@@ -16,15 +16,15 @@ kotlin {
         }
     }
     
-    listOf(
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach { iosTarget ->
-        iosTarget.binaries.framework {
-            baseName = "ComposeApp"
-            isStatic = true
-        }
-    }
+//    listOf(
+//        iosArm64(),
+//        iosSimulatorArm64()
+//    ).forEach { iosTarget ->
+//        iosTarget.binaries.framework {
+//            baseName = "ComposeApp"
+//            isStatic = true
+//        }
+//    }
     
     jvm()
     
@@ -43,6 +43,14 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(projects.shared)
+            implementation("io.insert-koin:koin-core:3.5.3")
+            implementation("io.ktor:ktor-client-core:3.3.0")
+            implementation("io.ktor:ktor-client-json:3.3.0")
+            implementation("io.ktor:ktor-client-serialization:3.3.0")
+            implementation("io.ktor:ktor-client-content-negotiation:3.3.0")
+            implementation("io.ktor:ktor-serialization-kotlinx-json:3.3.0")
+            implementation("io.ktor:ktor-client-jetty-jakarta:3.3.0")
+            implementation("io.ktor:ktor-client-cio:3.3.0")
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

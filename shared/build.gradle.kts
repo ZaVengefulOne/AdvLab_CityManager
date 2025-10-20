@@ -1,8 +1,10 @@
+import org.gradle.kotlin.dsl.implementation
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.kotlin.plugin.serialization)
 }
 
 kotlin {
@@ -19,7 +21,8 @@ kotlin {
     
     sourceSets {
         commonMain.dependencies {
-            // put your Multiplatform dependencies here
+            implementation(libs.ktor.serialization.kotlinx.json)
+            implementation("io.insert-koin:koin-core:3.5.3")
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
