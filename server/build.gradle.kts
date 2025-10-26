@@ -25,9 +25,11 @@ dependencies {
     implementation(libs.ktor.server.status.pages)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.ktor.server.content.negotiation)
-    implementation(libs.postgresql)
-    implementation(libs.h2)
-    implementation(libs.exposed.core)
-    implementation(libs.exposed.jdbc)
     implementation(libs.ktor.server.config.yaml)
+
+    implementation("org.jetbrains.exposed:exposed-core:0.44.0")
+    implementation("org.jetbrains.exposed:exposed-dao:0.44.0")
+    implementation("org.jetbrains.exposed:exposed-jdbc:0.44.0")
+    implementation("org.postgresql:postgresql:42.6.0")
+    implementation("com.zaxxer:HikariCP:5.1.0") // для connection pool
 }

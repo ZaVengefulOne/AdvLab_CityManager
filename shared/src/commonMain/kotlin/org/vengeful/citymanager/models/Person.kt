@@ -7,5 +7,5 @@ data class Person(
     val id: Int,
     val firstName: String,
     val lastName: String,
-    val rights: Rights,
+    val rights: List<Rights>,
 )

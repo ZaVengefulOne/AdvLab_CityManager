@@ -10,10 +10,17 @@ import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.request.receive
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.SchemaUtils
+import org.jetbrains.exposed.sql.transactions.transaction
 import org.vengeful.citymanager.models.Person
 import org.vengeful.citymanager.models.Rights
-import org.vengeful.citymanager.personService.FakePersonRepository
 import org.vengeful.citymanager.personService.IPersonRepository
+import org.vengeful.citymanager.personService.db.PersonDao
+import org.vengeful.citymanager.personService.db.PersonRepository
+import org.vengeful.citymanager.personService.db.PersonRights
+import org.vengeful.citymanager.personService.db.Persons
+import org.vengeful.citymanager.personService.db.RightsTable
 import java.util.Locale
 
 fun main() {
@@ -49,31 +56,24 @@ fun Application.configureSerialization(repository: IPersonRepository) {
                 call.respond(person)
             }
 
-            // Get by Rights
-            get("/byRights/{rights}") {
-                val rightsAsText = call.parameters["rights"]
-                if (rightsAsText == null) {
-                    call.respond(HttpStatusCode.BadRequest)
-                    return@get
-                }
-                try {
-                    val rights = Rights.valueOf(rightsAsText.uppercase(Locale.getDefault()))
-                    val persons = repository.personsByRights(rights)
-                    if (persons.isEmpty()) {
-                        call.respond(HttpStatusCode.NotFound)
-                        return@get
-                    }
-                    call.respond(persons)
-                } catch (e: IllegalArgumentException) {
-                    call.respond(HttpStatusCode.BadRequest, e.message ?: "")
-                }
-            }
-
             // Add person
             post {
                 try {
                     val person = call.receive<Person>()
                     repository.addPerson(person)
+                    call.respond(HttpStatusCode.OK)
+                } catch (e: IllegalStateException) {
+                    call.respond(HttpStatusCode.BadRequest, e.message ?: "")
+                } catch (e: JsonConvertException) {
+                    call.respond(HttpStatusCode.BadRequest, e.message ?: "")
+                }
+            }
+
+            // Update person
+            post("/update") {
+                try {
+                    val person = call.receive<Person>()
+                    repository.updatePerson(person)
                     call.respond(HttpStatusCode.OK)
                 } catch (e: IllegalStateException) {
                     call.respond(HttpStatusCode.BadRequest, e.message ?: "")
@@ -99,9 +99,25 @@ fun Application.configureSerialization(repository: IPersonRepository) {
     }
 }
 
+fun Application.configureDatabase(repository: PersonRepository) {
+    Database.connect(
+        url = "jdbc:postgresql://localhost:5432/vengeful_db",
+        driver = "org.postgresql.Driver",
+        user = "postgres",
+        password = "password"
+    )
+
+    transaction {
+//        SchemaUtils.drop(PersonRights, RightsTable, Persons) // На случай миграции если будет впадлу её писать
+        SchemaUtils.create(Persons, RightsTable, PersonRights)
+        repository.initializeRights()
+    }
+}
+
 fun Application.module() {
-    val fakeRepository = FakePersonRepository()
-    configureSerialization(repository = fakeRepository)
+    val repository = PersonRepository()
+    configureSerialization(repository = repository)
+    configureDatabase(repository)
     routing {
         get("/") {
             call.respondText("Vengeful Server: ${Greeting().greet()}")
