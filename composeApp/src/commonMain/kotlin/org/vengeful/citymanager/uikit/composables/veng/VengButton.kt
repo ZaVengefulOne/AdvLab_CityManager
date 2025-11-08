@@ -33,6 +33,7 @@ fun VengButton(
     cornerRadius: Dp = 8.dp,
     borderWidth: Dp = 2.dp,
     theme: ColorTheme = ColorTheme.GOLDEN,
+    isIconButton: Boolean = false,
     content: @Composable (() -> Unit)? = null
 ) {
     var isPressed by remember { mutableStateOf(false) }
@@ -101,17 +102,33 @@ fun VengButton(
             .padding(padding),
         contentAlignment = Alignment.Center
     ) {
-        if (content != null) {
-            content()
+        if (!isIconButton) {
+            if (content != null) {
+                content()
+            } else {
+                Text(
+                    text = text,
+                    color = buttonColors.text,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp
+                )
+            }
         } else {
-            Text(
-                text = text,
-                color = buttonColors.text,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 0.5.sp
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (content != null) {
+                    content()
+                }
+                Text(
+                    text = text,
+                    color = buttonColors.text,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp
+                )
+            }
         }
+
     }
 }
 

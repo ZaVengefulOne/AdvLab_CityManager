@@ -1,17 +1,16 @@
-package org.vengeful.citymanager
+package org.vengeful.citymanager.screens.administration
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import org.vengeful.citymanager.data.IServerInteractor
-import org.vengeful.citymanager.data.ServerInteractor
+import org.vengeful.citymanager.data.IPersonInteractor
 import org.vengeful.citymanager.models.Person
 import org.vengeful.citymanager.models.Rights
 
 
-class MainViewModel(private val serverInteractor: IServerInteractor)  {
+class AdministrationViewModel(private val interactor: IPersonInteractor)  {
 
     val scope = CoroutineScope(Dispatchers.IO)
     private val _persons = MutableStateFlow<List<Person>>(emptyList())
@@ -22,34 +21,34 @@ class MainViewModel(private val serverInteractor: IServerInteractor)  {
 
     fun getPersons(){
         scope.launch {
-            val persons = serverInteractor.getPersons()
+            val persons = interactor.getPersons()
             _persons.value = persons
         }
     }
 
     fun getPersonById(id: Int){
         scope.launch {
-            val person = serverInteractor.getPersonById(id)
+            val person = interactor.getPersonById(id)
             _curPerson.value = person
         }
     }
 
     fun getPersonsByRights(rights: Rights){
         scope.launch {
-            val persons = serverInteractor.getPersonsByRights(rights)
+            val persons = interactor.getPersonsByRights(rights)
             _persons.value = persons
         }
     }
 
     fun addPerson(person: Person){
         scope.launch {
-            serverInteractor.addPerson(person)
+            interactor.addPerson(person)
         }
     }
 
     fun deletePerson(id: Int){
         scope.launch {
-            serverInteractor.deletePerson(id)
+            interactor.deletePerson(id)
         }
     }
 }

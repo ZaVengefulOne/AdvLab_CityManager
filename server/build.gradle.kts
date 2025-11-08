@@ -15,6 +15,9 @@ application {
 }
 
 dependencies {
+    val ktorVersion = "3.3.0"
+
+    // Main Server
     implementation(projects.shared)
     implementation(libs.logback)
     implementation(libs.ktor.serverCore)
@@ -27,9 +30,19 @@ dependencies {
     implementation(libs.ktor.server.content.negotiation)
     implementation(libs.ktor.server.config.yaml)
 
-    implementation("org.jetbrains.exposed:exposed-core:0.44.0")
-    implementation("org.jetbrains.exposed:exposed-dao:0.44.0")
-    implementation("org.jetbrains.exposed:exposed-jdbc:0.44.0")
-    implementation("org.postgresql:postgresql:42.6.0")
-    implementation("com.zaxxer:HikariCP:5.1.0") // для connection pool
+    // Authentication
+    implementation("io.ktor:ktor-server-auth:$ktorVersion")
+    implementation("io.ktor:ktor-server-auth-jwt:$ktorVersion")
+    implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
+
+    // Database
+    implementation(libs.exposed.core.v0440)
+    implementation(libs.exposed.dao)
+    implementation(libs.exposed.jdbc.v0440)
+    implementation(libs.postgresql.v4260)
+    implementation(libs.hikaricp) // для connection pool
+
+    // Web Admin Panel
+    implementation(libs.web.core)
+    implementation(libs.html.core)
 }

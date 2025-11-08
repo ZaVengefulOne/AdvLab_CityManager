@@ -41,36 +41,35 @@ import org.vengeful.citymanager.uikit.SeveritepunkThemes
 
 @Composable
 fun TerminalControls(
+    modifier: Modifier = Modifier,
     onShutdown: () -> Unit,
     onRestart: () -> Unit,
     theme: ColorTheme = ColorTheme.GOLDEN,
-    modifier: Modifier = Modifier
 ) {
     val colors = remember(theme) {
         SeveritepunkThemes.getColorScheme(theme)
     }
 
     Row(
-        modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Кнопка перезагрузки
         SteampunkControlButton(
             onClick = onRestart,
             icon = "🔄",
             text = "ПЕРЕГРУЗКА",
             accentColor = colors.rivets,
-            theme = theme
+            theme = theme,
+            modifier = modifier
         )
 
-        // Кнопка выключения
         SteampunkControlButton(
             onClick = onShutdown,
             icon = "⏻",
             text = "ВЫКЛЮЧЕНИЕ",
             accentColor = colors.borderLight,
-            theme = theme
+            theme = theme,
+            modifier = modifier
         )
     }
 }

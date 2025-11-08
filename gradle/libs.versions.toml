@@ -11,6 +11,10 @@ androidx-lifecycle = "2.9.4"
 androidx-testExt = "1.3.0"
 composeHotReload = "1.0.0-beta07"
 composeMultiplatform = "1.9.0"
+exposedCore = "0.44.0"
+exposedJdbc = "0.44.0"
+hikaricp = "7.0.2"
+htmlCore = "1.9.1"
 junit = "4.13.2"
 kotlin = "2.2.20"
 kotlinx-coroutines = "1.10.2"
@@ -19,8 +23,15 @@ h2 = "2.4.240"
 postgres = "42.7.8"
 exposed = "0.61.0"
 logback = "1.5.18"
+postgresql = "42.6.0"
+webCore = "1.9.1"
 
 [libraries]
+exposed-core-v0440 = { module = "org.jetbrains.exposed:exposed-core", version.ref = "exposedCore" }
+exposed-dao = { module = "org.jetbrains.exposed:exposed-dao", version.ref = "exposedJdbc" }
+exposed-jdbc-v0440 = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "exposedJdbc" }
+hikaricp = { module = "com.zaxxer:HikariCP", version.ref = "hikaricp" }
+html-core = { module = "org.jetbrains.compose.html:html-core", version.ref = "htmlCore" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-testJunit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 junit = { module = "junit:junit", version.ref = "junit" }
@@ -45,6 +56,8 @@ h2 = { module = "com.h2database:h2", version.ref = "h2" }
 exposed-core = { module = "org.jetbrains.exposed:exposed-core", version.ref = "exposed" }
 exposed-jdbc = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "exposed" }
 ktor-server-config-yaml = { module = "io.ktor:ktor-server-config-yaml", version.ref = "ktor" }
+postgresql-v4260 = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+web-core = { module = "org.jetbrains.compose.web:web-core", version.ref = "webCore" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

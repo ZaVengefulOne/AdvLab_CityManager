@@ -34,6 +34,7 @@ kotlin {
             implementation(libs.androidx.activity.compose)
         }
         commonMain.dependencies {
+            // Core
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)
@@ -43,14 +44,26 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(projects.shared)
+
+            // Navigation
+            implementation("org.jetbrains.androidx.navigation:navigation-compose:2.9.1")
+
+            // Icons
+            implementation("com.composables:icons-lucide:1.0.0")
+
+            // Koin (DI)
             implementation("io.insert-koin:koin-core:3.5.3")
+
+            // Ktor (Server)
             implementation("io.ktor:ktor-client-core:3.3.0")
             implementation("io.ktor:ktor-client-json:3.3.0")
             implementation("io.ktor:ktor-client-serialization:3.3.0")
             implementation("io.ktor:ktor-client-content-negotiation:3.3.0")
-            implementation("io.ktor:ktor-serialization-kotlinx-json:3.3.0")
             implementation("io.ktor:ktor-client-jetty-jakarta:3.3.0")
             implementation("io.ktor:ktor-client-cio:3.3.0")
+
+            // Serialization
+            implementation("io.ktor:ktor-serialization-kotlinx-json:3.3.0")
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

@@ -16,7 +16,10 @@ kotlin {
     
     iosArm64()
     iosSimulatorArm64()
-    
+    js(IR) {
+        browser()
+        // binaries.executable()
+    }
     jvm()
     
     sourceSets {
@@ -26,6 +29,13 @@ kotlin {
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+        }
+        val jsMain by getting {
+            dependencies {
+                implementation("io.ktor:ktor-client-js:2.3.10")
+                implementation("io.ktor:ktor-client-content-negotiation:2.3.10")
+                implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.10")
+            }
         }
     }
 }

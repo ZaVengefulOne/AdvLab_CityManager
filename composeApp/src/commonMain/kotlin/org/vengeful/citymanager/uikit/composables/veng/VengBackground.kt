@@ -1,10 +1,12 @@
 package org.vengeful.citymanager.uikit.composables.veng
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -16,6 +18,8 @@ import org.vengeful.citymanager.uikit.SeveritepunkThemes
 fun VengBackground(
     modifier: Modifier = Modifier,
     theme: ColorTheme = ColorTheme.GOLDEN,
+    verticalArrangement: Arrangement.Vertical = Arrangement.Top,
+    horizontalAlignment: Alignment.Horizontal = Alignment.Start,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val backgroundBrush = remember(theme) {
@@ -44,7 +48,9 @@ fun VengBackground(
                     radius = 80f,
                     center = Offset(60f, size.height - 60f)
                 )
-            }
+            },
+        verticalArrangement = verticalArrangement,
+        horizontalAlignment = horizontalAlignment,
     ) {
         content()
     }

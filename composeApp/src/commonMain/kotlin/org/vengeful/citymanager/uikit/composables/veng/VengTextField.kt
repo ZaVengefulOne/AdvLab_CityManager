@@ -2,7 +2,6 @@ package org.vengeful.citymanager.uikit.composables.veng
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,6 +19,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.vengeful.citymanager.uikit.ColorTheme
@@ -32,6 +32,7 @@ fun VengTextField(
     modifier: Modifier = Modifier,
     label: String = "",
     placeholder: String = "",
+    visualTransformation: VisualTransformation = VisualTransformation.None,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     enabled: Boolean = true,
     theme: ColorTheme = ColorTheme.GOLDEN
@@ -47,8 +48,6 @@ fun VengTextField(
             scheme
         }
     }
-
-    val interactionSource = remember { MutableInteractionSource() }
 
     Box(
         modifier = modifier
@@ -96,7 +95,8 @@ fun VengTextField(
                         innerTextField()
                     }
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                visualTransformation = visualTransformation
             )
         }
     }

@@ -25,6 +25,10 @@ class PersonRepository : IPersonRepository {
         PersonDao.all().map { it.toPerson() }
     }
 
+    override fun getCount(): Int = transaction {
+        PersonDao.all().count().toInt()
+    }
+
     // Поиск по определённому праву
     override fun personByRight(right: Rights): List<Person> = transaction {
         val rightDao = RightDao.find { RightsTable.name eq right.name }.firstOrNull()
@@ -36,16 +40,21 @@ class PersonRepository : IPersonRepository {
         val rightNames = rights.map { it.name }
         PersonDao.find {
             Persons.id inSubQuery PersonRights
-                .slice(PersonRights.personId)
+                .slice(personId)
                 .select {
-                    PersonRights.rightId inList RightDao.find { RightsTable.name inList rightNames }.map { it.id }
+                    rightId inList RightDao.find { RightsTable.name inList rightNames }.map { it.id }
                 }
         }.map { it.toPerson() }
     }
 
-    override fun personByName(name: String, lastName: String): Person? = transaction {
+    override fun personByName(name: String, lastName: String?): Person? = transaction {
+        if (lastName != null) {
         PersonDao.find { (Persons.firstName eq name) and (Persons.lastName eq lastName) }.map { it.toPerson() }
             .firstOrNull()
+        } else {
+            PersonDao.find { (Persons.firstName eq name) }.map { it.toPerson() }
+                .firstOrNull()
+        }
     }
 
     override fun personById(id: Int): Person? = transaction {
