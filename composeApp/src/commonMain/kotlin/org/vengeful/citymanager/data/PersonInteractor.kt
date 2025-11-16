@@ -4,11 +4,13 @@ import io.ktor.client.call.*
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.http.HttpHeaders
 import io.ktor.http.headers
 import org.vengeful.citymanager.SERVER_PORT
 import org.vengeful.citymanager.data.users.AuthManager
@@ -17,11 +19,17 @@ import org.vengeful.citymanager.models.Rights
 import org.vengeful.citymanager.models.users.AuthResponse
 import org.vengeful.citymanager.models.users.LoginRequest
 
-class PersonInteractor() : IPersonInteractor {
+class PersonInteractor(
+    private val authManager: AuthManager
+) : IPersonInteractor {
 
     override suspend fun getPersons(): List<Person> {
         return try {
-            val response = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/persons") { setHttpBuilder() }
+            val token = authManager.getToken()
+            println("DEBUG: Token in getPersons: ${if (token != null) "present (${token.take(20)}...)" else "null"}")
+            val response = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/persons") { 
+                setHttpBuilder()
+            }
             if (response.status.isSuccess()) {
                 response.body<List<Person>>()
             } else {
@@ -66,6 +74,7 @@ class PersonInteractor() : IPersonInteractor {
     override suspend fun getPersonsByRights(rights: List<Rights>): List<Person> {
         val rightsParam = rights.joinToString(",") { it.name }
         return client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/persons/byRights") {
+            setHttpBuilder()
             parameter("rights", rightsParam)
         }.body()
     }
@@ -73,10 +82,7 @@ class PersonInteractor() : IPersonInteractor {
     override suspend fun addPerson(person: Person) {
         try {
                 client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/persons") {
-                    contentType(ContentType.Application.Json)
-                    headers {
-                        append(USER_AGENT_TAG, USER_AGENT)
-                    }
+                    setHttpBuilder()
                     setBody(person)
                 }
         } catch (e: Exception) {
@@ -85,7 +91,19 @@ class PersonInteractor() : IPersonInteractor {
     }
 
     override suspend fun updatePerson(person: Person) {
-        TODO("Not yet implemented")
+        return try {
+            val response = client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/persons/update") {
+                setHttpBuilder()
+                setBody(person)
+            }
+            if (response.status.isSuccess()) {
+                // Удачно, TODO: добавить сообщение?
+            } else {
+                throw Exception("HTTP error ${response.status} : ${response.status.description}")
+            }
+        } catch (e: Exception) {
+            throw Exception("Failed to update person: ${e.message}")
+        }
     }
 
     override suspend fun deletePerson(id: Int) {
@@ -109,6 +127,19 @@ class PersonInteractor() : IPersonInteractor {
             }
         } catch (e: Exception) {
             throw Exception("Failed to fetch persons: ${e.message}")
+        }
+    }
+
+    private fun HttpRequestBuilder.setHttpBuilder(withAuth: Boolean = true) {
+        contentType(ContentType.Application.Json)
+        header(USER_AGENT_TAG, USER_AGENT)
+        if (withAuth) {
+            val token = authManager.getToken()
+            if (token != null) {
+                header(HttpHeaders.Authorization, "Bearer $token")
+            } else {
+                println("WARNING: No token found in AuthManager for authenticated request")
+            }
         }
     }
 

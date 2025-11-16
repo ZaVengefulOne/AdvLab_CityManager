@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    // Общее
+    <string name="app_name">Система Городского Контроля v%1$s</string>
+    <string name="welcome_message">Добро пожаловать, %1$s</string>
+    <string name="back">Назад</string>
+
+    // Авторизация
+    <string name="login">Войти</string>
+    <string name="logout">Выйти</string>
+    <string name="register">Регистрация</string>
+    <string name="error_login">Неверное имя пользователя или пароль</string>
+
+    // Main Screen
+    <string name="administration_name">Администрация</string>
+    <string name="common_library_name">Библиотека г. Лэбтауна</string>
+    <string name="court_name">Суд</string>
+    <string name="medic_name">Больница</string>
+    <string name="police_name">Полиция</string>
+    <string name="clicker">СеверитКоин!</string>
+
+    // Administration Screen
+    <string name="register_user">👤 Зарегистрировать пользователя</string>
+    <string name="get_all_persons">Получить всех жителей</string>
+    <string name="id_search">Поиск по идентификатору</string>
+    <string name="enter_id">Введите ID...</string>
+    <string name="find">Найти</string>
+    <string name="delete_by_id">Удаление по идентификатору</string>
+    <string name="delete">Удалить</string>
+    <string name="add_new_person">Добавить</string>
+    <string name="person_list">Реестр жителей: всего %1$s записи</string>
+    <string name="user_list">Реестр пользователей: всего %1$s записи</string>
+    <string name="base_empty">🗄️ База пуста \n Зарегистрируйте первого жителя!</string>
+</resources>

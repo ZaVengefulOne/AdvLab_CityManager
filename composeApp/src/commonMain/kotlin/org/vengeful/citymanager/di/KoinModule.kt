@@ -1,33 +1,59 @@
 package org.vengeful.citymanager.di
 
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
+import androidx.lifecycle.viewmodel.compose.viewModel
+import org.koin.core.context.GlobalContext
 import org.koin.core.context.GlobalContext.startKoin
+import org.koin.core.parameter.ParametersHolder
+import org.koin.core.qualifier.Qualifier
 import org.koin.dsl.module
-import org.vengeful.citymanager.screens.administration.AdministrationViewModel
 import org.vengeful.citymanager.data.IPersonInteractor
-import org.vengeful.citymanager.data.users.IUserInteractor
 import org.vengeful.citymanager.data.PersonInteractor
 import org.vengeful.citymanager.data.users.AuthManager
+import org.vengeful.citymanager.data.users.IUserInteractor
 import org.vengeful.citymanager.data.users.UserInteractor
+import org.vengeful.citymanager.screens.administration.AdministrationViewModel
+import org.vengeful.citymanager.screens.clicker.ClickerViewModel
 import org.vengeful.citymanager.screens.main.MainViewModel
+import kotlin.reflect.KClass
 
 
 val appModule = module {
     single { AuthManager() }
 
-    single<IPersonInteractor> { PersonInteractor() }
+    single<IPersonInteractor> { PersonInteractor(get()) }
     single<IUserInteractor> { UserInteractor(get()) }
 
-    single { AdministrationViewModel(get()) }
-    single { MainViewModel(get()) }
+    factory { AdministrationViewModel(get(), get()) }
+    factory { MainViewModel(get(), get()) }
+    factory { ClickerViewModel(get(), get()) }
 }
 
 fun initKoin() = startKoin {
     modules(appModule)
 }
 
-object KoinInjector : KoinComponent {
-    val administrationViewModel: AdministrationViewModel by inject()
-    val mainViewModel: MainViewModel by inject()
+@Composable
+inline fun <reified T : ViewModel> koinViewModel(
+    qualifier: Qualifier? = null,
+    parameters: ParametersHolder? = null
+): T {
+    val koin = remember { GlobalContext.get() }
+    val factory = remember(qualifier, parameters) {
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: KClass<T>, extras: CreationExtras): T {
+                return if (parameters != null) {
+                    koin.get(modelClass, qualifier) { parameters }
+                } else {
+                    koin.get(modelClass, qualifier)
+                }
+            }
+        }
+    }
+    return viewModel(factory = factory)
 }

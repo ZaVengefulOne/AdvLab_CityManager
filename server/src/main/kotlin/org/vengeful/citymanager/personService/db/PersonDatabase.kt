@@ -1,23 +1,13 @@
 package org.vengeful.citymanager.personService.db
 
-import io.ktor.server.application.Application
 import org.jetbrains.exposed.dao.IntEntity
 import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IntIdTable
-import org.jetbrains.exposed.sql.Column
-import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.ReferenceOption
-import org.jetbrains.exposed.sql.SchemaUtils
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.Table
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.transaction
 import org.vengeful.citymanager.models.Person
 import org.vengeful.citymanager.models.Rights
-import org.vengeful.citymanager.personService.db.Persons.id
 
 object Persons : IntIdTable("persons") {
     val firstName = varchar("first_name", 255)

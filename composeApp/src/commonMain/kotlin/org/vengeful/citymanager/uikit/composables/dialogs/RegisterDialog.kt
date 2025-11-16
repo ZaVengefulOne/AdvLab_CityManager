@@ -1,26 +1,14 @@
-package org.vengeful.citymanager.uikit.composables
+package org.vengeful.citymanager.uikit.composables.dialogs
+
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -32,21 +20,27 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import org.vengeful.citymanager.models.Person
 import org.vengeful.citymanager.uikit.ColorTheme
 import org.vengeful.citymanager.uikit.DialogColors
+import org.vengeful.citymanager.uikit.SeveritepunkThemes
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
 import org.vengeful.citymanager.uikit.composables.veng.VengTextField
 
 @Composable
-fun AuthDialog(
+fun RegisterDialog(
     onDismiss: () -> Unit,
-    onLogin: (String, String) -> Unit,
-    onLogged: () -> Unit = {},
+    onRegister: (String, String, Int?) -> Unit,
+    persons: List<Person> = emptyList(),
+    isLoading: Boolean = false,
+    errorMessage: String? = null,
     theme: ColorTheme = ColorTheme.GOLDEN
 ) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
+    var confirmPassword by remember { mutableStateOf("") }
+    var selectedPerson by remember { mutableStateOf<Person?>(null) }
+    var personDropdownExpanded by remember { mutableStateOf(false) }
 
     val dialogColors = remember(theme) {
         when (theme) {
@@ -66,12 +60,16 @@ fun AuthDialog(
         }
     }
 
+    val textFieldColors = remember(theme) {
+        SeveritepunkThemes.getTextFieldColors(theme)
+    }
+
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(12.dp),
             color = dialogColors.background,
             modifier = Modifier
-                .width(380.dp)
+                .width(400.dp)
                 .border(
                     width = 3.dp,
                     brush = Brush.linearGradient(
@@ -85,17 +83,14 @@ fun AuthDialog(
                 modifier = Modifier
                     .background(
                         brush = Brush.verticalGradient(
-                            colors = listOf(
-                                dialogColors.surface,
-                                dialogColors.background
-                            )
+                            colors = listOf(dialogColors.surface, dialogColors.background)
                         )
                     )
                     .padding(24.dp)
             ) {
                 // Заголовок
                 Text(
-                    text = "АВТОРИЗАЦИЯ",
+                    text = "РЕГИСТРАЦИЯ",
                     color = dialogColors.borderLight,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
@@ -106,7 +101,7 @@ fun AuthDialog(
                 )
 
                 Text(
-                    text = "Войдите в систему доступа",
+                    text = "Создайте новый аккаунт",
                     color = dialogColors.borderLight.copy(alpha = 0.8f),
                     fontSize = 14.sp,
                     modifier = Modifier
@@ -114,7 +109,7 @@ fun AuthDialog(
                         .align(Alignment.CenterHorizontally)
                 )
 
-                // Поля ввода
+                // Поле username
                 VengTextField(
                     value = username,
                     onValueChange = { username = it },
@@ -127,6 +122,7 @@ fun AuthDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Поле password
                 VengTextField(
                     value = password,
                     onValueChange = { password = it },
@@ -139,7 +135,91 @@ fun AuthDialog(
                     enabled = !isLoading
                 )
 
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Поле confirmPassword
+                VengTextField(
+                    value = confirmPassword,
+                    onValueChange = { confirmPassword = it },
+                    label = "ПОДТВЕРЖДЕНИЕ ПАРОЛЯ",
+                    placeholder = "Повторите пароль...",
+                    modifier = Modifier.fillMaxWidth(),
+                    theme = theme,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    enabled = !isLoading
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Dropdown для выбора Person
+                Box {
+                    VengTextField(
+                        value = selectedPerson?.let { "${it.firstName} ${it.lastName}" } ?: "",
+                        onValueChange = { },
+                        label = "ВЫБЕРИТЕ ЧЕЛОВЕКА",
+                        placeholder = "Выберите из списка...",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { personDropdownExpanded = true },
+                        theme = theme,
+                        enabled = !isLoading && persons.isNotEmpty()
+                    )
+
+                    // Кастомная стрелка
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .padding(end = 12.dp, top = 20.dp)
+                            .clickable { personDropdownExpanded = true }
+                    ) {
+                        Text(
+                            text = if (personDropdownExpanded) "▲" else "▼",
+                            color = textFieldColors.text,
+                            fontSize = 12.sp
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = personDropdownExpanded,
+                        onDismissRequest = { personDropdownExpanded = false },
+                        modifier = Modifier
+                            .background(textFieldColors.background)
+                            .border(2.dp, textFieldColors.borderLight, RoundedCornerShape(6.dp))
+                            .width(350.dp)
+                    ) {
+                        persons.forEach { person ->
+                            DropdownMenuItem(
+                                onClick = {
+                                    selectedPerson = person
+                                    personDropdownExpanded = false
+                                },
+                                modifier = Modifier.background(textFieldColors.background),
+                                text = {
+                                    Text(
+                                        text = "${person.firstName} ${person.lastName}",
+                                        color = textFieldColors.text,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            )
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(20.dp))
+
+                // Сообщение об ошибке
+                if (errorMessage != null) {
+                    Text(
+                        text = errorMessage,
+                        color = Color(0xFFFF6B6B),
+                        fontSize = 12.sp,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp)
+                    )
+                }
 
                 // Индикатор загрузки
                 if (isLoading) {
@@ -157,7 +237,7 @@ fun AuthDialog(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "Проверка доступа...",
+                            text = "Регистрация...",
                             color = dialogColors.borderLight,
                             fontSize = 14.sp
                         )
@@ -183,20 +263,24 @@ fun AuthDialog(
 
                     VengButton(
                         onClick = {
-                            if (username.isNotBlank() && password.isNotBlank()) {
-                                isLoading = true
-                                onLogin(username, password)
-//                                    isLoading = false
-//                                    onLogged.invoke()
-
+                            if (username.isNotBlank() &&
+                                password.isNotBlank() &&
+                                password == confirmPassword &&
+                                !isLoading
+                            ) {
+                                onRegister(username, password, selectedPerson?.id)
                             }
                         },
-                        text = "ВОЙТИ",
+                        text = "ЗАРЕГИСТРИРОВАТЬ",
                         modifier = Modifier
                             .weight(1f)
                             .padding(start = 8.dp),
                         padding = 14.dp,
-                        enabled = username.isNotBlank() && password.isNotBlank() && !isLoading,
+                        enabled = username.isNotBlank() &&
+                                password.isNotBlank() &&
+                                password == confirmPassword &&
+                                password.length >= 3 &&
+                                !isLoading,
                         theme = theme
                     )
                 }

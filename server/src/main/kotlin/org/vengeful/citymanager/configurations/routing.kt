@@ -4,15 +4,11 @@ import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.JsonConvertException
-import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
-import io.ktor.server.application.install
-import io.ktor.server.auth.Authentication
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.jwt.JWTPrincipal
-import io.ktor.server.auth.jwt.jwt
-import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.server.plugins.statuspages.StatusPages
+import io.ktor.server.auth.principal
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
@@ -22,7 +18,6 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import org.vengeful.citymanager.Greeting
-import org.vengeful.citymanager.auth.JWTConfig
 import org.vengeful.citymanager.models.users.LoginRequest
 import org.vengeful.citymanager.models.Person
 import org.vengeful.citymanager.models.Rights
@@ -30,9 +25,42 @@ import org.vengeful.citymanager.models.users.AuthResponse
 import org.vengeful.citymanager.models.users.User
 import org.vengeful.citymanager.personService.IPersonRepository
 import java.util.Date
-import io.ktor.server.config.*
+import io.ktor.server.request.contentType
+import io.ktor.server.routing.put
+import org.vengeful.citymanager.models.users.RegisterRequest
+import org.vengeful.citymanager.models.users.RegisterResponse
+import org.vengeful.citymanager.models.users.UpdateClicksRequest
+import org.vengeful.citymanager.models.users.UpdateUserRequest
+import org.vengeful.citymanager.userService.IUserRepository
 
-fun Application.configureSerialization(repository: IPersonRepository) {
+fun Application.configureSerialization(
+    personRepository: IPersonRepository,
+    userRepository: IUserRepository
+) {
+
+    fun getCurrentUser(call: ApplicationCall, userRepository: IUserRepository): User? {
+        return try {
+            val principal = call.principal<JWTPrincipal>()
+            principal?.let {
+                val userIdClaim = it.payload.getClaim("userId")
+                if (userIdClaim.isNull) {
+                    println("getCurrentUser: userId claim is null")
+                    return null
+                }
+                val userId = userIdClaim.asInt()
+                println("getCurrentUser: extracted userId=$userId")
+                val user = userRepository.findById(userId)
+                if (user == null) {
+                    println("getCurrentUser: user with id=$userId not found in repository")
+                }
+                user
+            }
+        } catch (e: Exception) {
+            println("getCurrentUser error: ${e::class.simpleName} - ${e.message}")
+            e.printStackTrace()
+            null
+        }
+    }
 
     routing { // Публичный роутинг
         get("/") {
@@ -49,31 +77,270 @@ fun Application.configureSerialization(repository: IPersonRepository) {
         route("/auth") {
             post("/login") {
                 try {
-                    val loginRequest = call.receive<LoginRequest>()
-                    val user = authenticateUser(loginRequest.username, loginRequest.password)
+                    println("Received login request")
+                    println("Content-Type: ${call.request.contentType()}")
+                    println("Headers: ${call.request.headers.entries()}")
 
-                    if (user != null) {
-                        val token = generateJwtToken(user)
-                        call.respond(HttpStatusCode.OK, AuthResponse(token, user, user.rights))
-                    } else {
-                        call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "Invalid credentials"))
+                    val loginRequest = call.receive<LoginRequest>()
+                    println("Login attempt: username='${loginRequest.username}'")
+
+                    val user = authenticateUser(
+                        loginRequest.username,
+                        loginRequest.password,
+                        userRepository
+                    )
+                    val wrongPasswordUser = User(0, "error", "", listOf(Rights.Any))
+
+                    when (user) {
+                        wrongPasswordUser -> call.respond(HttpStatusCode.Forbidden)
+                        is User -> {
+                            val token = generateJwtToken(user)
+                            call.respond(HttpStatusCode.OK, AuthResponse(token, user, user.rights))
+                        }
+                        null -> call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "Invalid credentials"))
+
                     }
+
+                } catch (e: JsonConvertException) {
+                    println("JSON deserialization error: ${e::class.simpleName}")
+                    println("Error message: ${e.message}")
+                    e.printStackTrace()
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid JSON format: ${e.message}"))
                 } catch (e: Exception) {
-                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid request format"))
+                    println("Login error: ${e::class.simpleName}")
+                    println("Error message: ${e.message}")
+                    e.printStackTrace()
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid request: ${e.message}"))
                 }
             }
 
             post("/register") {
-                // Ваша логика регистрации TODO
-                call.respond(HttpStatusCode.OK, mapOf("message" to "Registration endpoint"))
+                try {
+                    val registerRequest = call.receive<RegisterRequest>()
+
+                    // Валидация входных данных
+                    if (registerRequest.username.isBlank()) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Username cannot be empty"))
+                        return@post
+                    }
+
+                    if (registerRequest.password.isBlank() || registerRequest.password.length < 4) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Password must be at least 4 characters"))
+                        return@post
+                    }
+
+                    val user = userRepository.registerUser(
+                        username = registerRequest.username,
+                        password = registerRequest.password,
+                        personId = registerRequest.personId,
+                        rights = listOf(Rights.Any)
+                    )
+
+                    call.respond(
+                        HttpStatusCode.Created,
+                        RegisterResponse(
+                            message = "User registered successfully",
+                            userId = user.id,
+                            username = user.username
+                        )
+                    )
+                } catch (e: IllegalArgumentException) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+                } catch (e: Exception) {
+                    println("Registration error: ${e::class.simpleName} - ${e.message}")
+                    e.printStackTrace()
+                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Registration failed: ${e.message}"))
+                }
             }
         }
 
         authenticate("auth-jwt") {
+
+            route("/users") {
+                // GET /users - получить всех пользователей
+                get {
+                    try {
+                        val users = userRepository.getAllUsers()
+                        call.respond(HttpStatusCode.OK, users)
+                    } catch (e: Exception) {
+                        println("Get users error: ${e::class.simpleName} - ${e.message}")
+                        e.printStackTrace()
+                        call.respond(
+                            HttpStatusCode.InternalServerError,
+                            mapOf("error" to "Failed to get users: ${e.message}")
+                        )
+                    }
+                }
+
+                // PUT /users/{id} - обновить пользователя
+                put("/{id}") {
+                    try {
+                        val id = call.parameters["id"]?.toInt()
+                        if (id == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid user ID"))
+                            return@put
+                        }
+
+                        val updateRequest = call.receive<UpdateUserRequest>()
+
+                        // Валидация: ID в параметре должен совпадать с ID в теле запроса
+                        if (updateRequest.id != id) {
+                            call.respond(
+                                HttpStatusCode.BadRequest,
+                                mapOf("error" to "User ID in path does not match ID in request body")
+                            )
+                            return@put
+                        }
+
+                        // Проверяем существование пользователя
+                        val existingUser = userRepository.findById(id)
+                        if (existingUser == null) {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "User not found"))
+                            return@put
+                        }
+
+                        // Проверяем уникальность username (если изменился)
+                        if (updateRequest.username != existingUser.username) {
+                            if (userRepository.userExists(updateRequest.username)) {
+                                call.respond(
+                                    HttpStatusCode.Conflict,
+                                    mapOf("error" to "Username already exists")
+                                )
+                                return@put
+                            }
+                        }
+
+                        // Создаем объект User для обновления
+                        val userToUpdate = User(
+                            id = updateRequest.id,
+                            username = updateRequest.username,
+                            passwordHash = existingUser.passwordHash, // Будет обновлен, если передан пароль
+                            rights = updateRequest.rights,
+                            isActive = updateRequest.isActive,
+                            createdAt = existingUser.createdAt
+                        )
+
+                        // Обновляем пользователя
+                        val updatedUser = userRepository.updateUser(
+                            user = userToUpdate,
+                            password = updateRequest.password,
+                            personId = updateRequest.personId
+                        )
+
+                        if (updatedUser == null) {
+                            call.respond(
+                                HttpStatusCode.InternalServerError,
+                                mapOf("error" to "Failed to update user")
+                            )
+                        } else {
+                            call.respond(HttpStatusCode.OK, updatedUser)
+                        }
+                    } catch (e: JsonConvertException) {
+                        call.respond(
+                            HttpStatusCode.BadRequest,
+                            mapOf("error" to "Invalid JSON format: ${e.message}")
+                        )
+                    } catch (e: IllegalArgumentException) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+                    } catch (e: Exception) {
+                        println("Update user error: ${e::class.simpleName} - ${e.message}")
+                        e.printStackTrace()
+                        call.respond(
+                            HttpStatusCode.InternalServerError,
+                            mapOf("error" to "Failed to update user: ${e.message}")
+                        )
+                    }
+                }
+
+                // DELETE /users/{id} - удалить пользователя (отвязать Person)
+                delete("/{id}") {
+                    try {
+                        val id = call.parameters["id"]?.toInt()
+                        if (id == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid user ID"))
+                            return@delete
+                        }
+
+                        // Проверяем существование пользователя
+                        val existingUser = userRepository.findById(id)
+                        if (existingUser == null) {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "User not found"))
+                            return@delete
+                        }
+
+                        // Удаляем пользователя (Person будет отвязан автоматически)
+                        val deleted = userRepository.deleteUser(id)
+
+                        if (deleted) {
+                            call.respond(HttpStatusCode.OK, mapOf("message" to "User deleted successfully"))
+                        } else {
+                            call.respond(
+                                HttpStatusCode.InternalServerError,
+                                mapOf("error" to "Failed to delete user")
+                            )
+                        }
+                    } catch (e: Exception) {
+                        println("Delete user error: ${e::class.simpleName} - ${e.message}")
+                        e.printStackTrace()
+                        call.respond(
+                            HttpStatusCode.InternalServerError,
+                            mapOf("error" to "Failed to delete user: ${e.message}")
+                        )
+                    }
+                }
+
+                // PUT /users/{id}/clicks - обновить количество кликов
+                put("/{id}/clicks") {
+                    try {
+                        val id = call.parameters["id"]?.toInt()
+                        if (id == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid user ID"))
+                            return@put
+                        }
+
+                        val request = call.receive<UpdateClicksRequest>()
+                        println("PUT /users/$id/clicks: request.clicks=${request.clicks}")
+
+                        // Проверяем, что пользователь обновляет свои клики
+                        val currentUser = getCurrentUser(call, userRepository)
+                        if (currentUser == null) {
+                            println("PUT /users/$id/clicks: currentUser is null")
+                            call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "User not authenticated"))
+                            return@put
+                        }
+
+                        println("PUT /users/$id/clicks: currentUser.id=${currentUser.id}")
+
+                        if (currentUser.id != id) {
+                            println("PUT /users/$id/clicks: Forbidden - currentUser.id=${currentUser.id} != requested id=$id")
+                            call.respond(HttpStatusCode.Forbidden, mapOf("error" to "Can only update own clicks"))
+                            return@put
+                        }
+
+                        val success = userRepository.updateUserClicks(id, request.clicks)
+                        println("PUT /users/$id/clicks: updateUserClicks returned success=$success")
+
+                        if (success) {
+                            call.respond(HttpStatusCode.OK, mapOf("message" to "Clicks updated successfully"))
+                        } else {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "User not found"))
+                        }
+                    } catch (e: JsonConvertException) {
+                        println("PUT /users/{id}/clicks: JSON error - ${e.message}")
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid JSON format: ${e.message}"))
+                    } catch (e: Exception) {
+                        println("PUT /users/{id}/clicks: Exception - ${e::class.simpleName} - ${e.message}")
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Failed to update clicks: ${e.message}"))
+                    }
+                }
+
+            }
+
             route("/persons") {
                 // Get all
                 get {
-                    val persons = repository.allPersons()
+                    val persons = personRepository.allPersons()
                     call.respond(HttpStatusCode.OK, persons)
                 }
 
@@ -84,7 +351,7 @@ fun Application.configureSerialization(repository: IPersonRepository) {
                         call.respond(HttpStatusCode.BadRequest)
                         return@get
                     }
-                    val person = repository.personById(id)
+                    val person = personRepository.personById(id)
                     if (person == null) {
                         call.respond(HttpStatusCode.NotFound)
                         return@get
@@ -100,7 +367,7 @@ fun Application.configureSerialization(repository: IPersonRepository) {
                         call.respond(HttpStatusCode.BadRequest)
                         return@get
                     }
-                    val person = repository.personByName(name, lastName)
+                    val person = personRepository.personByName(name, lastName)
                     if (person == null) {
                         call.respond(HttpStatusCode.NotFound)
                         return@get
@@ -123,7 +390,7 @@ fun Application.configureSerialization(repository: IPersonRepository) {
                             .filter { it.isNotBlank() }
                             .map { Rights.valueOf(it) }
 
-                        val persons = repository.personsByRights(rightsList)
+                        val persons = personRepository.personsByRights(rightsList)
                         if (persons.isEmpty()) {
                             call.respond(
                                 HttpStatusCode.NotFound,
@@ -149,7 +416,7 @@ fun Application.configureSerialization(repository: IPersonRepository) {
                 post {
                     try {
                         val person = call.receive<Person>()
-                        repository.addPerson(person)
+                        personRepository.addPerson(person)
                         call.respond(HttpStatusCode.OK)
                     } catch (e: IllegalStateException) {
                         call.respond(HttpStatusCode.BadRequest, e.message ?: "")
@@ -162,7 +429,7 @@ fun Application.configureSerialization(repository: IPersonRepository) {
                 post("/update") {
                     try {
                         val person = call.receive<Person>()
-                        repository.updatePerson(person)
+                        personRepository.updatePerson(person)
                         call.respond(HttpStatusCode.OK)
                     } catch (e: IllegalStateException) {
                         call.respond(HttpStatusCode.BadRequest, e.message ?: "")
@@ -178,7 +445,7 @@ fun Application.configureSerialization(repository: IPersonRepository) {
                         call.respond(HttpStatusCode.BadRequest)
                         return@delete
                     }
-                    if (repository.removePerson(id)) {
+                    if (personRepository.removePerson(id)) {
                         call.respond(HttpStatusCode.OK)
                     } else {
                         call.respond(HttpStatusCode.NotFound)
@@ -191,17 +458,20 @@ fun Application.configureSerialization(repository: IPersonRepository) {
 
 // Функция для генерации JWT токена
 private fun Application.generateJwtToken(user: User): String {
-    val jwtIssuer = environment.config.property("ktor.jwt.issuer").getString()
-    val jwtAudience = environment.config.property("ktor.jwt.audience").getString()
-    val jwtSecret = environment.config.property("ktor.jwt.secret").getString()
-    val expirationTime = environment.config.property("ktor.jwt.expiration_time").getString().toLong()
+    val jwtIssuer = environment.config.property("jwt.issuer").getString()
+    val jwtAudience = environment.config.property("jwt.audience").getString()
+    val jwtSecret = environment.config.property("jwt.secret").getString()
+    val expirationTime = environment.config.property("jwt.expiration_time").getString().toLong()
+
+    // Преобразуем List<Rights> в List<String>
+    val rightsAsStrings = user.rights.map { it.name }
 
     return JWT.create()
         .withAudience(jwtAudience)
         .withIssuer(jwtIssuer)
         .withClaim("userId", user.id)
         .withClaim("username", user.username)
-        .withClaim("rights", user.rights)
+        .withClaim("rights", rightsAsStrings) // Теперь List<String>
         .withExpiresAt(Date(System.currentTimeMillis() + expirationTime * 1000))
         .sign(Algorithm.HMAC256(jwtSecret))
 }

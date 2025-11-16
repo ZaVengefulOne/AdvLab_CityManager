@@ -3,7 +3,9 @@ package org.vengeful.citymanager.models.users
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class LoginRequest(
-    val username: String,
-    val password: String
+data class RegisterResponse(
+    val message: String,
+    val userId: Int,
+    val username: String
 )
+

@@ -24,10 +24,3 @@ val client = HttpClient(CIO) {
         https.trustManager = null
     }
 }
-
-fun setHttpBuilder(): Headers {
-    return headers {
-        append(HttpHeaders.Accept, HEADER_ACCEPT)
-        append(USER_AGENT_TAG, USER_AGENT)
-    }
-}

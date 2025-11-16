@@ -30,10 +30,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import citymanager.composeapp.generated.resources.Res
+import citymanager.composeapp.generated.resources.app_name
+import org.jetbrains.compose.resources.stringResource
+import org.vengeful.citymanager.BUILD_VERSION
 import org.vengeful.citymanager.models.Person
 import org.vengeful.citymanager.uikit.ColorTheme
 import org.vengeful.citymanager.uikit.SeveritepunkCardColors
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
+import org.vengeful.citymanager.utilities.DateFormatter
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 @Composable
 fun PersonCard(
@@ -173,6 +180,7 @@ private fun CompactPersonCardContent(person: Person, colors: SeveritepunkCardCol
     }
 }
 
+@OptIn(ExperimentalTime::class)
 @Composable
 private fun ExpandedPersonCardContent(person: Person, colors: SeveritepunkCardColors) {
     Column(
@@ -225,21 +233,20 @@ private fun ExpandedPersonCardContent(person: Person, colors: SeveritepunkCardCo
             }
         }
 
-        // Дата создания (фиксированная 1950 год)
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                text = "ДАТА РЕГИСТРАЦИИ:",
-                color = colors.accent,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "15.11.1950", // Фиксированная дата в стиле сеттинга
-                color = colors.text,
-                fontSize = 11.sp,
-                fontStyle = FontStyle.Italic
-            )
-        }
+//        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+//            Text(
+//                text = "ДАТА РЕГИСТРАЦИИ:",
+//                color = colors.accent,
+//                fontSize = 10.sp,
+//                fontWeight = FontWeight.Bold
+//            )
+//            Text(
+//                text = DateFormatter.formatTo1950Date(),
+//                color = colors.text,
+//                fontSize = 11.sp,
+//                fontStyle = FontStyle.Italic
+//            )
+//        }
 
         // Декоративный разделитель
         Box(
@@ -251,7 +258,7 @@ private fun ExpandedPersonCardContent(person: Person, colors: SeveritepunkCardCo
 
         // Подпись системы
         Text(
-            text = "Система Городского Управления v0.0.1",
+            text = stringResource(Res.string.app_name, BUILD_VERSION),
             color = colors.text.copy(alpha = 0.6f),
             fontSize = 8.sp,
             modifier = Modifier.align(Alignment.CenterHorizontally)

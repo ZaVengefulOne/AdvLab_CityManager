@@ -8,6 +8,8 @@ import org.vengeful.citymanager.personService.db.PersonRepository
 import org.vengeful.citymanager.personService.db.PersonRights
 import org.vengeful.citymanager.personService.db.Persons
 import org.vengeful.citymanager.personService.db.RightsTable
+import org.vengeful.citymanager.userService.db.UserRights
+import org.vengeful.citymanager.userService.db.Users
 
 fun Application.configureDatabase(repository: PersonRepository) {
     Database.connect(
@@ -18,8 +20,14 @@ fun Application.configureDatabase(repository: PersonRepository) {
     )
 
     transaction {
-//        SchemaUtils.drop(PersonRights, RightsTable, Persons) // На случай миграции если будет впадлу её писать
-        SchemaUtils.create(Persons, RightsTable, PersonRights)
+//        SchemaUtils.drop(PersonRights, RightsTable, Persons, Users, UserRights) // На случай миграции если будет впадлу её писать
+        SchemaUtils.createMissingTablesAndColumns(
+            Persons,
+            RightsTable,
+            PersonRights,
+            Users,
+            UserRights
+        )
         repository.initializeRights()
     }
 }

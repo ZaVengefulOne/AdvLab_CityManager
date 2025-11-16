@@ -3,7 +3,6 @@ package org.vengeful.citymanager.models.users
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class LoginRequest(
-    val username: String,
-    val password: String
+data class UpdateClicksRequest(
+    val clicks: Int
 )

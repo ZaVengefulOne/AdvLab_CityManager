@@ -45,7 +45,7 @@ fun ThemeSwitcher(
                 ColorTheme.SEVERITE -> "🏔️ ТЕМА"
             },
             theme = currentTheme,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = modifier.fillMaxWidth(),
             padding = 12.dp
         )
 

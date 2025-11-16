@@ -114,6 +114,12 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "org.vengeful.citymanager"
             packageVersion = "1.0.0"
+            macOS {
+                iconFile.set(project.file("src/jvmMain/resources/icon.png"))
+            }
+            windows {
+                iconFile.set(project.file("src/jvmMain/resources/icon.png"))
+            }
         }
     }
 }
