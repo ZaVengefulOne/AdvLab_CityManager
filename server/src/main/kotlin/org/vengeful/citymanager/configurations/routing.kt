@@ -27,15 +27,20 @@ import org.vengeful.citymanager.personService.IPersonRepository
 import java.util.Date
 import io.ktor.server.request.contentType
 import io.ktor.server.routing.put
+import org.vengeful.citymanager.bankService.IBankRepository
+import org.vengeful.citymanager.models.BankAccount
+import org.vengeful.citymanager.models.users.CreateBankAccountRequest
 import org.vengeful.citymanager.models.users.RegisterRequest
 import org.vengeful.citymanager.models.users.RegisterResponse
+import org.vengeful.citymanager.models.users.UpdateBankAccountRequest
 import org.vengeful.citymanager.models.users.UpdateClicksRequest
 import org.vengeful.citymanager.models.users.UpdateUserRequest
 import org.vengeful.citymanager.userService.IUserRepository
 
 fun Application.configureSerialization(
     personRepository: IPersonRepository,
-    userRepository: IUserRepository
+    userRepository: IUserRepository,
+    bankRepository: IBankRepository,
 ) {
 
     fun getCurrentUser(call: ApplicationCall, userRepository: IUserRepository): User? {
@@ -97,6 +102,7 @@ fun Application.configureSerialization(
                             val token = generateJwtToken(user)
                             call.respond(HttpStatusCode.OK, AuthResponse(token, user, user.rights))
                         }
+
                         null -> call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "Invalid credentials"))
 
                     }
@@ -125,7 +131,10 @@ fun Application.configureSerialization(
                     }
 
                     if (registerRequest.password.isBlank() || registerRequest.password.length < 4) {
-                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Password must be at least 4 characters"))
+                        call.respond(
+                            HttpStatusCode.BadRequest,
+                            mapOf("error" to "Password must be at least 4 characters")
+                        )
                         return@post
                     }
 
@@ -149,7 +158,10 @@ fun Application.configureSerialization(
                 } catch (e: Exception) {
                     println("Registration error: ${e::class.simpleName} - ${e.message}")
                     e.printStackTrace()
-                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Registration failed: ${e.message}"))
+                    call.respond(
+                        HttpStatusCode.InternalServerError,
+                        mapOf("error" to "Registration failed: ${e.message}")
+                    )
                 }
             }
         }
@@ -331,7 +343,10 @@ fun Application.configureSerialization(
                     } catch (e: Exception) {
                         println("PUT /users/{id}/clicks: Exception - ${e::class.simpleName} - ${e.message}")
                         e.printStackTrace()
-                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Failed to update clicks: ${e.message}"))
+                        call.respond(
+                            HttpStatusCode.InternalServerError,
+                            mapOf("error" to "Failed to update clicks: ${e.message}")
+                        )
                     }
                 }
 
@@ -402,7 +417,7 @@ fun Application.configureSerialization(
                     } catch (e: IllegalArgumentException) {
                         call.respond(
                             HttpStatusCode.BadRequest,
-                            mapOf("error" to "Invalid rights value. Available: ${Rights.entries.joinToString { it.name }}")
+                            mapOf("error" to "Invalid rights value. Available: ${Rights.entries.joinToString { it.name }}, full error: ${e.message}")
                         )
                     } catch (e: Exception) {
                         call.respond(
@@ -449,6 +464,206 @@ fun Application.configureSerialization(
                         call.respond(HttpStatusCode.OK)
                     } else {
                         call.respond(HttpStatusCode.NotFound)
+                    }
+                }
+            }
+
+            route("/bank") {
+                // GET /bank/accounts - получить все банковские счета
+                get("/accounts") {
+                    try {
+                        val accounts = bankRepository.getAllBankAccounts()
+                        call.respond(HttpStatusCode.OK, accounts)
+                    } catch (e: Exception) {
+                        println("Get bank accounts error: ${e::class.simpleName} - ${e.message}")
+                        e.printStackTrace()
+                        call.respond(
+                            HttpStatusCode.InternalServerError,
+                            mapOf("error" to "Failed to get bank accounts: ${e.message}")
+                        )
+                    }
+                }
+
+                // GET /bank/accounts/person/{personId} - получить счет по personId
+                get("/accounts/person/{personId}") {
+                    try {
+                        val personId = call.parameters["personId"]?.toInt()
+                        if (personId == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid person ID"))
+                            return@get
+                        }
+                        val account = bankRepository.getBankAccountByPersonId(personId)
+                        if (account == null) {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "Bank account not found"))
+                        } else {
+                            call.respond(HttpStatusCode.OK, account)
+                        }
+                    } catch (e: Exception) {
+                        println("Get bank account by personId error: ${e::class.simpleName} - ${e.message}")
+                        e.printStackTrace()
+                        call.respond(
+                            HttpStatusCode.InternalServerError,
+                            mapOf("error" to "Failed to get bank account: ${e.message}")
+                        )
+                    }
+                }
+
+                // GET /bank/accounts/{id} - получить счет по id
+                get("/accounts/{id}") {
+                    try {
+                        val id = call.parameters["id"]?.toInt()
+                        if (id == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid account ID"))
+                            return@get
+                        }
+                        val account = bankRepository.getBankAccountById(id)
+                        if (account == null) {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "Bank account not found"))
+                        } else {
+                            call.respond(HttpStatusCode.OK, account)
+                        }
+                    } catch (e: Exception) {
+                        println("Get bank account by id error: ${e::class.simpleName} - ${e.message}")
+                        e.printStackTrace()
+                        call.respond(
+                            HttpStatusCode.InternalServerError,
+                            mapOf("error" to "Failed to get bank account: ${e.message}")
+                        )
+                    }
+                }
+
+                // POST /bank/accounts - создать банковский счет
+                post("/accounts") {
+                    try {
+                        val request = call.receive<CreateBankAccountRequest>()
+
+                        if (request.personId != null && request.personId!! <= 0) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid person ID"))
+                            return@post
+                        }
+
+                        if (request.depositAmount < 0 || request.creditAmount < 0) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Amounts cannot be negative"))
+                            return@post
+                        }
+
+                        // Если это предприятие, должно быть указано название
+                        if (request.personId == null && (request.enterpriseName.isNullOrBlank())) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Enterprise name is required for enterprise accounts"))
+                            return@post
+                        }
+
+                        val account = bankRepository.createBankAccount(
+                            personId = request.personId,
+                            enterpriseName = request.enterpriseName, // НОВОЕ
+                            depositAmount = request.depositAmount,
+                            creditAmount = request.creditAmount
+                        )
+                        call.respond(HttpStatusCode.Created, account)
+                    } catch (e: IllegalStateException) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+                    } catch (e: JsonConvertException) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid JSON format: ${e.message}"))
+                    } catch (e: Exception) {
+                        println("Create bank account error: ${e::class.simpleName} - ${e.message}")
+                        e.printStackTrace()
+                        call.respond(
+                            HttpStatusCode.InternalServerError,
+                            mapOf("error" to "Failed to create bank account: ${e.message}")
+                        )
+                    }
+                }
+
+                // PUT /bank/accounts/{id} - обновить банковский счет
+                put("/accounts/{id}") {
+                    try {
+                        val id = call.parameters["id"]?.toInt()
+                        if (id == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid account ID"))
+                            return@put
+                        }
+
+                        val request = call.receive<UpdateBankAccountRequest>()
+
+                        if (request.id != id) {
+                            call.respond(
+                                HttpStatusCode.BadRequest,
+                                mapOf("error" to "Account ID in path does not match ID in request body")
+                            )
+                            return@put
+                        }
+
+                        if (request.depositAmount < 0 || request.creditAmount < 0) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Amounts cannot be negative"))
+                            return@put
+                        }
+
+                        val existingAccount = bankRepository.getBankAccountById(id)
+                        if (existingAccount == null) {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "Bank account not found"))
+                            return@put
+                        }
+
+                        val bankAccount = BankAccount(
+                            id = request.id,
+                            personId = request.personId,
+                            enterpriseName = request.enterpriseName, // НОВОЕ
+                            depositAmount = request.depositAmount,
+                            creditAmount = request.creditAmount
+                        )
+
+                        val updatedAccount = bankRepository.updateBankAccount(bankAccount)
+                        if (updatedAccount == null) {
+                            call.respond(
+                                HttpStatusCode.InternalServerError,
+                                mapOf("error" to "Failed to update bank account")
+                            )
+                        } else {
+                            call.respond(HttpStatusCode.OK, updatedAccount)
+                        }
+                    } catch (e: JsonConvertException) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid JSON format: ${e.message}"))
+                    } catch (e: Exception) {
+                        println("Update bank account error: ${e::class.simpleName} - ${e.message}")
+                        e.printStackTrace()
+                        call.respond(
+                            HttpStatusCode.InternalServerError,
+                            mapOf("error" to "Failed to update bank account: ${e.message}")
+                        )
+                    }
+                }
+
+                // DELETE /bank/accounts/{id} - удалить банковский счет
+                delete("/accounts/{id}") {
+                    try {
+                        val id = call.parameters["id"]?.toInt()
+                        if (id == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid account ID"))
+                            return@delete
+                        }
+
+                        val existingAccount = bankRepository.getBankAccountById(id)
+                        if (existingAccount == null) {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "Bank account not found"))
+                            return@delete
+                        }
+
+                        val deleted = bankRepository.deleteBankAccount(id)
+                        if (deleted) {
+                            call.respond(HttpStatusCode.OK, mapOf("message" to "Bank account deleted successfully"))
+                        } else {
+                            call.respond(
+                                HttpStatusCode.InternalServerError,
+                                mapOf("error" to "Failed to delete bank account")
+                            )
+                        }
+                    } catch (e: Exception) {
+                        println("Delete bank account error: ${e::class.simpleName} - ${e.message}")
+                        e.printStackTrace()
+                        call.respond(
+                            HttpStatusCode.InternalServerError,
+                            mapOf("error" to "Failed to delete bank account: ${e.message}")
+                        )
                     }
                 }
             }

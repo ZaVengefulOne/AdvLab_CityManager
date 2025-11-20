@@ -13,8 +13,8 @@ class ClickerViewModel(
     private val userInteractor: IUserInteractor,
     private val authManager: AuthManager
 ): BaseViewModel() {
-    private val _severiteAmount = MutableStateFlow(0)
-    val severiteAmount: StateFlow<Int> = _severiteAmount.asStateFlow()
+    private val _ebanatAmount = MutableStateFlow(0)
+    val ebanatAmount: StateFlow<Int> = _ebanatAmount.asStateFlow()
 
     private val _userId = MutableStateFlow<Int?>(null)
     val userId: StateFlow<Int?> = _userId.asStateFlow()
@@ -25,27 +25,27 @@ class ClickerViewModel(
             _userId.value = authManager.getUserId()
             val dbClicks = userInteractor.getCurrentUserClicks()
             if (dbClicks != null) {
-                _severiteAmount.value = dbClicks
+                _ebanatAmount.value = dbClicks
                 authManager.saveClicks(dbClicks)
             } else {
-                _severiteAmount.value = authManager.getClicks()
+                _ebanatAmount.value = authManager.getClicks()
             }
         }
     }
 
     fun incrementClicks() {
-        _severiteAmount.value++
+        _ebanatAmount.value++
     }
 
     fun saveClicks() {
         viewModelScope.launch {
             val userId = _userId.value
-            println("Saving clicks: userId=$userId, clicks=${_severiteAmount.value}") // Для отладки
+            println("Saving clicks: userId=$userId, clicks=${_ebanatAmount.value}") // Для отладки
             if (userId != null) {
                 try {
-                    val success = userInteractor.updateClicks(userId, _severiteAmount.value)
+                    val success = userInteractor.updateClicks(userId, _ebanatAmount.value)
                     if (success) {
-                        authManager.saveClicks(_severiteAmount.value)
+                        authManager.saveClicks(_ebanatAmount.value)
                         println("Clicks saved successfully") // Для отладки
                     } else {
                         println("Failed to save clicks") // Для отладки

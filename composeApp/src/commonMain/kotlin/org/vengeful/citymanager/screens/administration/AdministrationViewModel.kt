@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.vengeful.citymanager.base.BaseViewModel
-import org.vengeful.citymanager.data.IPersonInteractor
+import org.vengeful.citymanager.data.persons.IPersonInteractor
 import org.vengeful.citymanager.data.users.IUserInteractor
 import org.vengeful.citymanager.data.users.models.RegisterResult
 import org.vengeful.citymanager.data.users.states.RegisterUiState

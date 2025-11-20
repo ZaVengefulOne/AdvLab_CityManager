@@ -14,6 +14,7 @@ import io.ktor.server.response.respond
 import kotlinx.serialization.json.Json
 import org.vengeful.citymanager.adminPanel.configurations.configureAdminApi
 import org.vengeful.citymanager.auth.JWTConfig
+import org.vengeful.citymanager.bankService.db.BankRepository
 import org.vengeful.citymanager.configurations.configureDatabase
 import org.vengeful.citymanager.configurations.configureSerialization
 import org.vengeful.citymanager.models.Rights
@@ -67,11 +68,16 @@ fun Application.module() {
             }
         }
     }
+
     val personRepository = PersonRepository()
     val userRepository = UserRepository()
-    configureSerialization(personRepository = personRepository, userRepository = userRepository)
-    configureDatabase(repository = personRepository)
+    val bankRepository = BankRepository()
 
-//    userRepository.registerUser(username = "Admin", password =  "admin",  personId = null,rights = listOf(Rights.Joker)) // Убрать
+    configureSerialization(
+        personRepository = personRepository,
+        userRepository = userRepository,
+        bankRepository = bankRepository,
+        )
+    configureDatabase(repository = personRepository)
     configureAdminApi(repository = personRepository)
 }

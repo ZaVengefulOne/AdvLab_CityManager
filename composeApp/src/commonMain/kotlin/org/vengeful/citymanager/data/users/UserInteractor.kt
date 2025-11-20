@@ -12,11 +12,10 @@ import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
-import io.ktor.http.headers
 import io.ktor.http.isSuccess
 import org.vengeful.citymanager.SERVER_PORT
-import org.vengeful.citymanager.data.PersonInteractor.Companion.SERVER_ADDRESS
-import org.vengeful.citymanager.data.PersonInteractor.Companion.SERVER_PREFIX
+import org.vengeful.citymanager.data.persons.PersonInteractor.Companion.SERVER_ADDRESS
+import org.vengeful.citymanager.data.persons.PersonInteractor.Companion.SERVER_PREFIX
 import org.vengeful.citymanager.data.USER_AGENT
 import org.vengeful.citymanager.data.USER_AGENT_TAG
 import org.vengeful.citymanager.data.client

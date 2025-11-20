@@ -1,4 +1,4 @@
-package org.vengeful.citymanager.data
+package org.vengeful.citymanager.data.persons
 
 import org.vengeful.citymanager.models.Person
 import org.vengeful.citymanager.models.Rights

@@ -13,12 +13,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import citymanager.composeapp.generated.resources.Res
-import citymanager.composeapp.generated.resources.refresh
 import citymanager.composeapp.generated.resources.severite
 import org.jetbrains.compose.resources.painterResource
 import org.vengeful.citymanager.ROUTE_MAIN
 import org.vengeful.citymanager.di.koinViewModel
-import org.vengeful.citymanager.uikit.ColorTheme
 import org.vengeful.citymanager.uikit.composables.veng.VengBackground
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
 import org.vengeful.citymanager.utilities.LocalTheme
@@ -26,7 +24,7 @@ import org.vengeful.citymanager.utilities.LocalTheme
 @Composable
 fun ClickerScreen(navController: NavController) {
     val viewModel: ClickerViewModel = koinViewModel()
-    val clicks by viewModel.severiteAmount.collectAsState()
+    val clicks by viewModel.ebanatAmount.collectAsState()
     val theme = LocalTheme
 
     LaunchedEffect(Unit) {
@@ -51,7 +49,7 @@ fun ClickerScreen(navController: NavController) {
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "Северита добыто: $clicks",
+                text = "Северит-коинов добыто: $clicks",
                 fontSize = 24.sp,
                 modifier = Modifier.padding(bottom = 32.dp),
                 textAlign = TextAlign.Center,
@@ -67,13 +65,18 @@ fun ClickerScreen(navController: NavController) {
                         .clickable { viewModel.incrementClicks() },
                     contentAlignment = Alignment.Center
                 ) {
-                Image(
-                    painterResource(resource = Res.drawable.severite), null,
-                    modifier = Modifier
-                        .size(300.dp)
+                    Image(
+                        painterResource(resource = Res.drawable.severite), null,
+                        modifier = Modifier
+                            .size(300.dp)
                     )
                 }
-                Text("Кликни меня!", fontSize = 24.sp, textAlign = TextAlign.Center, color = Color.White)
+                Text(
+                    "Кликни на меня, чтобы добыть!",
+                    fontSize = 24.sp,
+                    textAlign = TextAlign.Center,
+                    color = Color.White
+                )
             }
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -82,7 +85,7 @@ fun ClickerScreen(navController: NavController) {
                 onClick = {
                     viewModel.saveClicks()
                     navController.navigate(ROUTE_MAIN)
-                          },
+                },
                 text = "Назад",
                 theme = theme,
                 modifier = Modifier.padding(top = 16.dp)

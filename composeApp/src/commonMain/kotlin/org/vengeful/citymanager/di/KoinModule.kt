@@ -11,12 +11,15 @@ import org.koin.core.context.GlobalContext.startKoin
 import org.koin.core.parameter.ParametersHolder
 import org.koin.core.qualifier.Qualifier
 import org.koin.dsl.module
-import org.vengeful.citymanager.data.IPersonInteractor
-import org.vengeful.citymanager.data.PersonInteractor
+import org.vengeful.citymanager.data.bank.BankInteractor
+import org.vengeful.citymanager.data.bank.IBankInteractor
+import org.vengeful.citymanager.data.persons.IPersonInteractor
+import org.vengeful.citymanager.data.persons.PersonInteractor
 import org.vengeful.citymanager.data.users.AuthManager
 import org.vengeful.citymanager.data.users.IUserInteractor
 import org.vengeful.citymanager.data.users.UserInteractor
 import org.vengeful.citymanager.screens.administration.AdministrationViewModel
+import org.vengeful.citymanager.screens.bank.BankViewModel
 import org.vengeful.citymanager.screens.clicker.ClickerViewModel
 import org.vengeful.citymanager.screens.main.MainViewModel
 import kotlin.reflect.KClass
@@ -27,10 +30,12 @@ val appModule = module {
 
     single<IPersonInteractor> { PersonInteractor(get()) }
     single<IUserInteractor> { UserInteractor(get()) }
+    single<IBankInteractor> { BankInteractor(get()) }
 
     factory { AdministrationViewModel(get(), get()) }
     factory { MainViewModel(get(), get()) }
     factory { ClickerViewModel(get(), get()) }
+    factory { BankViewModel(get(), get(), get()) }
 }
 
 fun initKoin() = startKoin {

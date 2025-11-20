@@ -1,4 +1,4 @@
-package org.vengeful.citymanager.data
+package org.vengeful.citymanager.data.persons
 
 import io.ktor.client.call.*
 import io.ktor.client.request.HttpRequestBuilder
@@ -8,16 +8,15 @@ import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
-import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.http.HttpHeaders
-import io.ktor.http.headers
 import org.vengeful.citymanager.SERVER_PORT
+import org.vengeful.citymanager.data.USER_AGENT
+import org.vengeful.citymanager.data.USER_AGENT_TAG
+import org.vengeful.citymanager.data.client
 import org.vengeful.citymanager.data.users.AuthManager
 import org.vengeful.citymanager.models.Person
 import org.vengeful.citymanager.models.Rights
-import org.vengeful.citymanager.models.users.AuthResponse
-import org.vengeful.citymanager.models.users.LoginRequest
 
 class PersonInteractor(
     private val authManager: AuthManager
@@ -27,7 +26,7 @@ class PersonInteractor(
         return try {
             val token = authManager.getToken()
             println("DEBUG: Token in getPersons: ${if (token != null) "present (${token.take(20)}...)" else "null"}")
-            val response = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/persons") { 
+            val response = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/persons") {
                 setHttpBuilder()
             }
             if (response.status.isSuccess()) {

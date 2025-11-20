@@ -26,7 +26,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import citymanager.composeapp.generated.resources.Res
 import citymanager.composeapp.generated.resources.administration_name
-import citymanager.composeapp.generated.resources.clicker
+import citymanager.composeapp.generated.resources.bank_title
+import citymanager.composeapp.generated.resources.clicker_name
 import citymanager.composeapp.generated.resources.common_library_name
 import citymanager.composeapp.generated.resources.court_name
 import citymanager.composeapp.generated.resources.login
@@ -39,9 +40,11 @@ import com.composables.icons.lucide.Library
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.MousePointerClick
 import com.composables.icons.lucide.Pen
+import com.composables.icons.lucide.PiggyBank
 import com.composables.icons.lucide.UtilityPole
 import org.jetbrains.compose.resources.stringResource
 import org.vengeful.citymanager.ROUTE_ADMINISTRATION
+import org.vengeful.citymanager.ROUTE_BANK
 import org.vengeful.citymanager.ROUTE_CLICKER
 import org.vengeful.citymanager.ROUTE_COMMON_LIBRARY
 import org.vengeful.citymanager.ROUTE_COURT
@@ -239,7 +242,7 @@ fun MainScreen(navController: NavController) {
                         content = {
                             Icon(Lucide.MousePointerClick, null, tint = colorTint)
                         },
-                        text = stringResource(Res.string.clicker),
+                        text = stringResource(Res.string.clicker_name),
                         theme = LocalTheme,
                         modifier = Modifier.size(buttonSize),
                         enabled = viewModel.hasAccessToScreen(ROUTE_CLICKER)
@@ -265,6 +268,28 @@ fun MainScreen(navController: NavController) {
                         theme = LocalTheme,
                         modifier = Modifier.size(buttonSize),
                         enabled = viewModel.hasAccessToScreen(ROUTE_MEDIC)
+                    )
+                }
+
+                // Банк
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(horizontal = defaultPadding)
+                ) {
+                    AccessIndicator(
+                        hasAccess = viewModel.hasAccessToScreen(ROUTE_BANK),
+                        theme = LocalTheme,
+                        modifier = Modifier.padding(bottom = defaultPadding)
+                    )
+                    VengButton(
+                        onClick = { navController.navigate(ROUTE_BANK) },
+                        content = {
+                            Icon(Lucide.PiggyBank, null, tint = colorTint)
+                        },
+                        text = stringResource(Res.string.bank_title),
+                        theme = LocalTheme,
+                        modifier = Modifier.size(buttonSize),
+                        enabled = viewModel.hasAccessToScreen(ROUTE_BANK)
                     )
                 }
 

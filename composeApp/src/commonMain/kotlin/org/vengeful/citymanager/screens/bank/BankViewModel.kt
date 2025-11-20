@@ -1,0 +1,113 @@
+package org.vengeful.citymanager.screens.bank
+
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import org.vengeful.citymanager.base.BaseViewModel
+import org.vengeful.citymanager.data.bank.IBankInteractor
+import org.vengeful.citymanager.data.persons.IPersonInteractor
+import org.vengeful.citymanager.data.users.IUserInteractor
+import org.vengeful.citymanager.models.BankAccount
+import org.vengeful.citymanager.models.Person
+import org.vengeful.citymanager.models.users.User
+
+class BankViewModel(
+    private val personInteractor: IPersonInteractor,
+    private val userInteractor: IUserInteractor,
+    private val bankInteractor: IBankInteractor
+) : BaseViewModel() {
+
+    private val _persons = MutableStateFlow<List<Person>>(emptyList())
+    val persons: StateFlow<List<Person>> = _persons.asStateFlow()
+
+    private val _users = MutableStateFlow<List<User>>(emptyList())
+    val users: StateFlow<List<User>> = _users.asStateFlow()
+
+    private val _bankAccounts = MutableStateFlow<List<BankAccount>>(emptyList())
+    val bankAccounts: StateFlow<List<BankAccount>> = _bankAccounts.asStateFlow()
+
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+
+    fun getPersons() {
+        viewModelScope.launch {
+            try {
+                val personsList = personInteractor.getPersons()
+                _persons.value = personsList
+            } catch (e: Exception) {
+                _errorMessage.value = e.message
+                println("Error loading persons: ${e.message}")
+            }
+        }
+    }
+
+    fun getUsers() {
+        viewModelScope.launch {
+            try {
+                val usersList = userInteractor.getAllUsers()
+                _users.value = usersList
+            } catch (e: Exception) {
+                _errorMessage.value = e.message
+                println("Error loading users: ${e.message}")
+            }
+        }
+    }
+
+    fun getBankAccounts() {
+        viewModelScope.launch {
+            try {
+                val accountsList = bankInteractor.getAllBankAccounts()
+                _bankAccounts.value = accountsList
+            } catch (e: Exception) {
+                _errorMessage.value = e.message
+                println("Error loading bank accounts: ${e.message}")
+            }
+        }
+    }
+
+    fun createBankAccount(personId: Int?, enterpriseName: String?, depositAmount: Double, creditAmount: Double) { // НОВОЕ
+        viewModelScope.launch {
+            try {
+                val account = bankInteractor.createBankAccount(personId, enterpriseName, depositAmount, creditAmount) // НОВОЕ
+                getBankAccounts()
+            } catch (e: Exception) {
+                _errorMessage.value = e.message
+                println("Error creating bank account: ${e.message}")
+            }
+        }
+    }
+
+    fun updateBankAccount(bankAccount: BankAccount) {
+        viewModelScope.launch {
+            try {
+                val success = bankInteractor.updateBankAccount(bankAccount)
+                if (success) {
+                    getBankAccounts()
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = e.message
+                println("Error updating bank account: ${e.message}")
+            }
+        }
+    }
+
+    fun deleteBankAccount(id: Int) {
+        viewModelScope.launch {
+            try {
+                val success = bankInteractor.deleteBankAccount(id)
+                if (success) {
+                    getBankAccounts() // Обновляем список
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = e.message
+                println("Error deleting bank account: ${e.message}")
+            }
+        }
+    }
+
+    fun clearError() {
+        _errorMessage.value = null
+    }
+}
