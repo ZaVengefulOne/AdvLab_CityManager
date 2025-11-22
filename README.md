@@ -1,67 +1,248 @@
-This is a Kotlin Multiplatform project targeting Android, iOS, Desktop (JVM), Server.
+# 🏙️ CityManager
 
-* [/composeApp](./composeApp/src) is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-  - [commonMain](./composeApp/src/commonMain/kotlin) is for code that’s common for all targets.
-  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-    For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-    the [iosMain](./composeApp/src/iosMain/kotlin) folder would be the right place for such calls.
-    Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./composeApp/src/jvmMain/kotlin)
-    folder is the appropriate location.
+> **Система Городского Контроля для смены "Мафия 2026" в Лаборатории Приключений**
 
-* [/iosApp](./iosApp/iosApp) contains iOS applications. Even if you’re sharing your UI with Compose Multiplatform,
-  you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
+[![MainVengefulCI](https://github.com/ZaVengefulOne/AdvLab_CityManager/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ZaVengefulOne/AdvLab_CityManager/actions/workflows/ci.yml)
+---
 
-* [/server](./server/src/main/kotlin) is for the Ktor server application.
+## 📋 Описание
 
-* [/shared](./shared/src) is for the code that will be shared between all targets in the project.
-  The most important subfolder is [commonMain](./shared/src/commonMain/kotlin). If preferred, you
-  can add code to the platform-specific folders here too.
+**CityManager** — комплексная система управления городом, разработанная для организации и контроля игрового процесса на смене "Мафия 2026". Система обеспечивает централизованное управление всеми аспектами городской жизни: от банковских операций до судебных процессов.
 
-### Build and Run Android Application
-
-To build and run the development version of the Android app, use the run configuration from the run widget
-in your IDE’s toolbar or build it directly from the terminal:
-- on macOS/Linux
-  ```shell
-  ./gradlew :composeApp:assembleDebug
-  ```
-- on Windows
-  ```shell
-  .\gradlew.bat :composeApp:assembleDebug
-  ```
-
-### Build and Run Desktop (JVM) Application
-
-To build and run the development version of the desktop app, use the run configuration from the run widget
-in your IDE’s toolbar or run it directly from the terminal:
-- on macOS/Linux
-  ```shell
-  ./gradlew :composeApp:run
-  ```
-- on Windows
-  ```shell
-  .\gradlew.bat :composeApp:run
-  ```
-
-### Build and Run Server
-
-To build and run the development version of the server, use the run configuration from the run widget
-in your IDE’s toolbar or run it directly from the terminal:
-- on macOS/Linux
-  ```shell
-  ./gradlew :server:run
-  ```
-- on Windows
-  ```shell
-  .\gradlew.bat :server:run
-  ```
-
-### Build and Run iOS Application
-
-To build and run the development version of the iOS app, use the run configuration from the run widget
-in your IDE’s toolbar or open the [/iosApp](./iosApp) directory in Xcode and run it from there.
+Проект построен на основе **Kotlin Multiplatform**, что позволяет использовать единую кодовую базу для различных платформ: Android, iOS, Desktop (JVM) и Web.
 
 ---
 
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…
+## 🛠️ Технический стек
+
+### Backend
+- **Ktor 3.3.0** — асинхронный веб-фреймворк для сервера
+- **PostgreSQL** — реляционная база данных
+- **Exposed** — ORM для работы с базой данных
+- **HikariCP** — пул соединений с БД
+- **JWT** — аутентификация и авторизация
+- **Logback** — логирование
+
+### Frontend (Mobile & Desktop)
+- **Compose Multiplatform 1.9.0** — кроссплатформенный UI фреймворк
+- **Kotlin 2.2.20** — язык программирования
+- **Koin 3.5.3** — dependency injection
+- **Ktor Client** — HTTP клиент
+- **Kotlinx Serialization** — сериализация данных
+- **Navigation Compose** — навигация между экранами
+
+### Web Admin Panel
+- **Compose for Web** — веб-интерфейс на Compose
+- **Ktor Client JS** — HTTP клиент для браузера
+
+### Инструменты качества кода
+- **ktlint 1.2.1** — линтер и форматтер кода
+- **detekt 1.23.8** — статический анализатор кода
+
+### Инфраструктура
+- **Gradle 8.14.3** — система сборки
+- **GitHub Actions** — CI/CD
+- **Docker** — контейнеризация (PostgreSQL)
+
+---
+
+## ✨ Реализованный функционал
+
+### 🔐 Аутентификация и авторизация
+- ✅ Регистрация и вход пользователей
+- ✅ JWT-токены для безопасной авторизации
+- ✅ Система прав доступа
+- ✅ Управление сессиями
+
+### 👥 Управление пользователями
+- ✅ CRUD операции с пользователями
+- ✅ Назначение и управление правами доступа
+- ✅ Просмотр списка пользователей
+- ✅ Редактирование профилей
+
+### 👤 Управление персонажами
+- ✅ Создание и редактирование персонажей
+- ✅ Привязка персонажей к пользователям
+- ✅ Управление правами персонажей
+- ✅ Детальная информация о персонажах
+
+### 🏦 Банковская система
+- ✅ Управление банковскими счетами
+- ✅ Создание и редактирование счетов
+- ✅ Просмотр балансов
+
+### 🎮 Кликер
+- ✅ Игровой модуль для набора очков
+- ✅ Система кликов пользователей
+
+### 💾 Система резервного копирования
+- ✅ Создание бэкапов игры
+- ✅ Экспорт данных в JSON
+- ✅ Импорт бэкапов
+- ✅ Полное резервное копирование всех данных
+
+### 🖥️ Административная панель (Web)
+- ✅ Веб-интерфейс для администраторов
+- ✅ Мониторинг сервера
+- ✅ Просмотр логов запросов
+- ✅ Статистика сервера
+- ✅ Управление бэкапами через веб-интерфейс
+
+---
+
+## 🚀 Планируемый функционал
+
+### 🚔 Полиция
+- ✅ Интерфейс для работы полиции
+- ✅ Управление правонарушениями
+- ✅ Контроль правопорядка
+
+### 🏥 Медицина
+- ✅ Интерфейс для медицинских работников
+- ✅ Учет медицинских услуг
+- ✅ Управление здоровьем персонажей
+
+### ⚖️ Суд
+- ✅ Судебные процессы
+- ✅ Управление делами
+- ✅ Вынесение решений
+
+### 📚 Общая библиотека
+- ✅ Просмотр общей информации
+- ✅ Справочные материалы
+
+---
+
+## 📦 Структура проекта
+
+CityManager/
+
+├── composeApp/ # Мобильное и десктопное приложение 
+
+│ ├── androidMain/ # Android-специфичный код 
+
+│ ├── iosMain/ # iOS-специфичный код 
+
+│ ├── jvmMain/ # Desktop (JVM) код 
+
+│ └── commonMain/ # Общий код для всех платформ 
+
+├── server/ # Ktor сервер 
+
+│ └── src/main/kotlin/ 
+
+├── shared/ # Общие модели и утилиты 
+
+│ └── src/commonMain/ 
+
+├── adminPanel/ # Веб-админ панель 
+
+│ └── src/jsMain/ 
+
+└── config/ # Конфигурационные файлы 
+
+└── detekt/ # Конфигурация detekt 
+
+---
+
+## 🏃 Быстрый старт
+
+### Предварительные требования
+
+- **JDK 17** или выше
+- **Gradle 8.14.3**
+- **PostgreSQL 14+** (или Docker)
+- **Android SDK** (для сборки Android приложения)
+
+### Установка и запуск
+
+1. **Клонируйте репозиторий:**
+   `git clone https://github.com/ZaVengefulOne/AdvLab_CityManager.git
+   cd CityManager`
+   
+3. **Настройте базу данных:**
+   
+   Используя Docker:
+   
+   `cd postgres
+   docker-compose up -d`
+      
+   Или настройте PostgreSQL вручную и создайте базу данных.
+
+4. **Настройте конфигурацию сервера:**
+   
+   Создайте файл `server/src/main/resources/application.conf` с настройками подключения к БД.
+
+5. **Запустите сервер:**
+  `./gradlew :server:run`
+   
+6. **Запустите приложение:**
+   
+   **Android:**
+   `./gradlew :composeApp:assembleDebug`
+
+   **Desktop (JVM):**
+   `./gradlew :composeApp:run`
+
+   **Web (Админ-панель)**
+   `./gradlew :adminPanel:jsBrowserDevelopmentWebpack`
+  
+---
+
+# 🧪 Разработка
+
+## Запуск тестов
+`./gradlew test `
+
+# Проверка стиля кода
+`./gradlew ktlintCheck`
+
+# Автоформатирование
+`./gradlew ktlintFormat`
+
+# Статический анализ
+`./gradlew detekt`
+
+# Сборка проекта
+`./gradlew build`
+
+## 📝 Контрибьютинг
+
+Я поддерживаю любые вклады в развитие проекта! Пожалуйста:
+
+1. Создайте форк проекта
+2. Создайте ветку для новой функции (`git checkout -b feature/AmazingFeature`)
+3. Закоммитьте изменения (`git commit -m 'Add some AmazingFeature'`)
+4. Запушьте в ветку (`git push origin feature/AmazingFeature`)
+5. Откройте Pull Request
+
+Перед отправкой PR убедитесь, что:
+- ✅ Код проходит проверки `ktlint` и `detekt`
+- ✅ Все тесты (когда они появятся) проходят успешно
+- ✅ Код соответствует стилю проекта
+
+---
+
+## 📄 Лицензия
+
+Этот проект разработан для внутреннего использования в Лаборатории Приключений.
+
+---
+
+## 👥 Авторы
+
+- **Vengeful** — разработка и поддержка
+
+---
+
+## 📞 Контакты
+
+По вопросам и предложениям создавайте Issues в репозитории или пишите в телегу `@The_VengefulOne`.
+
+---
+
+<div align="center">
+
+**Сделано с ❤️ для Лаборатории Приключений**
+
+</div>
