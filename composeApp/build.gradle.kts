@@ -32,6 +32,11 @@ kotlin {
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
+            implementation("io.ktor:ktor-client-core:3.3.0")
+            implementation("io.ktor:ktor-client-cio:3.3.0")
+            implementation("io.ktor:ktor-client-content-negotiation:3.3.0")
+            implementation("io.ktor:ktor-serialization-kotlinx-json:3.3.0")
+
         }
         commonMain.dependencies {
             // Core
@@ -59,7 +64,6 @@ kotlin {
             implementation("io.ktor:ktor-client-json:3.3.0")
             implementation("io.ktor:ktor-client-serialization:3.3.0")
             implementation("io.ktor:ktor-client-content-negotiation:3.3.0")
-            implementation("io.ktor:ktor-client-jetty-jakarta:3.3.0")
             implementation("io.ktor:ktor-client-cio:3.3.0")
 
             // Serialization
