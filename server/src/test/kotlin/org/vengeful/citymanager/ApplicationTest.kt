@@ -15,6 +15,6 @@ class ApplicationTest {
         }
         val response = client.get("/")
         assertEquals(HttpStatusCode.OK, response.status)
-        assertEquals("Ktor: ${Greeting().greet()}", response.bodyAsText())
+        assertEquals("Vengeful Server: ${Greeting().greet()}", response.bodyAsText())
     }
 }
