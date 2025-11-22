@@ -35,6 +35,7 @@ import citymanager.composeapp.generated.resources.logout
 import citymanager.composeapp.generated.resources.medic_name
 import citymanager.composeapp.generated.resources.police_name
 import citymanager.composeapp.generated.resources.welcome_message
+import com.composables.icons.lucide.Download
 import com.composables.icons.lucide.Heart
 import com.composables.icons.lucide.Library
 import com.composables.icons.lucide.Lucide
@@ -44,6 +45,7 @@ import com.composables.icons.lucide.PiggyBank
 import com.composables.icons.lucide.UtilityPole
 import org.jetbrains.compose.resources.stringResource
 import org.vengeful.citymanager.ROUTE_ADMINISTRATION
+import org.vengeful.citymanager.ROUTE_BACKUP
 import org.vengeful.citymanager.ROUTE_BANK
 import org.vengeful.citymanager.ROUTE_CLICKER
 import org.vengeful.citymanager.ROUTE_COMMON_LIBRARY
@@ -313,6 +315,29 @@ fun MainScreen(navController: NavController) {
                         modifier = Modifier.size(buttonSize),
                         enabled = viewModel.hasAccessToScreen(ROUTE_POLICE)
                     )
+                }
+
+                if (viewModel.hasAccessToScreen(ROUTE_BACKUP)) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(horizontal = defaultPadding)
+                    ) {
+                        AccessIndicator(
+                            hasAccess = viewModel.hasAccessToScreen(ROUTE_BACKUP),
+                            theme = LocalTheme,
+                            modifier = Modifier.padding(bottom = defaultPadding)
+                        )
+                        VengButton(
+                            onClick = { navController.navigate(ROUTE_BACKUP) },
+                            content = {
+                                Icon(Lucide.Download, null, tint = colorTint)
+                            },
+                            text = "Бэкап",
+                            theme = LocalTheme,
+                            modifier = Modifier.size(buttonSize),
+                            enabled = viewModel.hasAccessToScreen(ROUTE_BACKUP)
+                        )
+                    }
                 }
             }
         }

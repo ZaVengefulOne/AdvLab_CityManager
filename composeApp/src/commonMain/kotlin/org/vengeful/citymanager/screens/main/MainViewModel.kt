@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.vengeful.citymanager.ROUTE_ADMINISTRATION
+import org.vengeful.citymanager.ROUTE_BACKUP
 import org.vengeful.citymanager.ROUTE_BANK
 import org.vengeful.citymanager.ROUTE_COMMON_LIBRARY
 import org.vengeful.citymanager.ROUTE_COURT
@@ -101,6 +102,7 @@ class MainViewModel(
             ROUTE_MEDIC -> userRights.contains(Rights.Medic)
             ROUTE_POLICE -> userRights.contains(Rights.Police)
             ROUTE_BANK -> userRights.contains(Rights.Bank)
+            ROUTE_BACKUP -> userRights.contains(Rights.Joker)
             ROUTE_CLICKER -> userRights.contains(Rights.Any) && isLogged
             else -> false
         }

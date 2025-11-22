@@ -25,6 +25,8 @@ exposed = "0.61.0"
 logback = "1.5.18"
 postgresql = "42.6.0"
 webCore = "1.9.1"
+ktlint = "1.2.1"
+detekt = "1.24.0"
 
 [libraries]
 exposed-core-v0440 = { module = "org.jetbrains.exposed:exposed-core", version.ref = "exposedCore" }
@@ -69,6 +71,8 @@ kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 ktor = { id = "io.ktor.plugin", version.ref = "ktor" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin-plugin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version = "14.0.1" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version = "1.23.8" }
 
 
 

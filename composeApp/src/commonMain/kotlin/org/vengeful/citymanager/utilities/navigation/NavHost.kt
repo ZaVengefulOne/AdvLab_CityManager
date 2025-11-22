@@ -5,6 +5,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import org.vengeful.citymanager.ROUTE_ADMINISTRATION
+import org.vengeful.citymanager.ROUTE_BACKUP
 import org.vengeful.citymanager.ROUTE_BANK
 import org.vengeful.citymanager.ROUTE_CLICKER
 import org.vengeful.citymanager.ROUTE_COMMON_LIBRARY
@@ -13,6 +14,7 @@ import org.vengeful.citymanager.ROUTE_MAIN
 import org.vengeful.citymanager.ROUTE_MEDIC
 import org.vengeful.citymanager.ROUTE_POLICE
 import org.vengeful.citymanager.screens.administration.AdministrationScreen
+import org.vengeful.citymanager.screens.backup.BackupScreen
 import org.vengeful.citymanager.screens.bank.BankScreen
 import org.vengeful.citymanager.screens.clicker.ClickerScreen
 import org.vengeful.citymanager.screens.commonLibrary.CommonLibraryScreen
@@ -53,6 +55,9 @@ fun Host() {
         }
         composable(route = ROUTE_COURT) {
             CourtScreen()
+        }
+        composable(route = ROUTE_BACKUP) {
+            BackupScreen(navController = navController)
         }
     }
 }

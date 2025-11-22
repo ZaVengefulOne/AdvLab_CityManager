@@ -27,8 +27,10 @@ import org.vengeful.citymanager.personService.IPersonRepository
 import java.util.Date
 import io.ktor.server.request.contentType
 import io.ktor.server.routing.put
+import org.vengeful.citymanager.backupService.BackupService
 import org.vengeful.citymanager.bankService.IBankRepository
 import org.vengeful.citymanager.models.BankAccount
+import org.vengeful.citymanager.models.backup.MasterBackup
 import org.vengeful.citymanager.models.users.CreateBankAccountRequest
 import org.vengeful.citymanager.models.users.RegisterRequest
 import org.vengeful.citymanager.models.users.RegisterResponse
@@ -667,6 +669,106 @@ fun Application.configureSerialization(
                     }
                 }
             }
+
+            route("/backup") {
+                // Проверка прав Joker
+                fun checkJokerAccess(call: ApplicationCall, userRepository: IUserRepository): Boolean {
+                    val currentUser = getCurrentUser(call, userRepository)
+                    return currentUser?.rights?.contains(Rights.Joker) == true
+                }
+
+                // GET /backup/game?format=html - получить игровой бэкап в формате HTML
+                get("/game") {
+                    try {
+                        if (!checkJokerAccess(call, userRepository)) {
+                            call.respond(HttpStatusCode.Forbidden, mapOf("error" to "Access denied. You have no rights!"))
+                            return@get
+                        }
+
+                        val format = call.request.queryParameters["format"] ?: "html"
+                        val backupService = BackupService(personRepository, userRepository, bankRepository)
+
+                        when (format.lowercase()) {
+                            "html" -> {
+                                val html = backupService.createGameBackupHtml()
+                                call.response.headers.append("Content-Type", "text/html; charset=UTF-8")
+                                call.respondText(html, contentType = io.ktor.http.ContentType.Text.Html)
+                            }
+                            "markdown" -> {
+                                val markdown = backupService.createGameBackupMarkdown()
+                                call.response.headers.append("Content-Type", "text/markdown; charset=UTF-8")
+                                call.respondText(markdown, contentType = io.ktor.http.ContentType.Text.Plain)
+                            }
+                            else -> {
+                                call.respond(
+                                    HttpStatusCode.BadRequest,
+                                    mapOf("error" to "Invalid format. Use 'html' or 'markdown'")
+                                )
+                            }
+                        }
+                    } catch (e: Exception) {
+                        println("Get game backup error: ${e::class.simpleName} - ${e.message}")
+                        e.printStackTrace()
+                        call.respond(
+                            HttpStatusCode.InternalServerError,
+                            mapOf("error" to "Failed to create game backup: ${e.message}")
+                        )
+                    }
+                }
+
+                // GET /backup/master - получить мастерский бэкап (JSON)
+                get("/master") {
+                    try {
+                        if (!checkJokerAccess(call, userRepository)) {
+                            call.respond(HttpStatusCode.Forbidden, mapOf("error" to "Access denied. You have no rights!"))
+                            return@get
+                        }
+
+                        val backupService = BackupService(personRepository, userRepository, bankRepository)
+                        val masterBackup = backupService.createMasterBackup()
+                        call.respond(HttpStatusCode.OK, masterBackup)
+                    } catch (e: Exception) {
+                        println("Get master backup error: ${e::class.simpleName} - ${e.message}")
+                        e.printStackTrace()
+                        call.respond(
+                            HttpStatusCode.InternalServerError,
+                            mapOf("error" to "Failed to create master backup: ${e.message}")
+                        )
+                    }
+                }
+
+                // POST /backup/restore - загрузить и восстановить мастерский бэкап
+                post("/restore") {
+                    try {
+                        if (!checkJokerAccess(call, userRepository)) {
+                            call.respond(HttpStatusCode.Forbidden, mapOf("error" to "Access denied. You have no rights!"))
+                            return@post
+                        }
+
+                        val masterBackup = call.receive<MasterBackup>()
+                        val backupService = BackupService(personRepository, userRepository, bankRepository)
+
+                        backupService.restoreFromMasterBackup(masterBackup)
+
+                        call.respond(
+                            HttpStatusCode.OK,
+                            mapOf("message" to "Database restored successfully from master backup")
+                        )
+                    } catch (e: JsonConvertException) {
+                        call.respond(
+                            HttpStatusCode.BadRequest,
+                            mapOf("error" to "Invalid JSON format: ${e.message}")
+                        )
+                    } catch (e: Exception) {
+                        println("Restore backup error: ${e::class.simpleName} - ${e.message}")
+                        e.printStackTrace()
+                        call.respond(
+                            HttpStatusCode.InternalServerError,
+                            mapOf("error" to "Failed to restore backup: ${e.message}")
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -678,7 +780,6 @@ private fun Application.generateJwtToken(user: User): String {
     val jwtSecret = environment.config.property("jwt.secret").getString()
     val expirationTime = environment.config.property("jwt.expiration_time").getString().toLong()
 
-    // Преобразуем List<Rights> в List<String>
     val rightsAsStrings = user.rights.map { it.name }
 
     return JWT.create()
@@ -686,7 +787,7 @@ private fun Application.generateJwtToken(user: User): String {
         .withIssuer(jwtIssuer)
         .withClaim("userId", user.id)
         .withClaim("username", user.username)
-        .withClaim("rights", rightsAsStrings) // Теперь List<String>
+        .withClaim("rights", rightsAsStrings)
         .withExpiresAt(Date(System.currentTimeMillis() + expirationTime * 1000))
         .sign(Algorithm.HMAC256(jwtSecret))
 }

@@ -1,6 +1,7 @@
 package org.vengeful.cityManager
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -9,29 +10,185 @@ import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.dom.*
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
+import org.jetbrains.compose.web.attributes.InputType
 import org.vengeful.cityManager.models.RequestLog
 import org.vengeful.cityManager.models.ServerStats
+import org.vengeful.citymanager.models.backup.MasterBackup
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
+@OptIn(ExperimentalTime::class)
 @Composable
 fun AdminApp() {
-    val apiClient = ApiClient()
-    val coroutineScope = MainScope()
+    val authManager = AuthManager()
 
+    val coroutineScope = MainScope()
+    var isLoggedIn by mutableStateOf(authManager.isLoggedIn())
+    var showLoginDialog by mutableStateOf(!authManager.isLoggedIn())
+
+    val onUnauthorized = {
+        isLoggedIn = false
+        showLoginDialog = true
+        window.alert("Сессия истекла. Пожалуйста, войдите снова.")
+    }
+
+    val apiClient = ApiClient(authManager, onUnauthorized)
     // Состояния
+
+    var loginUsername by mutableStateOf("")
+    var loginPassword by mutableStateOf("")
+    var loginError by mutableStateOf<String?>(null)
+    var isLoggingIn by mutableStateOf(false)
+
     var serverStats by mutableStateOf(ServerStats(0, 0, "00:00:00", "0 MB"))
     var requestLogs by mutableStateOf(emptyList<RequestLog>())
+    var showBackupDialog by mutableStateOf(false)
+    var backupData by mutableStateOf<String?>(null)
+    var isBackupLoading by mutableStateOf(false)
     var isLoading by mutableStateOf(false)
 
-    // Загрузка данных при старте
-    coroutineScope.launch {
-        isLoading = true
-        try {
-            serverStats = apiClient.getServerStats()
-            requestLogs = apiClient.getRequestLogs()
-        } catch (e: Exception) {
-            window.alert("Ошибка подключения к серверу: ${e.message}")
+    // Загрузка данных при старте (только если залогинен)
+    if (isLoggedIn) {
+        LaunchedEffect(Unit) {
+            isLoading = true
+            try {
+                serverStats = apiClient.getServerStats()
+                requestLogs = apiClient.getRequestLogs()
+            } catch (e: Exception) {
+                window.alert("Ошибка подключения к серверу: ${e.message}")
+            }
+            isLoading = false
         }
-        isLoading = false
+    }
+
+    // Форма входа
+    if (showLoginDialog) {
+        Div({
+            style {
+                top(0.px)
+                left(0.px)
+                width(100.percent)
+                height(100.percent)
+                backgroundColor(Color("rgba(0, 0, 0, 0.9)"))
+                display(DisplayStyle.Flex)
+                alignItems(AlignItems.Center)
+                justifyContent(JustifyContent.Center)
+            }
+        }) {
+            Div({
+                style {
+                    backgroundColor(Color("#2C3E50"))
+                    border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                    borderRadius(8.px)
+                    padding(40.px)
+                    maxWidth(400.px)
+                    width(90.percent)
+                }
+            }) {
+                H2({
+                    style {
+                        marginTop(0.px)
+                        marginBottom(24.px)
+                        color(Color("#FFFFFF"))
+                        textAlign("center")
+                    }
+                }) {
+                    Text("🔐 Вход в админ-панель")
+                }
+
+                if (loginError != null) {
+                    P({
+                        style {
+                            color(Color("#E74C3C"))
+                            marginBottom(16.px)
+                            fontSize(14.px)
+                        }
+                    }) {
+                        Text(loginError ?: "")
+                    }
+                }
+
+                Input(InputType.Text, {
+                    style {
+                        width(100.percent)
+                        padding(12.px)
+                        marginBottom(16.px)
+                        backgroundColor(Color("#1A2530"))
+                        color(Color("#4A90E2"))
+                        border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                        borderRadius(4.px)
+                        fontFamily("'Courier New', monospace")
+                        fontSize(14.px)
+                    }
+                    attr("placeholder", "Имя пользователя")
+                    value(loginUsername)
+                    onInput { event ->
+                        val target = event.target
+                        loginUsername = target.value
+                    }
+                })
+
+                Input(InputType.Password, {
+                    style {
+                        width(100.percent)
+                        padding(12.px)
+                        marginBottom(24.px)
+                        backgroundColor(Color("#1A2530"))
+                        color(Color("#4A90E2"))
+                        border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                        borderRadius(4.px)
+                        fontFamily("'Courier New', monospace")
+                        fontSize(14.px)
+                    }
+                    attr("placeholder", "Пароль")
+                    value(loginPassword)
+                    onInput { event ->
+                        val target = event.target
+                        loginPassword = target.value
+                    }
+                })
+
+                Button({
+                    style {
+                        width(100.percent)
+                        backgroundColor(if (isLoggingIn || loginUsername.isBlank() || loginPassword.isBlank()) Color("#7F8C8D") else Color("#4A90E2"))
+                        color(Color("#FFFFFF"))
+                        borderWidth(0.px)
+                        padding(12.px, 24.px)
+                        borderRadius(4.px)
+                        fontFamily("'Courier New', monospace")
+                        fontWeight("bold")
+                        cursor(if (isLoggingIn || loginUsername.isBlank() || loginPassword.isBlank()) "not-allowed" else "pointer")
+                        fontSize(14.px)
+                    }
+                    onClick {
+                        if (!isLoggingIn && loginUsername.isNotBlank() && loginPassword.isNotBlank()) {
+                            coroutineScope.launch {
+                                isLoggingIn = true
+                                loginError = null
+                                try {
+                                    apiClient.login(loginUsername, loginPassword)
+                                    isLoggedIn = true
+                                    showLoginDialog = false
+                                    loginUsername = ""
+                                    loginPassword = ""
+                                } catch (e: Exception) {
+                                    loginError = "Ошибка входа: ${e.message}"
+                                }
+                                isLoggingIn = false
+                            }
+                        }
+                    }
+                }) {
+                    Text(if (isLoggingIn) "⏳ Вход..." else "Войти")
+                }
+            }
+        }
+    }
+
+    if (!isLoggedIn) {
+        return
     }
 
     Div({
@@ -45,7 +202,7 @@ fun AdminApp() {
             property("margin", "0 auto")
         }
     }) {
-        // Заголовок
+        // Заголовок с кнопкой выхода
         Div({
             style {
                 backgroundColor(Color("#34495E"))
@@ -53,27 +210,65 @@ fun AdminApp() {
                 borderRadius(8.px)
                 padding(20.px)
                 marginBottom(16.px)
-//                boxShadow(0.px, 4.px, 6.px, Color("rgba(0, 0, 0, 0.3)"))
+                display(DisplayStyle.Flex)
+                justifyContent(JustifyContent.SpaceBetween)
+                alignItems(AlignItems.Center)
+                flexWrap(FlexWrap("wrap"))
             }
         }) {
-            H1({
+            Div({
                 style {
-                    marginTop(0.px)
-                    textAlign("center")
-                    fontSize(24.px)
-                    fontWeight("bold")
+                    flex(1)
+                    minWidth(0.px)
                 }
             }) {
-                Text("⚙️ АДМИНИСТРИРОВАНИЕ СИСТЕМЫ ГОСУДАРСТВЕННОГО УПРАВЛЕНИЯ")
+                H1({
+                    style {
+                        marginTop(0.px)
+                        marginBottom(8.px)
+                        fontSize(24.px)
+                        fontWeight("bold")
+                        textAlign("center")
+                    }
+                }) {
+                    Text("⚙️ АДМИНИСТРИРОВАНИЕ СИСТЕМЫ ГОСУДАРСТВЕННОГО КОНТРОЛЯ")
+                }
+                P({
+                    style {
+                        textAlign("center")
+                        marginTop(8.px)
+                        marginBottom(0.px)
+                    }
+                }) {
+                    Text("Панель мониторинга и управления базой данных")
+                }
             }
-            P({
+
+            Button({
                 style {
-                    textAlign("center")
-                    marginTop(8.px)
-                    marginBottom(0.px)
+                    backgroundColor(Color("#E74C3C"))
+                    color(Color("#FFFFFF"))
+                    borderWidth(0.px)
+                    padding(10.px, 20.px)
+                    borderRadius(4.px)
+                    fontFamily("'Courier New', monospace")
+                    fontWeight("bold")
+                    cursor("pointer")
+                    fontSize(14.px)
+                    marginLeft(16.px)
+                    whiteSpace("nowrap")
+                }
+                onClick {
+                    authManager.clearToken()
+                    isLoggedIn = false
+                    showLoginDialog = true
+                    // Очистка данных при выходе
+                    serverStats = ServerStats(0, 0, "00:00:00", "0 MB")
+                    requestLogs = emptyList()
+                    backupData = null
                 }
             }) {
-                Text("Панель мониторинга и управления базой данных")
+                Text("🚪 Выход")
             }
         }
 
@@ -222,7 +417,6 @@ fun AdminApp() {
                 }
             }
 
-            // Управление
             Div({
                 style {
                     backgroundColor(Color("#34495E"))
@@ -239,7 +433,7 @@ fun AdminApp() {
                         fontSize(18.px)
                     }
                 }) {
-                    Text("🛠️ УПРАВЛЕНИЕ СИСТЕМОЙ")
+                    Text("💾 МАСТЕРСКИЕ БЭКАПЫ БАЗЫ ДАННЫХ")
                 }
 
                 Div({
@@ -251,7 +445,7 @@ fun AdminApp() {
                 }) {
                     Button({
                         style {
-                            backgroundColor(Color("#4A90E2"))
+                            backgroundColor(Color("#27AE60"))
                             color(Color("#FFFFFF"))
                             borderWidth(0.px)
                             padding(12.px, 24.px)
@@ -263,29 +457,37 @@ fun AdminApp() {
                         }
                         onClick {
                             coroutineScope.launch {
+                                isBackupLoading = true
                                 try {
-                                    val data = apiClient.exportData()
+                                    val backup = apiClient.getMasterBackup()
+                                    val jsonString = Json.encodeToString(backup)
+                                    backupData = jsonString
 
-                                    // Простой способ через window.open для JSON данных
-                                    val jsonBlob = js("new Blob([data], { type: 'application/json' })")
-                                    val jsonUrl = js("URL.createObjectURL(jsonBlob)")
-                                    js("window.open(jsonUrl, '_blank')")
+                                    // Скачать файл
+                                    val blob = js("new Blob([jsonString], { type: 'application/json' })")
+                                    val url = js("URL.createObjectURL(blob)")
+                                    val link = js("document.createElement('a')")
+                                    link.href = url
+                                    link.download = "master_backup_${Clock.System.now().toEpochMilliseconds()}.json"
+                                    js("document.body.appendChild(link)")
+                                    link.click()
+                                    js("document.body.removeChild(link)")
+                                    js("URL.revokeObjectURL(url)")
 
-                                    // Или альтернатива - показать данные в alert для копирования
-                                    // window.alert("Данные для копирования:\\n\\n$data")
-
+                                    window.alert("✅ Мастерский бэкап успешно создан и скачан!")
                                 } catch (e: Exception) {
-                                    window.alert("Ошибка при экспорте данных: ${e.message}")
+                                    window.alert("❌ Ошибка при создании бэкапа: ${e.message}")
                                 }
+                                isBackupLoading = false
                             }
                         }
                     }) {
-                        Text("💾 Экспорт данных")
+                        Text(if (isBackupLoading) "⏳ Создание..." else "📥 Создать и скачать мастерский бэкап")
                     }
 
                     Button({
                         style {
-                            backgroundColor(Color("#4A90E2"))
+                            backgroundColor(Color("#E74C3C"))
                             color(Color("#FFFFFF"))
                             borderWidth(0.px)
                             padding(12.px, 24.px)
@@ -296,13 +498,138 @@ fun AdminApp() {
                             fontSize(14.px)
                         }
                         onClick {
-                            coroutineScope.launch {
-                                serverStats = apiClient.getServerStats()
-                                requestLogs = apiClient.getRequestLogs()
-                            }
+                            showBackupDialog = true
                         }
                     }) {
-                        Text("🔄 Обновить данные")
+                        Text("📤 Загрузить и восстановить бэкап")
+                    }
+                }
+
+                if (showBackupDialog) {
+                    Div({
+                        style {
+                            top(0.px)
+                            left(0.px)
+                            width(100.percent)
+                            height(100.percent)
+                            backgroundColor(Color("rgba(0, 0, 0, 0.8)"))
+                            display(DisplayStyle.Flex)
+                            alignItems(AlignItems.Center)
+                            justifyContent(JustifyContent.Center)
+                        }
+                    }) {
+                        Div({
+                            style {
+                                backgroundColor(Color("#2C3E50"))
+                                border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                                borderRadius(8.px)
+                                padding(30.px)
+                                maxWidth(600.px)
+                                width(90.percent)
+                            }
+                        }) {
+                            H3({
+                                style {
+                                    marginTop(0.px)
+                                    marginBottom(16.px)
+                                    color(Color("#FFFFFF"))
+                                }
+                            }) {
+                                Text("📤 Восстановление из мастерского бэкапа")
+                            }
+
+                            P({
+                                style {
+                                    color(Color("#E74C3C"))
+                                    marginBottom(16.px)
+                                }
+                            }) {
+                                Text("⚠️ ВНИМАНИЕ: Это действие полностью очистит базу данных и восстановит данные из бэкапа!")
+                            }
+
+                            TextArea(
+                                attrs = {
+                                    style {
+                                        width(100.percent)
+                                        minHeight(300.px)
+                                        padding(12.px)
+                                        backgroundColor(Color("#1A2530"))
+                                        color(Color("#4A90E2"))
+                                        border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                                        borderRadius(4.px)
+                                        fontFamily("'Courier New', monospace")
+                                        fontSize(12.px)
+                                    }
+                                    attr("placeholder", "Вставьте JSON содержимое мастерского бэкапа здесь...")
+                                    value(backupData ?: "")
+                                    onInput { event ->
+                                        val target = event.target
+                                        backupData = target.value
+                                    }
+                                }
+                            )
+
+                            Div({
+                                style {
+                                    display(DisplayStyle.Flex)
+                                    gap(12.px)
+                                    marginTop(16.px)
+                                    justifyContent(JustifyContent.FlexEnd)
+                                }
+                            }) {
+                                Button({
+                                    style {
+                                        backgroundColor(Color("#7F8C8D"))
+                                        color(Color("#FFFFFF"))
+                                        borderWidth(0.px)
+                                        padding(8.px, 16.px)
+                                        borderRadius(4.px)
+                                        fontFamily("'Courier New', monospace")
+                                        cursor("pointer")
+                                    }
+                                    onClick {
+                                        showBackupDialog = false
+                                        backupData = null
+                                    }
+                                }) {
+                                    Text("Отмена")
+                                }
+
+                                Button({
+                                    style {
+                                        backgroundColor(Color("#E74C3C"))
+                                        color(Color("#FFFFFF"))
+                                        borderWidth(0.px)
+                                        padding(8.px, 16.px)
+                                        borderRadius(4.px)
+                                        fontFamily("'Courier New', monospace")
+                                        fontWeight("bold")
+                                        cursor("pointer")
+                                    }
+                                    onClick {
+                                        coroutineScope.launch {
+                                            try {
+                                                val jsonString = backupData ?: return@launch
+                                                val backup = Json.decodeFromString<MasterBackup>(jsonString)
+
+                                                if (window.confirm("Вы уверены? Это действие полностью очистит базу данных!")) {
+                                                    apiClient.restoreMasterBackup(backup)
+                                                    window.alert("✅ База данных успешно восстановлена из бэкапа!")
+                                                    showBackupDialog = false
+                                                    backupData = null
+                                                    // Обновить данные
+                                                    serverStats = apiClient.getServerStats()
+                                                }
+                                            } catch (e: Exception) {
+                                                window.alert("❌ Ошибка при восстановлении: ${e.message}")
+                                            }
+                                        }
+                                    }
+                                }) {
+                                    Text("Восстановить")
+                                }
+                            }
+                        }
                     }
                 }
             }
