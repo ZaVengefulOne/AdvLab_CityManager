@@ -1,4 +1,3 @@
-import org.gradle.kotlin.dsl.implementation
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -13,7 +12,7 @@ kotlin {
             jvmTarget.set(JvmTarget.JVM_11)
         }
     }
-    
+
     iosArm64()
     iosSimulatorArm64()
     js(IR) {
@@ -21,7 +20,7 @@ kotlin {
         // binaries.executable()
     }
     jvm()
-    
+
     sourceSets {
         commonMain.dependencies {
             implementation(libs.ktor.serialization.kotlinx.json)
@@ -32,9 +31,9 @@ kotlin {
         }
         val jsMain by getting {
             dependencies {
-                implementation("io.ktor:ktor-client-js:2.3.10")
-                implementation("io.ktor:ktor-client-content-negotiation:2.3.10")
-                implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.10")
+                implementation("io.ktor:ktor-client-js:3.3.0")
+                implementation("io.ktor:ktor-client-content-negotiation:3.3.0")
+                implementation("io.ktor:ktor-serialization-kotlinx-json:3.3.0")
             }
         }
     }
