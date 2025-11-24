@@ -8,7 +8,6 @@ enum class Rights {
     Medic,
     Court,
     Administration,
-    Club,
     Bank,
     Any,
     Joker
