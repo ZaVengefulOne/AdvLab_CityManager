@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import org.vengeful.citymanager.uikit.ColorTheme
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
+import org.vengeful.citymanager.uikit.composables.veng.VengText
 
 @Composable
 fun ThemeSwitcher(
@@ -79,7 +80,7 @@ fun ThemeSwitcher(
                                     )
                             )
 
-                            Text(
+                            VengText(
                                 text = when (theme) {
                                     ColorTheme.GOLDEN -> "🎩 Золотая"
                                     ColorTheme.SEVERITE -> "🏔️ Северная"

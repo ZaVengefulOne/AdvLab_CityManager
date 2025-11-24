@@ -28,8 +28,8 @@ import org.jetbrains.compose.resources.stringResource
 import org.vengeful.citymanager.BUILD_VERSION
 import org.vengeful.citymanager.uikit.ColorTheme
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
-import kotlin.math.cos
-import kotlin.math.sin
+import org.vengeful.citymanager.uikit.composables.veng.VengText
+
 
 @Composable
 fun ShutdownAnimation(
@@ -82,14 +82,14 @@ fun ShutdownAnimation(
                     .border(3.dp, Color.White, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
+                VengText(
                     text = "⏻",
                     fontSize = 32.sp,
                     color = Color.White
                 )
             }
 
-            Text(
+            VengText(
                 text = "СИСТЕМА ОТКЛЮЧАЕТСЯ",
                 color = Color.White,
                 fontSize = 24.sp,
@@ -103,7 +103,7 @@ fun ShutdownAnimation(
                 color = colors.borderLight
             )
 
-            Text(
+            VengText(
                 text = stringResource(Res.string.app_name, BUILD_VERSION),
                 color = colors.borderLight.copy(alpha = 0.7f),
                 fontSize = 12.sp,

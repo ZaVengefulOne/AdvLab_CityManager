@@ -29,7 +29,7 @@ fun VengRightsMultiSelect(
     onRightsSelected: (Set<Rights>) -> Unit
 ) {
     Column {
-        Text(
+        VengText(
             text = "ПРАВА ДОСТУПА:",
             color = Color(0xFFD4AF37),
             fontSize = 12.sp,
@@ -68,7 +68,7 @@ fun VengRightsMultiSelect(
                             )
                     )
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text(
+                    VengText(
                         text = right.name,
                         color = Color(0xFFE8D9B5),
                         fontSize = 14.sp

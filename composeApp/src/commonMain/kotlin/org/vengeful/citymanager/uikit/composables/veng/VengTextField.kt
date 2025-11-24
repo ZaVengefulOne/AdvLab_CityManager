@@ -64,7 +64,7 @@ fun VengTextField(
     ) {
         Column {
             if (label.isNotEmpty()) {
-                Text(
+                VengText(
                     text = label,
                     color = colors.label,
                     fontSize = 12.sp,
@@ -86,7 +86,7 @@ fun VengTextField(
                 decorationBox = { innerTextField ->
                     Box {
                         if (value.isEmpty() && placeholder.isNotEmpty()) {
-                            Text(
+                            VengText(
                                 text = placeholder,
                                 color = colors.placeholder,
                                 fontSize = 16.sp

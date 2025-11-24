@@ -38,6 +38,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.vengeful.citymanager.uikit.ColorTheme
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
+import org.vengeful.citymanager.uikit.composables.veng.VengText
 
 @Composable
 fun TerminalControls(
@@ -57,7 +58,7 @@ fun TerminalControls(
         SteampunkControlButton(
             onClick = onRestart,
             icon = "🔄",
-            text = "ПЕРЕГРУЗКА",
+            text = "ПЕРЕЗАГРУЗКА",
             accentColor = colors.rivets,
             theme = theme,
             modifier = modifier
@@ -149,7 +150,7 @@ fun SteampunkControlButton(
                         .padding(8.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
+                    VengText(
                         text = icon,
                         fontSize = 18.sp,
                         color = Color.White
@@ -184,7 +185,7 @@ fun SteampunkControlButton(
             }
 
             // Текст под кнопкой
-            Text(
+            VengText(
                 text = text,
                 color = accentColor,
                 fontSize = 10.sp,

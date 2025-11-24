@@ -106,7 +106,7 @@ fun VengButton(
             if (content != null) {
                 content()
             } else {
-                Text(
+                VengText(
                     text = text,
                     color = buttonColors.text,
                     fontSize = 16.sp,
@@ -119,7 +119,7 @@ fun VengButton(
                 if (content != null) {
                     content()
                 }
-                Text(
+                VengText(
                     text = text,
                     color = buttonColors.text,
                     fontSize = 16.sp,

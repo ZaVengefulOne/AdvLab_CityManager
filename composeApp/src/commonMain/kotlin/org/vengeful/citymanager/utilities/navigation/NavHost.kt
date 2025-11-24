@@ -39,22 +39,22 @@ fun Host() {
             AdministrationScreen(navController = navController)
         }
         composable(route = ROUTE_COMMON_LIBRARY) {
-            CommonLibraryScreen()
+            CommonLibraryScreen(navController = navController)
         }
         composable(route = ROUTE_CLICKER) {
             ClickerScreen(navController = navController)
         }
         composable(route = ROUTE_MEDIC) {
-            MedicScreen()
+            MedicScreen(navController = navController)
         }
         composable(route = ROUTE_BANK) {
             BankScreen(navController = navController)
         }
         composable(route = ROUTE_POLICE) {
-            PoliceScreen()
+            PoliceScreen(navController = navController)
         }
         composable(route = ROUTE_COURT) {
-            CourtScreen()
+            CourtScreen(navController = navController)
         }
         composable(route = ROUTE_BACKUP) {
             BackupScreen(navController = navController)

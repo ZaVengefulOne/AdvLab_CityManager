@@ -38,6 +38,7 @@ import org.vengeful.citymanager.models.Person
 import org.vengeful.citymanager.uikit.ColorTheme
 import org.vengeful.citymanager.uikit.SeveritepunkCardColors
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
+import org.vengeful.citymanager.uikit.composables.veng.VengText
 import org.vengeful.citymanager.utilities.DateFormatter
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
@@ -89,7 +90,7 @@ private fun CompactPersonCardContent(person: Person, colors: SeveritepunkCardCol
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
+            VengText(
                 text = "ID: ${person.id}",
                 color = colors.accent,
                 fontSize = 12.sp,
@@ -103,7 +104,7 @@ private fun CompactPersonCardContent(person: Person, colors: SeveritepunkCardCol
                     .padding(4.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
+                VengText(
                     text = "👁️",
                     color = colors.background,
                     fontSize = 10.sp
@@ -131,7 +132,7 @@ private fun CompactPersonCardContent(person: Person, colors: SeveritepunkCardCol
         Column(
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Text(
+            VengText(
                 text = "${person.firstName} ${person.lastName}",
                 color = colors.text,
                 fontSize = 16.sp,
@@ -146,7 +147,7 @@ private fun CompactPersonCardContent(person: Person, colors: SeveritepunkCardCol
 
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 displayedRights.forEach { right ->
-                    Text(
+                    VengText(
                         text = "• ${right.name}",
                         color = colors.accent,
                         fontSize = 10.sp
@@ -154,7 +155,7 @@ private fun CompactPersonCardContent(person: Person, colors: SeveritepunkCardCol
                 }
 
                 if (remainingCount > 0) {
-                    Text(
+                    VengText(
                         text = "+$remainingCount ещё...",
                         color = colors.text.copy(alpha = 0.7f),
                         fontSize = 9.sp,
@@ -187,7 +188,7 @@ private fun ExpandedPersonCardContent(person: Person, colors: SeveritepunkCardCo
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // Заголовок
-        Text(
+        VengText(
             text = "ПРОФИЛЬ ЖИТЕЛЯ",
             color = colors.accent,
             fontSize = 14.sp,
@@ -204,7 +205,7 @@ private fun ExpandedPersonCardContent(person: Person, colors: SeveritepunkCardCo
 
         // Права доступа
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(
+            VengText(
                 text = "ПРАВА ДОСТУПА:",
                 color = colors.accent,
                 fontSize = 12.sp,
@@ -222,7 +223,7 @@ private fun ExpandedPersonCardContent(person: Person, colors: SeveritepunkCardCo
                             .background(colors.accent.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
-                        Text(
+                        VengText(
                             text = right.name,
                             color = colors.accent,
                             fontSize = 10.sp,

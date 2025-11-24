@@ -24,6 +24,7 @@ import org.vengeful.citymanager.uikit.ColorTheme
 import org.vengeful.citymanager.uikit.DialogColors
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
+import org.vengeful.citymanager.uikit.composables.veng.VengText
 import org.vengeful.citymanager.uikit.composables.veng.VengTextField
 
 @Composable
@@ -81,7 +82,7 @@ fun PersonDialog(
                     )
                     .padding(24.dp)
             ) {
-                Text(
+                VengText(
                     text = "ДОБАВИТЬ ЧЕЛОВЕКА",
                     color = dialogColors.borderLight,
                     fontSize = 20.sp,
@@ -190,7 +191,7 @@ fun SteampunkRightsMultiSelect(
     }
 
     Column {
-        Text(
+        VengText(
             text = "ПРАВА ДОСТУПА:",
             color = colors.label,
             fontSize = 12.sp,
@@ -229,7 +230,7 @@ fun SteampunkRightsMultiSelect(
                             )
                     )
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text(
+                    VengText(
                         text = right.name,
                         color = colors.text,
                         fontSize = 14.sp
@@ -271,7 +272,7 @@ fun SteampunkRightsDropdown(
                 .padding(end = 12.dp, top = 20.dp)
                 .clickable { expanded = true }
         ) {
-            Text(
+            VengText(
                 text = if (expanded) "▲" else "▼",
                 color = colors.text,
                 fontSize = 12.sp
@@ -293,7 +294,7 @@ fun SteampunkRightsDropdown(
                     },
                     modifier = Modifier.background(colors.background),
                     text = {
-                        Text(
+                        VengText(
                             text = right.name,
                             color = colors.text,
                             fontWeight = FontWeight.Medium

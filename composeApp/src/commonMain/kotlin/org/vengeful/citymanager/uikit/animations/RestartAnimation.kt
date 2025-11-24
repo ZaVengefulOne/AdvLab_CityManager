@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import org.vengeful.citymanager.uikit.ColorTheme
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
+import org.vengeful.citymanager.uikit.composables.veng.VengText
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -118,7 +119,7 @@ fun RestartAnimation(
                 }
             }
 
-            Text(
+            VengText(
                 text = "ПЕРЕЗАГРУЗКА СИСТЕМЫ",
                 color = colors.borderLight,
                 fontSize = 20.sp,
