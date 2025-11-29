@@ -24,4 +24,4 @@ build/reports/detekt/
 .env.local
 .env.*.local
 *.env
-server/src/main/resources/application.local.conf
+server/src/main/resources/application.conf
