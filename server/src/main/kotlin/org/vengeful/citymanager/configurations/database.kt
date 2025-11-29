@@ -13,11 +13,20 @@ import org.vengeful.citymanager.userService.db.UserRights
 import org.vengeful.citymanager.userService.db.Users
 
 fun Application.configureDatabase(repository: PersonRepository) {
+    val dbUrl = environment.config.propertyOrNull("database.url")?.getString()
+        ?: throw IllegalStateException("DATABASE_URL environment variable is required")
+    val dbUser = environment.config.propertyOrNull("database.user")?.getString()
+        ?: throw IllegalStateException("DATABASE_USER environment variable is required")
+    val dbPassword = environment.config.propertyOrNull("database.password")?.getString()
+        ?: throw IllegalStateException("DATABASE_PASSWORD environment variable is required")
+    val dbDriver = environment.config.propertyOrNull("database.driver")?.getString()
+        ?: "org.postgresql.Driver"
+
     Database.connect(
-        url = "jdbc:postgresql://localhost:5432/vengeful_db",
-        driver = "org.postgresql.Driver",
-        user = "postgres",
-        password = "password"
+        url = dbUrl,
+        driver = dbDriver,
+        user = dbUser,
+        password = dbPassword
     )
 
     transaction {

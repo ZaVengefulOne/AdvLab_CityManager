@@ -43,8 +43,12 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Build project
-        run: ./gradlew build --no-daemon -x :shared:compileTestDevelopmentExecutableKotlinJs -x :shared:compileTestProductionExecutableKotlinJs || true
-        continue-on-error: false
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_USER: ${{ secrets.DATABASE_USER }}
+          DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+        run: ./gradlew build --no-daemon
 
       - name: Run ktlint check
         run: ./gradlew ktlintCheck --no-daemon
