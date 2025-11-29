@@ -120,7 +120,7 @@ fun RestartAnimation(
             }
 
             VengText(
-                text = "ПЕРЕЗАГРУЗКА СИСТЕМЫ",
+                text = "Перезагрузка Системы",
                 color = colors.borderLight,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold

@@ -95,7 +95,7 @@ fun AuthDialog(
             ) {
                 // Заголовок
                 Text(
-                    text = "АВТОРИЗАЦИЯ",
+                    text = "Авторизация",
                     color = dialogColors.borderLight,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
@@ -118,7 +118,7 @@ fun AuthDialog(
                 VengTextField(
                     value = username,
                     onValueChange = { username = it },
-                    label = "ИМЯ ПОЛЬЗОВАТЕЛЯ",
+                    label = "Имя пользователя",
                     placeholder = "Введите логин...",
                     modifier = Modifier.fillMaxWidth(),
                     theme = theme,
@@ -130,7 +130,7 @@ fun AuthDialog(
                 VengTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = "ПАРОЛЬ",
+                    label = "Пароль",
                     placeholder = "Введите пароль...",
                     modifier = Modifier.fillMaxWidth(),
                     theme = theme,
@@ -184,7 +184,7 @@ fun AuthDialog(
                 ) {
                     VengButton(
                         onClick = onDismiss,
-                        text = "ОТМЕНА",
+                        text = "Отмена",
                         modifier = Modifier
                             .weight(1f)
                             .padding(end = 8.dp),
@@ -199,7 +199,7 @@ fun AuthDialog(
                                 onLogin(username, password)
                             }
                         },
-                        text = "ВОЙТИ",
+                        text = "Войти",
                         modifier = Modifier
                             .weight(1f)
                             .padding(start = 8.dp),

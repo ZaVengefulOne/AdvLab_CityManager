@@ -37,32 +37,3 @@ fun PersonsGrid(
         }
     }
 }
-
-// Альтернатива с фиксированным количеством колонок
-@Composable
-fun PersonsGridFixed(
-    persons: List<Person>,
-    columns: Int = 2,
-    modifier: Modifier = Modifier
-) {
-    val gridColumns = when {
-        columns <= 0 -> 2
-        else -> columns
-    }
-
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(gridColumns),
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        items(persons) { person ->
-            PersonCard(
-                person = person,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp)
-            )
-        }
-    }
-}

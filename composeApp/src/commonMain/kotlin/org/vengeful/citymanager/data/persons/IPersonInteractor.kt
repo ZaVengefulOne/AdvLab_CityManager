@@ -12,4 +12,6 @@ interface IPersonInteractor {
     suspend fun updatePerson(person: Person)
     suspend fun deletePerson(id: Int)
     suspend fun getPersonsByRights(rights: Rights): List<Person>
+
+    suspend fun getAdminPersons(): List<Person>
 }

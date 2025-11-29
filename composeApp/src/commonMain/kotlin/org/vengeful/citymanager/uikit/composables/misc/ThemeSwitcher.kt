@@ -42,8 +42,8 @@ fun ThemeSwitcher(
         VengButton(
             onClick = { expanded = true },
             text = when (currentTheme) {
-                ColorTheme.GOLDEN -> "🎩 ТЕМА"
-                ColorTheme.SEVERITE -> "🏔️ ТЕМА"
+                ColorTheme.GOLDEN -> "🎩 Тема"
+                ColorTheme.SEVERITE -> "🏔️ Тема"
             },
             theme = currentTheme,
             modifier = modifier.fillMaxWidth(),

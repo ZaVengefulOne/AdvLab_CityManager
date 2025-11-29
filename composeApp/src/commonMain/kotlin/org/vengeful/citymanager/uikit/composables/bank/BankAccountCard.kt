@@ -62,13 +62,13 @@ fun BankAccountCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "СЧЕТ #${account.id}",
+                        text = "Счёт #${account.id}",
                         color = cardColors.accent,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = person?.let { "${it.firstName} ${it.lastName}" } ?: (account.enterpriseName ?: "ПРЕДПРИЯТИЕ"), // ИЗМЕНЕНО: добавили enterpriseName
+                        text = person?.let { "${it.firstName} ${it.lastName}" } ?: (account.enterpriseName ?: "Предприятие"),
                         color = cardColors.text,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
@@ -114,7 +114,7 @@ fun BankAccountCard(
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        text = "ВКЛАД",
+                        text = "Счёт",
                         color = cardColors.text.copy(alpha = 0.7f),
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Medium
@@ -135,7 +135,7 @@ fun BankAccountCard(
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        text = "КРЕДИТ",
+                        text = "Кредит",
                         color = cardColors.text.copy(alpha = 0.7f),
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Medium
@@ -156,7 +156,7 @@ fun BankAccountCard(
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        text = "БАЛАНС",
+                        text = "Баланс",
                         color = cardColors.accent,
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold

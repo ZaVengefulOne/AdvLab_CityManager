@@ -76,6 +76,60 @@ fun Application.configureSerialization(
         get("/library") {
             call.respondText(text = "Здесь будет библиотека г. Лабтауна. В разработке.")
         }
+
+        post("/adminReg") {
+            try {
+                val registerRequest = call.receive<RegisterRequest>()
+
+                // Валидация входных данных
+                if (registerRequest.username.isBlank()) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Username cannot be empty"))
+                    return@post
+                }
+
+                if (registerRequest.password.isBlank() || registerRequest.password.length < 4) {
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        mapOf("error" to "Password must be at least 4 characters")
+                    )
+                    return@post
+                }
+
+                val rights = registerRequest.rights.ifEmpty {
+                    listOf(Rights.Any)
+                }
+
+                val user = userRepository.registerUser(
+                    username = registerRequest.username,
+                    password = registerRequest.password,
+                    personId = registerRequest.personId,
+                    rights = rights
+                )
+
+                call.respond(
+                    HttpStatusCode.Created,
+                    RegisterResponse(
+                        message = "User registered successfully",
+                        userId = user.id,
+                        username = user.username
+                    )
+                )
+            } catch (e: IllegalArgumentException) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+            } catch (e: Exception) {
+                println("Registration error: ${e::class.simpleName} - ${e.message}")
+                e.printStackTrace()
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    mapOf("error" to "Registration failed: ${e.message}")
+                )
+            }
+        }
+
+        get("/adminPersons") {
+            val persons = personRepository.allPersons()
+            call.respond(HttpStatusCode.OK, persons)
+        }
     }
 
     routing { // Приватный роутинг
@@ -140,11 +194,15 @@ fun Application.configureSerialization(
                         return@post
                     }
 
+                    val rights = registerRequest.rights.ifEmpty {
+                        listOf(Rights.Any)
+                    }
+
                     val user = userRepository.registerUser(
                         username = registerRequest.username,
                         password = registerRequest.password,
                         personId = registerRequest.personId,
-                        rights = listOf(Rights.Any)
+                        rights = rights
                     )
 
                     call.respond(
@@ -169,7 +227,6 @@ fun Application.configureSerialization(
         }
 
         authenticate("auth-jwt") {
-
             route("/users") {
                 // GET /users - получить всех пользователей
                 get {
@@ -551,7 +608,10 @@ fun Application.configureSerialization(
 
                         // Если это предприятие, должно быть указано название
                         if (request.personId == null && (request.enterpriseName.isNullOrBlank())) {
-                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Enterprise name is required for enterprise accounts"))
+                            call.respond(
+                                HttpStatusCode.BadRequest,
+                                mapOf("error" to "Enterprise name is required for enterprise accounts")
+                            )
                             return@post
                         }
 
@@ -681,7 +741,10 @@ fun Application.configureSerialization(
                 get("/game") {
                     try {
                         if (!checkJokerAccess(call, userRepository)) {
-                            call.respond(HttpStatusCode.Forbidden, mapOf("error" to "Access denied. You have no rights!"))
+                            call.respond(
+                                HttpStatusCode.Forbidden,
+                                mapOf("error" to "Access denied. You have no rights!")
+                            )
                             return@get
                         }
 
@@ -694,11 +757,13 @@ fun Application.configureSerialization(
                                 call.response.headers.append("Content-Type", "text/html; charset=UTF-8")
                                 call.respondText(html, contentType = io.ktor.http.ContentType.Text.Html)
                             }
+
                             "markdown" -> {
                                 val markdown = backupService.createGameBackupMarkdown()
                                 call.response.headers.append("Content-Type", "text/markdown; charset=UTF-8")
                                 call.respondText(markdown, contentType = io.ktor.http.ContentType.Text.Plain)
                             }
+
                             else -> {
                                 call.respond(
                                     HttpStatusCode.BadRequest,
@@ -720,7 +785,10 @@ fun Application.configureSerialization(
                 get("/master") {
                     try {
                         if (!checkJokerAccess(call, userRepository)) {
-                            call.respond(HttpStatusCode.Forbidden, mapOf("error" to "Access denied. You have no rights!"))
+                            call.respond(
+                                HttpStatusCode.Forbidden,
+                                mapOf("error" to "Access denied. You have no rights!")
+                            )
                             return@get
                         }
 
@@ -741,7 +809,10 @@ fun Application.configureSerialization(
                 post("/restore") {
                     try {
                         if (!checkJokerAccess(call, userRepository)) {
-                            call.respond(HttpStatusCode.Forbidden, mapOf("error" to "Access denied. You have no rights!"))
+                            call.respond(
+                                HttpStatusCode.Forbidden,
+                                mapOf("error" to "Access denied. You have no rights!")
+                            )
                             return@post
                         }
 

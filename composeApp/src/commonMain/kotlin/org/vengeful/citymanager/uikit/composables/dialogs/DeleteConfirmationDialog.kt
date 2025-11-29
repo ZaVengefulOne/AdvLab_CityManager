@@ -74,7 +74,7 @@ fun DeleteConfirmationDialog(
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 Text(
-                    text = "ПОДТВЕРЖДЕНИЕ УДАЛЕНИЯ",
+                    text = "Подтверждение удаления",
                     color = dialogColors.borderLight,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
@@ -94,7 +94,7 @@ fun DeleteConfirmationDialog(
                 ) {
                     VengButton(
                         onClick = onDismiss,
-                        text = "ОТМЕНА",
+                        text = "Отмена",
                         modifier = Modifier.weight(1f),
                         padding = 12.dp,
                         theme = theme
@@ -105,7 +105,7 @@ fun DeleteConfirmationDialog(
                             onConfirm()
                             onDismiss()
                         },
-                        text = "УДАЛИТЬ",
+                        text = "Удалить",
                         modifier = Modifier.weight(1f),
                         padding = 12.dp,
                         theme = theme

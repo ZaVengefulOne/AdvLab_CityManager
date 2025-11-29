@@ -13,14 +13,18 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
+import org.vengeful.citymanager.BUILD_VARIANT
+import org.vengeful.citymanager.BuildVariant
 import org.vengeful.citymanager.SERVER_PORT
 import org.vengeful.citymanager.data.persons.PersonInteractor.Companion.SERVER_ADDRESS
 import org.vengeful.citymanager.data.persons.PersonInteractor.Companion.SERVER_PREFIX
 import org.vengeful.citymanager.data.USER_AGENT
 import org.vengeful.citymanager.data.USER_AGENT_TAG
 import org.vengeful.citymanager.data.client
+import org.vengeful.citymanager.data.persons.PersonInteractor.Companion.SERVER_ADDRESS_DEBUG
 import org.vengeful.citymanager.data.users.models.LoginResult
 import org.vengeful.citymanager.data.users.models.RegisterResult
+import org.vengeful.citymanager.models.Rights
 import org.vengeful.citymanager.models.users.AuthResponse
 import org.vengeful.citymanager.models.users.LoginRequest
 import org.vengeful.citymanager.models.users.RegisterRequest
@@ -119,9 +123,55 @@ class UserInteractor(private val authManager: AuthManager) : IUserInteractor {
         }
     }
 
-    override suspend fun register(username: String, password: String, personId: Int?): RegisterResult {
+    override suspend fun adminRegister(
+        username: String,
+        password: String,
+        personId: Int?,
+        rights: List<Rights>
+    ): RegisterResult {
         return try {
-            val registerRequest = RegisterRequest(username, password, personId)
+            val serverAddress = if (BUILD_VARIANT == BuildVariant.DEBUG) SERVER_ADDRESS_DEBUG else SERVER_ADDRESS
+            val registerRequest = RegisterRequest(username, password, personId, rights)
+            val response: HttpResponse = client.post("$SERVER_PREFIX$serverAddress:$SERVER_PORT/adminReg") {
+                contentType(ContentType.Application.Json)
+                setBody(registerRequest)
+                // Не добавляем токен авторизации
+            }
+
+            if (response.status.isSuccess()) {
+                RegisterResult.Success
+            } else {
+                val errorMessage = when (response.status.value) {
+                    400 -> {
+                        try {
+                            val errorBody = response.body<Map<String, String>>()
+                            errorBody["error"] ?: "Некорректный запрос"
+                        } catch (e: Exception) {
+                            "Некорректный запрос"
+                        }
+                    }
+                    409 -> "Пользователь с таким именем уже существует!"
+                    else -> "Ошибка сервера: ${response.status.description}"
+                }
+                RegisterResult.Error(errorMessage)
+            }
+        } catch (e: Exception) {
+            val errorMessage = when {
+                e.message?.contains("timeout", ignoreCase = true) == true ->
+                    "Превышено время ожидания. Проверьте подключение к серверу."
+
+                e.message?.contains("connection", ignoreCase = true) == true ->
+                    "Не удалось подключиться к серверу. Проверьте подключение к сети."
+
+                else -> "Ошибка: ${e.message ?: "Не удалось зарегистрироваться. Попробуйте позже."}"
+            }
+            RegisterResult.Error(errorMessage)
+        }
+    }
+
+    override suspend fun register(username: String, password: String, personId: Int?, rights: List<Rights>): RegisterResult {
+        return try {
+            val registerRequest = RegisterRequest(username, password, personId, rights)
             val response: HttpResponse = client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/auth/register") {
                 contentType(ContentType.Application.Json)
                 setBody(registerRequest)

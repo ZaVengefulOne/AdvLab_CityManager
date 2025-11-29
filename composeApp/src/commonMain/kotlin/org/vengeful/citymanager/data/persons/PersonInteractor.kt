@@ -10,6 +10,8 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.*
 import io.ktor.http.HttpHeaders
+import org.vengeful.citymanager.BUILD_VARIANT
+import org.vengeful.citymanager.BuildVariant
 import org.vengeful.citymanager.SERVER_PORT
 import org.vengeful.citymanager.data.USER_AGENT
 import org.vengeful.citymanager.data.USER_AGENT_TAG
@@ -27,7 +29,7 @@ class PersonInteractor(
             val token = authManager.getToken()
             println("DEBUG: Token in getPersons: ${if (token != null) "present (${token.take(20)}...)" else "null"}")
             val response = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/persons") {
-                setHttpBuilder()
+                setHttpBuilder(withAuth = token != null) // Добавляем токен только если он есть
             }
             if (response.status.isSuccess()) {
                 response.body<List<Person>>()
@@ -80,10 +82,10 @@ class PersonInteractor(
 
     override suspend fun addPerson(person: Person) {
         try {
-                client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/persons") {
-                    setHttpBuilder()
-                    setBody(person)
-                }
+            client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/persons") {
+                setHttpBuilder()
+                setBody(person)
+            }
         } catch (e: Exception) {
             throw Exception("Failed to fetch persons: ${e.message}")
         }
@@ -129,6 +131,30 @@ class PersonInteractor(
         }
     }
 
+    override suspend fun getAdminPersons(): List<Person> {
+        return try {
+            val serverAddress = if (BUILD_VARIANT == BuildVariant.DEBUG) SERVER_ADDRESS_DEBUG else SERVER_ADDRESS
+            val url = "$SERVER_PREFIX$serverAddress:$SERVER_PORT/adminPersons"
+            val response = client.get(url) {
+                contentType(ContentType.Application.Json)
+                header(USER_AGENT_TAG, USER_AGENT)
+            }
+            if (response.status.isSuccess()) {
+                response.body<List<Person>>()
+            } else {
+                val errorBody = try {
+                    response.body<String>()
+                } catch (e: Exception) {
+                    "Unable to read error body"
+                }
+                throw Exception("HTTP error ${response.status} : ${response.status.description}. Body: $errorBody")
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            throw Exception("Failed to fetch persons: ${e.message}")
+        }
+    }
+
     private fun HttpRequestBuilder.setHttpBuilder(withAuth: Boolean = true) {
         contentType(ContentType.Application.Json)
         header(USER_AGENT_TAG, USER_AGENT)
@@ -145,6 +171,7 @@ class PersonInteractor(
     companion object {
         const val SERVER_PREFIX = "http://"
         const val SERVER_ADDRESS = "localhost"
+        const val SERVER_ADDRESS_DEBUG = "10.0.2.2"
         const val ERROR_TEXT = "Server Error!"
     }
 }

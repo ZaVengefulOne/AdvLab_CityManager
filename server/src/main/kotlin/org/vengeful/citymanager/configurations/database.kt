@@ -21,7 +21,6 @@ fun Application.configureDatabase(repository: PersonRepository) {
     )
 
     transaction {
-//        SchemaUtils.drop(PersonRights, RightsTable, Persons, Users, UserRights) // На случай миграции если будет впадлу её писать
         SchemaUtils.createMissingTablesAndColumns(
             Persons,
             RightsTable,

@@ -15,3 +15,9 @@ const val ROUTE_POLICE = "police"
 const val ROUTE_CLICKER = "clicker"
 const val ROUTE_BANK = "bank"
 const val ROUTE_BACKUP = "backup"
+
+val BUILD_VARIANT = BuildVariant.DEBUG
+
+enum class BuildVariant {
+    DEBUG, PROD
+}

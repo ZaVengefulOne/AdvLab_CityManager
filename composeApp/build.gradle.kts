@@ -75,6 +75,7 @@ kotlin {
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
+            implementation(projects.shared) // Явно добавляем shared для desktop
         }
     }
 }
@@ -127,6 +128,9 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "org.vengeful.citymanager"
             packageVersion = "1.0.0"
+
+            modules("jdk.unsupported")
+
             macOS {
                 iconFile.set(project.file("src/jvmMain/resources/icon.png"))
             }

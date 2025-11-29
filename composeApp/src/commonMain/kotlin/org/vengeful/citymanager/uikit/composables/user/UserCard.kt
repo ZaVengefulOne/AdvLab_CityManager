@@ -119,7 +119,7 @@ fun UserCard(
             ) {
                 VengButton(
                     onClick = onEditClick,
-                    text = "РЕДАКТИРОВАТЬ",
+                    text = "Редактировать",
                     modifier = Modifier.weight(1f),
                     padding = 10.dp,
                     theme = theme
@@ -127,7 +127,7 @@ fun UserCard(
 
                 VengButton(
                     onClick = onDeleteClick,
-                    text = "УДАЛИТЬ",
+                    text = "Удалить",
                     modifier = Modifier.weight(1f),
                     padding = 10.dp,
                     theme = theme

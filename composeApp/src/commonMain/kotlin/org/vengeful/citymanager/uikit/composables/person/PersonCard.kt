@@ -189,7 +189,7 @@ private fun ExpandedPersonCardContent(person: Person, colors: SeveritepunkCardCo
     ) {
         // Заголовок
         VengText(
-            text = "ПРОФИЛЬ ЖИТЕЛЯ",
+            text = "Профиль жителя",
             color = colors.accent,
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
@@ -206,7 +206,7 @@ private fun ExpandedPersonCardContent(person: Person, colors: SeveritepunkCardCo
         // Права доступа
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             VengText(
-                text = "ПРАВА ДОСТУПА:",
+                text = "Права доступа:",
                 color = colors.accent,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold

@@ -80,7 +80,7 @@ fun BankAccountEditDialog(
                     .padding(24.dp)
             ) {
                 Text(
-                    text = "РЕДАКТИРОВАТЬ БАНКОВСКИЙ СЧЕТ",
+                    text = "Редактировать банковский счёт",
                     color = dialogColors.borderLight,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
@@ -94,7 +94,7 @@ fun BankAccountEditDialog(
                 VengTextField(
                     value = account.id.toString(),
                     onValueChange = { },
-                    label = "ИДЕНТИФИКАТОР СЧЕТА",
+                    label = "Идентификатор счёта",
                     placeholder = "ID",
                     enabled = false,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -106,9 +106,9 @@ fun BankAccountEditDialog(
 
                 // Person ID или "Предприятие" (только для отображения)
                 VengTextField(
-                    value = account.personId?.toString() ?: "ПРЕДПРИЯТИЕ",
+                    value = account.personId?.toString() ?: "Предприятие",
                     onValueChange = { },
-                    label = "ВЛАДЕЛЕЦ",
+                    label = "Владелец",
                     placeholder = "Person ID или Предприятие",
                     enabled = false,
                     modifier = Modifier.fillMaxWidth(),
@@ -139,7 +139,7 @@ fun BankAccountEditDialog(
                             depositAmount = newValue
                         }
                     },
-                    label = "РАЗМЕР ВКЛАДА",
+                    label = "Размер депозита",
                     placeholder = "0.0",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
@@ -156,7 +156,7 @@ fun BankAccountEditDialog(
                             creditAmount = newValue
                         }
                     },
-                    label = "РАЗМЕР КРЕДИТА",
+                    label = "Размер кредита",
                     placeholder = "0.0",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
@@ -176,7 +176,7 @@ fun BankAccountEditDialog(
                             onDelete(account.id)
                             onDismiss()
                         },
-                        text = "УДАЛИТЬ СЧЕТ",
+                        text = "Закрыть счёт",
                         modifier = Modifier.fillMaxWidth(),
                         padding = 12.dp,
                         theme = theme
@@ -189,7 +189,7 @@ fun BankAccountEditDialog(
                     ) {
                         VengButton(
                             onClick = onDismiss,
-                            text = "ОТМЕНА",
+                            text = "Отмена",
                             modifier = Modifier
                                 .weight(1f)
                                 .padding(end = 8.dp),
@@ -214,7 +214,7 @@ fun BankAccountEditDialog(
                                     onDismiss()
                                 }
                             },
-                            text = "СОХРАНИТЬ",
+                            text = "Сохранить",
                             modifier = Modifier
                                 .weight(1f)
                                 .padding(start = 8.dp),

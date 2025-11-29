@@ -85,7 +85,7 @@ fun PersonDetailedDialog(
 
                 VengButton(
                     onClick = onDismiss,
-                    text = "ЗАКРЫТЬ",
+                    text = "Закрыть",
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                     padding = 12.dp,
                     theme = theme

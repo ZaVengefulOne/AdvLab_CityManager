@@ -41,6 +41,7 @@ fun RegisterDialog(
     var confirmPassword by remember { mutableStateOf("") }
     var selectedPerson by remember { mutableStateOf<Person?>(null) }
     var personDropdownExpanded by remember { mutableStateOf(false) }
+    var personSearchQuery by remember { mutableStateOf("") }
 
     val dialogColors = remember(theme) {
         when (theme) {
@@ -88,9 +89,8 @@ fun RegisterDialog(
                     )
                     .padding(24.dp)
             ) {
-                // Заголовок
                 Text(
-                    text = "РЕГИСТРАЦИЯ",
+                    text = "Регистрация",
                     color = dialogColors.borderLight,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
@@ -109,11 +109,10 @@ fun RegisterDialog(
                         .align(Alignment.CenterHorizontally)
                 )
 
-                // Поле username
                 VengTextField(
                     value = username,
                     onValueChange = { username = it },
-                    label = "ИМЯ ПОЛЬЗОВАТЕЛЯ",
+                    label = "Имя пользователя",
                     placeholder = "Введите логин...",
                     modifier = Modifier.fillMaxWidth(),
                     theme = theme,
@@ -122,11 +121,10 @@ fun RegisterDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Поле password
                 VengTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = "ПАРОЛЬ",
+                    label = "Пароль",
                     placeholder = "Введите пароль...",
                     modifier = Modifier.fillMaxWidth(),
                     theme = theme,
@@ -137,11 +135,10 @@ fun RegisterDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Поле confirmPassword
                 VengTextField(
                     value = confirmPassword,
                     onValueChange = { confirmPassword = it },
-                    label = "ПОДТВЕРЖДЕНИЕ ПАРОЛЯ",
+                    label = "Подтверждение пароля",
                     placeholder = "Повторите пароль...",
                     modifier = Modifier.fillMaxWidth(),
                     theme = theme,
@@ -152,7 +149,6 @@ fun RegisterDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Dropdown для выбора Person
                 Box {
                     VengTextField(
                         value = selectedPerson?.let { "${it.firstName} ${it.lastName}" } ?: "",
@@ -166,7 +162,6 @@ fun RegisterDialog(
                         enabled = !isLoading && persons.isNotEmpty()
                     )
 
-                    // Кастомная стрелка
                     Box(
                         modifier = Modifier
                             .align(Alignment.CenterEnd)
@@ -182,17 +177,35 @@ fun RegisterDialog(
 
                     DropdownMenu(
                         expanded = personDropdownExpanded,
-                        onDismissRequest = { personDropdownExpanded = false },
+                        onDismissRequest = {
+                            personDropdownExpanded = false
+                            personSearchQuery = ""
+                        },
                         modifier = Modifier
                             .background(textFieldColors.background)
                             .border(2.dp, textFieldColors.borderLight, RoundedCornerShape(6.dp))
                             .width(350.dp)
                     ) {
-                        persons.forEach { person ->
+                        VengTextField(
+                            value = personSearchQuery,
+                            onValueChange = { personSearchQuery = it },
+                            label = "Поиск",
+                            placeholder = "Введите имя или фамилию...",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            theme = theme
+                        )
+                        val filteredPersons = persons.filter { person ->
+                            val searchText = personSearchQuery.lowercase()
+                            "${person.firstName} ${person.lastName}".lowercase().contains(searchText)
+                        }
+                        filteredPersons.forEach { person ->
                             DropdownMenuItem(
                                 onClick = {
                                     selectedPerson = person
                                     personDropdownExpanded = false
+                                    personSearchQuery = ""
                                 },
                                 modifier = Modifier.background(textFieldColors.background),
                                 text = {
@@ -209,7 +222,6 @@ fun RegisterDialog(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Сообщение об ошибке
                 if (errorMessage != null) {
                     Text(
                         text = errorMessage,
@@ -221,7 +233,6 @@ fun RegisterDialog(
                     )
                 }
 
-                // Индикатор загрузки
                 if (isLoading) {
                     Row(
                         modifier = Modifier
@@ -245,14 +256,13 @@ fun RegisterDialog(
                     Spacer(modifier = Modifier.height(12.dp))
                 }
 
-                // Кнопки действий
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     VengButton(
                         onClick = onDismiss,
-                        text = "ОТМЕНА",
+                        text = "Отмена",
                         modifier = Modifier
                             .weight(1f)
                             .padding(end = 8.dp),
@@ -271,7 +281,7 @@ fun RegisterDialog(
                                 onRegister(username, password, selectedPerson?.id)
                             }
                         },
-                        text = "ЗАРЕГИСТРИРОВАТЬ",
+                        text = "Зарегистрировать",
                         modifier = Modifier
                             .weight(1f)
                             .padding(start = 8.dp),

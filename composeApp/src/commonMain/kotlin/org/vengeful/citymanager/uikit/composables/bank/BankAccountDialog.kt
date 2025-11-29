@@ -38,6 +38,7 @@ fun BankAccountDialog(
     var enterpriseName by remember { mutableStateOf("") }
     var personDropdownExpanded by remember { mutableStateOf(false) }
     var isEnterprise by remember { mutableStateOf(false) }
+    var personSearchQuery by remember { mutableStateOf("") }
 
     val dialogColors = remember(theme) {
         when (theme) {
@@ -89,7 +90,7 @@ fun BankAccountDialog(
                     .padding(24.dp)
             ) {
                 Text(
-                    text = "СОЗДАТЬ БАНКОВСКИЙ СЧЕТ",
+                    text = "Открыть банковский счёт",
                     color = dialogColors.borderLight,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
@@ -111,7 +112,7 @@ fun BankAccountDialog(
                             isEnterprise = false
                             selectedPersonId = null
                         },
-                        text = "ЖИТЕЛЬ",
+                        text = "Житель",
                         modifier = Modifier.weight(1f),
                         padding = 10.dp,
                         theme = theme
@@ -122,7 +123,7 @@ fun BankAccountDialog(
                             isEnterprise = true
                             selectedPersonId = null
                         },
-                        text = "ПРЕДПРИЯТИЕ",
+                        text = "Предприятие",
                         modifier = Modifier.weight(1f),
                         padding = 10.dp,
                         theme = theme
@@ -137,7 +138,7 @@ fun BankAccountDialog(
                             value = selectedPerson?.let { "${it.firstName} ${it.lastName} (ID: ${it.id})" }
                                 ?: "Выберите жителя...",
                             onValueChange = { },
-                            label = "ЖИТЕЛЬ",
+                            label = "Житель",
                             placeholder = "Нажмите для выбора...",
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -162,17 +163,36 @@ fun BankAccountDialog(
 
                         DropdownMenu(
                             expanded = personDropdownExpanded,
-                            onDismissRequest = { personDropdownExpanded = false },
+                            onDismissRequest = {
+                                personDropdownExpanded = false
+                                personSearchQuery = ""
+                            },
                             modifier = Modifier
                                 .background(textFieldColors.background)
                                 .border(2.dp, textFieldColors.borderLight, RoundedCornerShape(6.dp))
                                 .width(350.dp)
                         ) {
-                            persons.forEach { person ->
+                            VengTextField(
+                                value = personSearchQuery,
+                                onValueChange = { personSearchQuery = it },
+                                label = "Поиск",
+                                placeholder = "Введите имя, фамилию или ID...",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                theme = theme
+                            )
+                            val filteredPersons = persons.filter { person ->
+                                val searchText = personSearchQuery.lowercase()
+                                "${person.firstName} ${person.lastName} ${person.id}".lowercase().contains(searchText)
+                            }
+
+                            filteredPersons.forEach { person ->
                                 DropdownMenuItem(
                                     onClick = {
                                         selectedPersonId = person.id
                                         personDropdownExpanded = false
+                                        personSearchQuery = ""
                                     },
                                     modifier = Modifier.background(textFieldColors.background),
                                     text = {
@@ -196,7 +216,7 @@ fun BankAccountDialog(
                     VengTextField(
                         value = enterpriseName,
                         onValueChange = { enterpriseName = it },
-                        label = "НАЗВАНИЕ ПРЕДПРИЯТИЯ",
+                        label = "Название предприятия",
                         placeholder = "Введите название предприятия...",
                         modifier = Modifier.fillMaxWidth(),
                         theme = theme
@@ -230,7 +250,7 @@ fun BankAccountDialog(
                             creditAmount = newValue
                         }
                     },
-                    label = "РАЗМЕР КРЕДИТА",
+                    label = "Размер кредита",
                     placeholder = "0.0",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
@@ -246,7 +266,7 @@ fun BankAccountDialog(
                 ) {
                     VengButton(
                         onClick = onDismiss,
-                        text = "ОТМЕНА",
+                        text = "Отмена",
                         modifier = Modifier
                             .weight(1f)
                             .padding(end = 8.dp),
@@ -266,7 +286,7 @@ fun BankAccountDialog(
                                 onDismiss()
                             }
                         },
-                        text = "СОЗДАТЬ",
+                        text = "Открыть",
                         modifier = Modifier
                             .weight(1f)
                             .padding(start = 8.dp),

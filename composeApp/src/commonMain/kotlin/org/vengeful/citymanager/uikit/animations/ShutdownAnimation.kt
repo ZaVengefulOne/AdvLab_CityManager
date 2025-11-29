@@ -90,7 +90,7 @@ fun ShutdownAnimation(
             }
 
             VengText(
-                text = "СИСТЕМА ОТКЛЮЧАЕТСЯ",
+                text = "Система отключается...",
                 color = Color.White,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold

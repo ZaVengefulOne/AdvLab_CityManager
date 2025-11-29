@@ -1,5 +1,6 @@
 package org.vengeful.citymanager.uikit.composables.person
 
+import VengRightsMultiSelect
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -18,10 +19,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import org.vengeful.citymanager.models.Person
-import org.vengeful.citymanager.models.Rights
 import org.vengeful.citymanager.uikit.ColorTheme
 import org.vengeful.citymanager.uikit.DialogColors
-import org.vengeful.citymanager.uikit.SeveritepunkThemes
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
 import org.vengeful.citymanager.uikit.composables.veng.VengTextField
 
@@ -81,7 +80,7 @@ fun PersonEditDialog(
                     .padding(24.dp)
             ) {
                 Text(
-                    text = "РЕДАКТИРОВАТЬ ЖИТЕЛЯ",
+                    text = "Редактировать жителя",
                     color = dialogColors.borderLight,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
@@ -95,7 +94,7 @@ fun PersonEditDialog(
                 VengTextField(
                     value = person.id.toString(),
                     onValueChange = { },
-                    label = "ИДЕНТИФИКАТОР",
+                    label = "Идентификатор",
                     placeholder = "ID",
                     enabled = false,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -109,7 +108,7 @@ fun PersonEditDialog(
                 VengTextField(
                     value = firstName,
                     onValueChange = { firstName = it },
-                    label = "ИМЯ",
+                    label = "Имя",
                     placeholder = "Введите имя...",
                     modifier = Modifier.fillMaxWidth(),
                     theme = theme
@@ -121,7 +120,7 @@ fun PersonEditDialog(
                 VengTextField(
                     value = lastName,
                     onValueChange = { lastName = it },
-                    label = "ФАМИЛИЯ",
+                    label = "Фамилия",
                     placeholder = "Введите фамилию...",
                     modifier = Modifier.fillMaxWidth(),
                     theme = theme
@@ -130,7 +129,7 @@ fun PersonEditDialog(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Права доступа
-                SteampunkRightsMultiSelect(
+                VengRightsMultiSelect(
                     selectedRights = selectedRights,
                     onRightsSelected = { selectedRights = it },
                     theme = theme
@@ -145,7 +144,7 @@ fun PersonEditDialog(
                 ) {
                     VengButton(
                         onClick = onDismiss,
-                        text = "ОТМЕНА",
+                        text = "Отмена",
                         modifier = Modifier
                             .weight(1f)
                             .padding(end = 8.dp),
@@ -164,7 +163,7 @@ fun PersonEditDialog(
                             onSave(updatedPerson)
                             onDismiss()
                         },
-                        text = "СОХРАНИТЬ",
+                        text = "Сохранить",
                         modifier = Modifier
                             .weight(1f)
                             .padding(start = 8.dp),

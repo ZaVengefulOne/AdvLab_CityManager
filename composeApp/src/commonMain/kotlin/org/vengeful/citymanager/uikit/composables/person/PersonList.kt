@@ -39,7 +39,7 @@ fun PersonList(
                 ) {
                     VengButton(
                         onClick = { onEditClick(person) },
-                        text = "РЕДАКТИРОВАТЬ",
+                        text = "Редактировать",
                         modifier = Modifier.weight(1f),
                         padding = 10.dp,
                         theme = theme
@@ -47,7 +47,7 @@ fun PersonList(
 
                     VengButton(
                         onClick = { onDeleteClick(person) },
-                        text = "УДАЛИТЬ",
+                        text = "Удалить",
                         modifier = Modifier.weight(1f),
                         padding = 10.dp,
                         theme = theme

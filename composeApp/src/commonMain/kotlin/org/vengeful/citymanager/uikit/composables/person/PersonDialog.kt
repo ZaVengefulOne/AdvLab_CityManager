@@ -1,5 +1,6 @@
 package org.vengeful.citymanager.uikit.composables.person
 
+import VengRightsMultiSelect
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -37,6 +38,7 @@ fun PersonDialog(
     var lastName by remember { mutableStateOf("") }
     var selectedRights by remember { mutableStateOf(emptySet<Rights>()) }
     var id by remember { mutableStateOf("") }
+    var rightsSearchQuery by remember { mutableStateOf("") }
 
     val dialogColors = remember(theme) {
         when (theme) {
@@ -83,7 +85,7 @@ fun PersonDialog(
                     .padding(24.dp)
             ) {
                 VengText(
-                    text = "ДОБАВИТЬ ЧЕЛОВЕКА",
+                    text = "Добавить жителя",
                     color = dialogColors.borderLight,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
@@ -97,7 +99,7 @@ fun PersonDialog(
                 VengTextField(
                     value = id,
                     onValueChange = { id = it },
-                    label = "ИДЕНТИФИКАТОР",
+                    label = "Идентификатор",
                     placeholder = "Введите ID...",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
@@ -109,7 +111,7 @@ fun PersonDialog(
                 VengTextField(
                     value = firstName,
                     onValueChange = { firstName = it },
-                    label = "ИМЯ",
+                    label = "Имя",
                     placeholder = "Введите имя...",
                     modifier = Modifier.fillMaxWidth(),
                     theme = theme
@@ -120,7 +122,7 @@ fun PersonDialog(
                 VengTextField(
                     value = lastName,
                     onValueChange = { lastName = it },
-                    label = "ФАМИЛИЯ",
+                    label = "Фамилия",
                     placeholder = "Введите фамилию...",
                     modifier = Modifier.fillMaxWidth(),
                     theme = theme
@@ -128,7 +130,7 @@ fun PersonDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                SteampunkRightsMultiSelect(
+                VengRightsMultiSelect(
                     selectedRights = selectedRights,
                     onRightsSelected = { selectedRights = it },
                     theme = theme
@@ -143,7 +145,7 @@ fun PersonDialog(
                 ) {
                     VengButton(
                         onClick = onDismiss,
-                        text = "ОТМЕНА",
+                        text = "Отмена",
                         modifier = Modifier
                             .weight(1f)
                             .padding(end = 8.dp),
@@ -165,7 +167,7 @@ fun PersonDialog(
                                 onDismiss()
                             }
                         },
-                        text = "ДОБАВИТЬ",
+                        text = "Добавить",
                         modifier = Modifier
                             .weight(1f)
                             .padding(start = 8.dp),
@@ -174,133 +176,6 @@ fun PersonDialog(
                         theme = theme
                     )
                 }
-            }
-        }
-    }
-}
-
-
-@Composable
-fun SteampunkRightsMultiSelect(
-    selectedRights: Set<Rights>,
-    onRightsSelected: (Set<Rights>) -> Unit,
-    theme: ColorTheme = ColorTheme.GOLDEN
-) {
-    val colors = remember(theme) {
-        SeveritepunkThemes.getTextFieldColors(theme)
-    }
-
-    Column {
-        VengText(
-            text = "ПРАВА ДОСТУПА:",
-            color = colors.label,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(2.dp, colors.borderLight, RoundedCornerShape(6.dp))
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Rights.entries.forEach { right ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            val newRights = if (selectedRights.contains(right)) {
-                                selectedRights - right
-                            } else {
-                                selectedRights + right
-                            }
-                            onRightsSelected(newRights)
-                        }
-                        .padding(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(20.dp)
-                            .border(2.dp, colors.borderLight, RoundedCornerShape(4.dp))
-                            .background(
-                                if (selectedRights.contains(right)) colors.borderLight else Color.Transparent
-                            )
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    VengText(
-                        text = right.name,
-                        color = colors.text,
-                        fontSize = 14.sp
-                    )
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun SteampunkRightsDropdown(
-    selectedRights: Rights,
-    onRightsSelected: (Rights) -> Unit,
-    theme: ColorTheme = ColorTheme.GOLDEN
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val colors = remember(theme) {
-        SeveritepunkThemes.getTextFieldColors(theme)
-    }
-
-    Box {
-        VengTextField(
-            value = selectedRights.name,
-            onValueChange = { },
-            label = "ПРАВА ДОСТУПА",
-            placeholder = "Выберите права...",
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { expanded = true },
-            theme = theme
-        )
-
-        // Кастомная стрелка
-        Box(
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(end = 12.dp, top = 20.dp)
-                .clickable { expanded = true }
-        ) {
-            VengText(
-                text = if (expanded) "▲" else "▼",
-                color = colors.text,
-                fontSize = 12.sp
-            )
-        }
-
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            modifier = Modifier
-                .background(colors.background)
-                .border(2.dp, colors.borderLight, RoundedCornerShape(6.dp))
-        ) {
-            Rights.entries.forEach { right ->
-                DropdownMenuItem(
-                    onClick = {
-                        onRightsSelected(right)
-                        expanded = false
-                    },
-                    modifier = Modifier.background(colors.background),
-                    text = {
-                        VengText(
-                            text = right.name,
-                            color = colors.text,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                )
             }
         }
     }

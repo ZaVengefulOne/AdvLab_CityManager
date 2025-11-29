@@ -1,5 +1,6 @@
 package org.vengeful.citymanager.uikit.composables.user
 
+import VengRightsMultiSelect
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,12 +21,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import org.vengeful.citymanager.models.Person
-import org.vengeful.citymanager.models.Rights
 import org.vengeful.citymanager.models.users.User
 import org.vengeful.citymanager.uikit.ColorTheme
 import org.vengeful.citymanager.uikit.DialogColors
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
-import org.vengeful.citymanager.uikit.composables.person.SteampunkRightsMultiSelect
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
 import org.vengeful.citymanager.uikit.composables.veng.VengTextField
 
@@ -42,6 +41,7 @@ fun UserEditDialog(
     var selectedRights by remember { mutableStateOf(user.rights.toSet()) }
     var selectedPersonId by remember { mutableStateOf<Int?>(null) }
     var personDropdownExpanded by remember { mutableStateOf(false) }
+    var personSearchQuery by remember { mutableStateOf("") }
 
     val dialogColors = remember(theme) {
         when (theme) {
@@ -92,7 +92,7 @@ fun UserEditDialog(
                     .padding(24.dp)
             ) {
                 Text(
-                    text = "РЕДАКТИРОВАТЬ ПОЛЬЗОВАТЕЛЯ",
+                    text = "Редактировать пользователя",
                     color = dialogColors.borderLight,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
@@ -102,11 +102,10 @@ fun UserEditDialog(
                         .align(Alignment.CenterHorizontally)
                 )
 
-                // ID (только для отображения)
                 VengTextField(
                     value = user.id.toString(),
                     onValueChange = { },
-                    label = "ИДЕНТИФИКАТОР",
+                    label = "Идентификатор",
                     placeholder = "ID",
                     enabled = false,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -116,11 +115,10 @@ fun UserEditDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Username
                 VengTextField(
                     value = username,
                     onValueChange = { username = it },
-                    label = "ИМЯ ПОЛЬЗОВАТЕЛЯ",
+                    label = "Имя пользователя",
                     placeholder = "Введите имя пользователя...",
                     modifier = Modifier.fillMaxWidth(),
                     theme = theme
@@ -128,11 +126,10 @@ fun UserEditDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Password (опционально)
                 VengTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = "НОВЫЙ ПАРОЛЬ (ОПЦИОНАЛЬНО)",
+                    label = "Новый пароль (опционально)",
                     placeholder = "Оставьте пустым, чтобы не менять...",
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -142,8 +139,7 @@ fun UserEditDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Права доступа
-                SteampunkRightsMultiSelect(
+                VengRightsMultiSelect(
                     selectedRights = selectedRights,
                     onRightsSelected = { selectedRights = it },
                     theme = theme
@@ -151,13 +147,12 @@ fun UserEditDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Выбор связанного Person
                 Box {
                     val selectedPerson = persons.find { it.id == selectedPersonId }
                     VengTextField(
                         value = selectedPerson?.let { "${it.firstName} ${it.lastName} (ID: ${it.id})" } ?: "Не выбран",
                         onValueChange = { },
-                        label = "СВЯЗАННЫЙ ЖИТЕЛЬ",
+                        label = "Связанный житель",
                         placeholder = "Нажмите для выбора...",
                         modifier = Modifier
                             .fillMaxWidth()
@@ -166,7 +161,6 @@ fun UserEditDialog(
                         theme = theme
                     )
 
-                    // Кастомная стрелка
                     Box(
                         modifier = Modifier
                             .align(Alignment.CenterEnd)
@@ -182,16 +176,30 @@ fun UserEditDialog(
 
                     DropdownMenu(
                         expanded = personDropdownExpanded,
-                        onDismissRequest = { personDropdownExpanded = false },
+                        onDismissRequest = {
+                            personDropdownExpanded = false
+                            personSearchQuery = ""
+                        },
                         modifier = Modifier
                             .background(textFieldColors.background)
                             .border(2.dp, textFieldColors.borderLight, RoundedCornerShape(6.dp))
                             .width(450.dp)
                     ) {
+                        VengTextField(
+                            value = personSearchQuery,
+                            onValueChange = { personSearchQuery = it },
+                            label = "Поиск",
+                            placeholder = "Введите имя, фамилию или ID...",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            theme = theme
+                        )
                         DropdownMenuItem(
                             onClick = {
                                 selectedPersonId = null
                                 personDropdownExpanded = false
+                                personSearchQuery = ""
                             },
                             modifier = Modifier.background(textFieldColors.background),
                             text = {
@@ -202,11 +210,16 @@ fun UserEditDialog(
                                 )
                             }
                         )
-                        persons.forEach { person ->
+                        val filteredPersons = persons.filter { person ->
+                            val searchText = personSearchQuery.lowercase()
+                            "${person.firstName} ${person.lastName} ${person.id}".lowercase().contains(searchText)
+                        }
+                        filteredPersons.forEach { person ->
                             DropdownMenuItem(
                                 onClick = {
                                     selectedPersonId = person.id
                                     personDropdownExpanded = false
+                                    personSearchQuery = ""
                                 },
                                 modifier = Modifier.background(textFieldColors.background),
                                 text = {
@@ -223,14 +236,13 @@ fun UserEditDialog(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Кнопки действий
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     VengButton(
                         onClick = onDismiss,
-                        text = "ОТМЕНА",
+                        text = "Отмена",
                         modifier = Modifier
                             .weight(1f)
                             .padding(end = 8.dp),
@@ -243,7 +255,7 @@ fun UserEditDialog(
                             val updatedUser = User(
                                 id = user.id,
                                 username = username,
-                                passwordHash = user.passwordHash, // Будет обновлен на сервере, если пароль указан
+                                passwordHash = user.passwordHash,
                                 rights = selectedRights.toList(),
                                 isActive = user.isActive,
                                 createdAt = user.createdAt
@@ -252,7 +264,7 @@ fun UserEditDialog(
                             onSave(updatedUser, passwordToUpdate, selectedPersonId)
                             onDismiss()
                         },
-                        text = "СОХРАНИТЬ",
+                        text = "Сохранить",
                         modifier = Modifier
                             .weight(1f)
                             .padding(start = 8.dp),

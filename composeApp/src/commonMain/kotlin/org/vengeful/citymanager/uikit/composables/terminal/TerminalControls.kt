@@ -58,7 +58,7 @@ fun TerminalControls(
         SteampunkControlButton(
             onClick = onRestart,
             icon = "🔄",
-            text = "ПЕРЕЗАГРУЗКА",
+            text = "Перезагрузка",
             accentColor = colors.rivets,
             theme = theme,
             modifier = modifier
@@ -67,7 +67,7 @@ fun TerminalControls(
         SteampunkControlButton(
             onClick = onShutdown,
             icon = "⏻",
-            text = "ВЫКЛЮЧЕНИЕ",
+            text = "Выключение",
             accentColor = colors.borderLight,
             theme = theme,
             modifier = modifier
