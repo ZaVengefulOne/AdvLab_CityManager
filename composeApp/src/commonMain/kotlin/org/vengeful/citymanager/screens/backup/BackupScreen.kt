@@ -14,6 +14,7 @@ import org.vengeful.citymanager.ROUTE_MAIN
 import org.vengeful.citymanager.models.Rights
 import org.vengeful.citymanager.uikit.composables.veng.VengBackground
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
+import org.vengeful.citymanager.uikit.composables.veng.VengText
 import org.vengeful.citymanager.utilities.LocalTheme
 
 @Composable
@@ -48,14 +49,13 @@ fun BackupScreen(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
+            VengText(
                 text = "Игровой бэкап",
-                style = MaterialTheme.typography.headlineMedium,
                 color = Color.White,
             )
 
             if (errorMessage != null) {
-                Text(
+                VengText(
                     text = errorMessage,
                     color = MaterialTheme.colorScheme.error
                 )

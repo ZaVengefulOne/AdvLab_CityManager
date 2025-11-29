@@ -32,6 +32,8 @@ import org.vengeful.citymanager.models.users.User
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
 import org.vengeful.citymanager.uikit.animations.RestartAnimation
 import org.vengeful.citymanager.uikit.animations.ShutdownAnimation
+import org.vengeful.citymanager.uikit.composables.administration.ControlLossIndicator
+import org.vengeful.citymanager.uikit.composables.administration.SeveriteRateGraph
 import org.vengeful.citymanager.uikit.composables.dialogs.DeleteConfirmationDialog
 import org.vengeful.citymanager.uikit.composables.dialogs.RegisterDialog
 import org.vengeful.citymanager.uikit.composables.misc.ThemeSwitcher
@@ -40,6 +42,7 @@ import org.vengeful.citymanager.uikit.composables.user.UserEditDialog
 import org.vengeful.citymanager.uikit.composables.user.UserList
 import org.vengeful.citymanager.uikit.composables.veng.VengBackground
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
+import org.vengeful.citymanager.uikit.composables.veng.VengText
 import org.vengeful.citymanager.utilities.LocalTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,6 +51,10 @@ fun AdministrationScreen(navController: NavController) {
     val administrationViewModel: AdministrationViewModel = koinViewModel()
     val persons = administrationViewModel.persons.collectAsState().value
     val users = administrationViewModel.users.collectAsState().value
+    val severitRate = administrationViewModel.severitRate.collectAsState().value
+    val controlLossThreshold = administrationViewModel.controlLossThreshold.collectAsState().value
+    val severitRateHistory = administrationViewModel.severitRateHistory.collectAsState().value
+
 
     var currentTheme by remember { mutableStateOf(LocalTheme) }
     var showAddDialog by remember { mutableStateOf(false) }
@@ -108,6 +115,8 @@ fun AdministrationScreen(navController: NavController) {
     LaunchedEffect(Unit) {
         administrationViewModel.getPersons()
         administrationViewModel.getUsers()
+        administrationViewModel.getAdminConfig()
+        administrationViewModel.startConfigUpdates()
     }
 
     LaunchedEffect(refreshTrigger) {
@@ -167,7 +176,7 @@ fun AdministrationScreen(navController: NavController) {
                         .weight(0.1f),
                 )
 
-                Text(
+                VengText(
                     text = stringResource(Res.string.app_name, BUILD_VERSION),
                     color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
                     fontSize = 36.sp,
@@ -182,6 +191,32 @@ fun AdministrationScreen(navController: NavController) {
                     text = stringResource(Res.string.back),
                     theme = currentTheme,
                     modifier = Modifier.weight(0.1f),
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = defaultSpacer),
+                verticalArrangement = Arrangement.spacedBy(defaultSpacer),
+                horizontalAlignment = Alignment.Start
+            ) {
+                SeveriteRateGraph(
+                    currentRate = severitRate,
+                    history = severitRateHistory,
+                    modifier = Modifier
+                        .fillMaxWidth(0.3f)
+                        .wrapContentHeight(),
+                    graphColor = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
+                    backgroundColor = SeveritepunkThemes.getColorScheme(currentTheme).background.copy(alpha = 0.3f)
+                )
+
+                ControlLossIndicator(
+                    threshold = controlLossThreshold,
+                    modifier = Modifier
+                        .fillMaxWidth(0.3f)
+                        .wrapContentHeight(),
+                    backgroundColor = SeveritepunkThemes.getColorScheme(currentTheme).background.copy(alpha = 0.3f)
                 )
             }
 
@@ -202,7 +237,7 @@ fun AdministrationScreen(navController: NavController) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
+                        VengText(
                             text = stringResource(Res.string.user_list,users.size),
                             color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
                             fontSize = 20.sp,
@@ -250,7 +285,7 @@ fun AdministrationScreen(navController: NavController) {
                                 .padding(defaultSpacer),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
+                            VengText(
                                 text = "Нет пользователей",
                                 color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
                                 fontSize = 16.sp,
@@ -273,7 +308,7 @@ fun AdministrationScreen(navController: NavController) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
+                        VengText(
                             text = stringResource(Res.string.person_list, persons.size),
                             color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
                             fontSize = 20.sp,
@@ -315,7 +350,7 @@ fun AdministrationScreen(navController: NavController) {
                                 .padding(defaultSpacer),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
+                            VengText(
                                 text = stringResource(Res.string.base_empty),
                                 color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
                                 fontSize = 16.sp,
@@ -352,7 +387,7 @@ fun AdministrationScreen(navController: NavController) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
+                    VengText(
                         text = stringResource(Res.string.person_list, persons.size),
                         color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
                         fontSize = 36.sp,
@@ -388,7 +423,7 @@ fun AdministrationScreen(navController: NavController) {
                             .padding(defaultSpacer),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
+                        VengText(
                             text = stringResource(Res.string.base_empty),
                             color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
                             fontSize = 16.sp,

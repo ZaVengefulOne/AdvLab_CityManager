@@ -12,6 +12,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.vengeful.cityManager.models.RequestLog
 import org.vengeful.cityManager.models.ServerStats
+import org.vengeful.citymanager.models.AdministrationConfig
 import org.vengeful.citymanager.models.backup.MasterBackup
 import org.vengeful.citymanager.models.users.AuthResponse
 import org.vengeful.citymanager.models.users.LoginRequest
@@ -113,6 +114,24 @@ class ApiClient(
             contentType(ContentType.Application.Json)
             addAuthHeader()
             setBody(backup)
+        }
+        handleResponse(response) { }
+    }
+
+    suspend fun getConfig(): AdministrationConfig {
+        val response = client.get("$baseUrl/admin/config") {
+            addAuthHeader()
+        }
+        return handleResponse(response) {
+            response.body<AdministrationConfig>()
+        }
+    }
+
+    suspend fun updateConfig(config: AdministrationConfig) {
+        val response = client.post("$baseUrl/admin/config") {
+            contentType(ContentType.Application.Json)
+            addAuthHeader()
+            setBody(config)
         }
         handleResponse(response) { }
     }

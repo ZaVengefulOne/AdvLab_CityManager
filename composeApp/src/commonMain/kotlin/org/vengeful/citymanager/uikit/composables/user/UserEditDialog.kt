@@ -26,6 +26,7 @@ import org.vengeful.citymanager.uikit.ColorTheme
 import org.vengeful.citymanager.uikit.DialogColors
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
+import org.vengeful.citymanager.uikit.composables.veng.VengText
 import org.vengeful.citymanager.uikit.composables.veng.VengTextField
 
 @Composable
@@ -91,7 +92,7 @@ fun UserEditDialog(
                     )
                     .padding(24.dp)
             ) {
-                Text(
+                VengText(
                     text = "Редактировать пользователя",
                     color = dialogColors.borderLight,
                     fontSize = 20.sp,
@@ -167,7 +168,7 @@ fun UserEditDialog(
                             .padding(end = 12.dp, top = 20.dp)
                             .clickable { personDropdownExpanded = true }
                     ) {
-                        Text(
+                        VengText(
                             text = if (personDropdownExpanded) "▲" else "▼",
                             color = textFieldColors.text,
                             fontSize = 12.sp
@@ -203,7 +204,7 @@ fun UserEditDialog(
                             },
                             modifier = Modifier.background(textFieldColors.background),
                             text = {
-                                Text(
+                                VengText(
                                     text = "Не выбран",
                                     color = textFieldColors.text,
                                     fontWeight = FontWeight.Medium
@@ -223,7 +224,7 @@ fun UserEditDialog(
                                 },
                                 modifier = Modifier.background(textFieldColors.background),
                                 text = {
-                                    Text(
+                                    VengText(
                                         text = "${person.firstName} ${person.lastName} (ID: ${person.id})",
                                         color = textFieldColors.text,
                                         fontWeight = FontWeight.Medium

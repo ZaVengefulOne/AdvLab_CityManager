@@ -63,6 +63,7 @@ import org.vengeful.citymanager.uikit.composables.misc.AccessIndicator
 import org.vengeful.citymanager.uikit.composables.misc.ThemeSwitcher
 import org.vengeful.citymanager.uikit.composables.veng.VengBackground
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
+import org.vengeful.citymanager.uikit.composables.veng.VengText
 import org.vengeful.citymanager.utilities.LocalTheme
 import kotlin.system.exitProcess
 
@@ -126,10 +127,9 @@ fun MainScreen(navController: NavController) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(bigPadding)
                     ) {
-                        Text(
+                        VengText(
                             text = stringResource(Res.string.welcome_message, username.value),
                             color = colorTint,
-                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         VengButton(
@@ -351,7 +351,7 @@ fun MainScreen(navController: NavController) {
         }
         if (showLoggingDialog) {
             AuthDialog(
-                onDismiss = { 
+                onDismiss = {
                     showLoggingDialog = false
                     viewModel.resetLoginState()
                 },
@@ -365,7 +365,7 @@ fun MainScreen(navController: NavController) {
                 },
                 theme = LocalTheme
             )
-            
+
             // Закрыть диалог при успешном логине
             LaunchedEffect(loginState.value) {
                 if (loginState.value is LoginUiState.Success) {

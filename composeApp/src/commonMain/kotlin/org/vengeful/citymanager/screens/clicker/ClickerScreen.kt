@@ -19,6 +19,7 @@ import org.vengeful.citymanager.ROUTE_MAIN
 import org.vengeful.citymanager.di.koinViewModel
 import org.vengeful.citymanager.uikit.composables.veng.VengBackground
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
+import org.vengeful.citymanager.uikit.composables.veng.VengText
 import org.vengeful.citymanager.utilities.LocalTheme
 
 @Composable
@@ -48,7 +49,7 @@ fun ClickerScreen(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(
+            VengText(
                 text = "Северит-коинов добыто: $clicks",
                 fontSize = 24.sp,
                 modifier = Modifier.padding(bottom = 32.dp),
@@ -71,7 +72,7 @@ fun ClickerScreen(navController: NavController) {
                             .size(300.dp)
                     )
                 }
-                Text(
+                VengText(
                     "Кликни на меня, чтобы добыть!",
                     fontSize = 24.sp,
                     textAlign = TextAlign.Center,

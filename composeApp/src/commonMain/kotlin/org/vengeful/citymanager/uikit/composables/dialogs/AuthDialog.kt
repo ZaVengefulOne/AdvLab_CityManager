@@ -35,6 +35,7 @@ import androidx.compose.ui.window.Dialog
 import org.vengeful.citymanager.uikit.ColorTheme
 import org.vengeful.citymanager.uikit.DialogColors
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
+import org.vengeful.citymanager.uikit.composables.veng.VengText
 import org.vengeful.citymanager.uikit.composables.veng.VengTextField
 
 @Composable
@@ -94,7 +95,7 @@ fun AuthDialog(
                     .padding(24.dp)
             ) {
                 // Заголовок
-                Text(
+                VengText(
                     text = "Авторизация",
                     color = dialogColors.borderLight,
                     fontSize = 20.sp,
@@ -105,7 +106,7 @@ fun AuthDialog(
                         .align(Alignment.CenterHorizontally)
                 )
 
-                Text(
+                VengText(
                     text = "Войдите в систему доступа",
                     color = dialogColors.borderLight.copy(alpha = 0.8f),
                     fontSize = 14.sp,
@@ -143,7 +144,7 @@ fun AuthDialog(
 
                 // Сообщение об ошибке
                 if (errorMessage != null) {
-                    Text(
+                    VengText(
                         text = errorMessage,
                         color = Color(0xFFFF6B6B),
                         fontSize = 12.sp,
@@ -168,7 +169,7 @@ fun AuthDialog(
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text(
+                        VengText(
                             text = "Проверка доступа...",
                             color = dialogColors.borderLight,
                             fontSize = 14.sp

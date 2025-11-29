@@ -22,6 +22,7 @@ import org.jetbrains.compose.resources.stringResource
 import org.vengeful.citymanager.uikit.ColorTheme
 import org.vengeful.citymanager.uikit.composables.veng.VengBackground
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
+import org.vengeful.citymanager.uikit.composables.veng.VengText
 import org.vengeful.citymanager.utilities.LocalTheme
 
 @Composable
@@ -36,7 +37,7 @@ fun MedicScreen(navController: NavController) {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
+            VengText(
                 text = "Здесь будет ${stringResource(resource = Res.string.medic_name)}",
                 color = Color.White,)
             VengButton(

@@ -21,6 +21,7 @@ import org.vengeful.citymanager.models.BankAccount
 import org.vengeful.citymanager.uikit.ColorTheme
 import org.vengeful.citymanager.uikit.DialogColors
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
+import org.vengeful.citymanager.uikit.composables.veng.VengText
 import org.vengeful.citymanager.uikit.composables.veng.VengTextField
 
 @Composable
@@ -79,7 +80,7 @@ fun BankAccountEditDialog(
                     )
                     .padding(24.dp)
             ) {
-                Text(
+                VengText(
                     text = "Редактировать банковский счёт",
                     color = dialogColors.borderLight,
                     fontSize = 20.sp,

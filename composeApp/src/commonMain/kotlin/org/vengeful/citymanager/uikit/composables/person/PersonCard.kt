@@ -258,7 +258,7 @@ private fun ExpandedPersonCardContent(person: Person, colors: SeveritepunkCardCo
         )
 
         // Подпись системы
-        Text(
+        VengText(
             text = stringResource(Res.string.app_name, BUILD_VERSION),
             color = colors.text.copy(alpha = 0.6f),
             fontSize = 8.sp,
@@ -273,12 +273,12 @@ private fun InfoRow(label: String, value: String, cardColors: SeveritepunkCardCo
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(
+        VengText(
             text = label,
             color = cardColors.text.copy(alpha = 0.8f),
             fontSize = 12.sp
         )
-        Text(
+        VengText(
             text = value,
             color = cardColors.text,
             fontSize = 12.sp,

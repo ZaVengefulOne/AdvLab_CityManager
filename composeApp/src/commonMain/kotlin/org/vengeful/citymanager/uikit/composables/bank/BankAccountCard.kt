@@ -23,6 +23,7 @@ import org.vengeful.citymanager.models.Person
 import org.vengeful.citymanager.uikit.ColorTheme
 import org.vengeful.citymanager.uikit.SeveritepunkCardColors
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
+import org.vengeful.citymanager.uikit.composables.veng.VengText
 
 @Composable
 fun BankAccountCard(
@@ -61,13 +62,13 @@ fun BankAccountCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
+                    VengText(
                         text = "Счёт #${account.id}",
                         color = cardColors.accent,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold
                     )
-                    Text(
+                    VengText(
                         text = person?.let { "${it.firstName} ${it.lastName}" } ?: (account.enterpriseName ?: "Предприятие"),
                         color = cardColors.text,
                         fontSize = 14.sp,
@@ -87,7 +88,7 @@ fun BankAccountCard(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
+                    VengText(
                         text = if (person != null) "👤" else "🏢",
                         fontSize = 10.sp
                     )
@@ -113,13 +114,13 @@ fun BankAccountCard(
                     horizontalAlignment = Alignment.Start,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text(
+                    VengText(
                         text = "Счёт",
                         color = cardColors.text.copy(alpha = 0.7f),
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Medium
                     )
-                    Text(
+                    VengText(
                         text = String.format("%.0f", account.depositAmount),
                         color = Color(0xFF4CAF50),
                         fontSize = 14.sp,
@@ -134,13 +135,13 @@ fun BankAccountCard(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text(
+                    VengText(
                         text = "Кредит",
                         color = cardColors.text.copy(alpha = 0.7f),
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Medium
                     )
-                    Text(
+                    VengText(
                         text = String.format("%.0f", account.creditAmount),
                         color = Color(0xFFFF4444),
                         fontSize = 14.sp,
@@ -155,14 +156,14 @@ fun BankAccountCard(
                     horizontalAlignment = Alignment.End,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text(
+                    VengText(
                         text = "Баланс",
                         color = cardColors.accent,
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold
                     )
                     val balance = account.depositAmount - account.creditAmount
-                    Text(
+                    VengText(
                         text = String.format("%.0f", balance),
                         color = if (balance >= 0) Color(0xFF4CAF50) else Color(0xFFFF4444),
                         fontSize = 14.sp,

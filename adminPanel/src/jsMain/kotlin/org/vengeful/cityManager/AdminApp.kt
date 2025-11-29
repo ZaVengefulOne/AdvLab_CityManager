@@ -14,6 +14,7 @@ import kotlinx.serialization.json.Json
 import org.jetbrains.compose.web.attributes.InputType
 import org.vengeful.cityManager.models.RequestLog
 import org.vengeful.cityManager.models.ServerStats
+import org.vengeful.citymanager.models.AdministrationConfig
 import org.vengeful.citymanager.models.backup.MasterBackup
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
@@ -48,6 +49,10 @@ fun AdminApp() {
     var isBackupLoading by mutableStateOf(false)
     var isLoading by mutableStateOf(false)
 
+    var severitRate by mutableStateOf("42.75")
+    var controlLossThreshold by mutableStateOf("75")
+    var isConfigLoading by mutableStateOf(false)
+
     // Загрузка данных при старте (только если залогинен)
     if (isLoggedIn) {
         LaunchedEffect(Unit) {
@@ -55,6 +60,9 @@ fun AdminApp() {
             try {
                 serverStats = apiClient.getServerStats()
                 requestLogs = apiClient.getRequestLogs()
+                val config = apiClient.getConfig()
+                severitRate = config.severiteRate.toString()
+                controlLossThreshold = config.controlLossThreshold.toString()
             } catch (e: Exception) {
                 window.alert("Ошибка подключения к серверу: ${e.message}")
             }
@@ -630,6 +638,136 @@ fun AdminApp() {
                                 }
                             }
                         }
+                    }
+                }
+            }
+
+            Div({
+                style {
+                    backgroundColor(Color("#34495E"))
+                    border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                    borderRadius(8.px)
+                    padding(20.px)
+                    marginBottom(16.px)
+                }
+            }) {
+                H3({
+                    style {
+                        marginTop(0.px)
+                        marginBottom(16.px)
+                        fontSize(18.px)
+                    }
+                }) {
+                    Text("⚙️ КОНФИГУРАЦИЯ СИСТЕМЫ")
+                }
+
+                Div({
+                    style {
+                        display(DisplayStyle.Flex)
+                        flexDirection(FlexDirection.Column)
+                        gap(16.px)
+                    }
+                }) {
+                    // Поле курса северита
+                    Div({
+                        style {
+                            display(DisplayStyle.Flex)
+                            flexDirection(FlexDirection.Column)
+                            gap(8.px)
+                        }
+                    }) {
+                        Label(attrs = {
+                            style {
+                                color(Color("#FFFFFF"))
+                                fontSize(14.px)
+                                fontWeight("bold")
+                            }
+                        }) {
+                            Text("Курс северита")
+                        }
+                        Input(InputType.Number, {
+                            style {
+                                width(95.percent)
+                                padding(12.px)
+                                backgroundColor(Color("#1A2530"))
+                                color(Color("#4A90E2"))
+                                border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                                borderRadius(4.px)
+                                fontFamily("'Courier New', monospace")
+                                fontSize(14.px)
+                            }
+                            value(severitRate)
+                            onInput { event ->
+                                severitRate = event.target.value
+                            }
+                        })
+                    }
+
+                    // Поле границы потери контроля
+                    Div({
+                        style {
+                            display(DisplayStyle.Flex)
+                            flexDirection(FlexDirection.Column)
+                            gap(8.px)
+                        }
+                    }) {
+                        Label(attrs = {
+                            style {
+                                color(Color("#FFFFFF"))
+                                fontSize(14.px)
+                                fontWeight("bold")
+                            }
+                        }) {
+                            Text("Граница потери контроля (0-100)")
+                        }
+                        Input(InputType.Number, {
+                            style {
+                                width(95.percent)
+                                padding(12.px)
+                                backgroundColor(Color("#1A2530"))
+                                color(Color("#4A90E2"))
+                                border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                                borderRadius(4.px)
+                                fontFamily("'Courier New', monospace")
+                                fontSize(14.px)
+                            }
+                            value(controlLossThreshold)
+                            onInput { event ->
+                                controlLossThreshold = event.target.value
+                            }
+                        })
+                    }
+
+                    Button({
+                        style {
+                            backgroundColor(if (isConfigLoading) Color("#7F8C8D") else Color("#27AE60"))
+                            color(Color("#FFFFFF"))
+                            borderWidth(0.px)
+                            padding(12.px, 24.px)
+                            borderRadius(4.px)
+                            fontFamily("'Courier New', monospace")
+                            fontWeight("bold")
+                            cursor(if (isConfigLoading) "not-allowed" else "pointer")
+                            fontSize(14.px)
+                        }
+                        onClick {
+                            coroutineScope.launch {
+                                isConfigLoading = true
+                                try {
+                                    val config = AdministrationConfig(
+                                        severiteRate = severitRate.toDoubleOrNull() ?: 42.75,
+                                        controlLossThreshold = controlLossThreshold.toIntOrNull() ?: 75
+                                    )
+                                    apiClient.updateConfig(config)
+                                    window.alert("✅ Конфигурация успешно сохранена!")
+                                } catch (e: Exception) {
+                                    window.alert("❌ Ошибка при сохранении: ${e.message}")
+                                }
+                                isConfigLoading = false
+                            }
+                        }
+                    }) {
+                        Text(if (isConfigLoading) "⏳ Сохранение..." else "💾 Сохранить конфигурацию")
                     }
                 }
             }

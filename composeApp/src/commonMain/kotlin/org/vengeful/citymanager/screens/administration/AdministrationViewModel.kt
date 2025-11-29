@@ -1,11 +1,14 @@
 package org.vengeful.citymanager.screens.administration
 
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.vengeful.citymanager.base.BaseViewModel
+import org.vengeful.citymanager.data.administration.IAdministrationInteractor
 import org.vengeful.citymanager.data.persons.IPersonInteractor
 import org.vengeful.citymanager.data.users.IUserInteractor
 import org.vengeful.citymanager.data.users.models.RegisterResult
@@ -13,12 +16,27 @@ import org.vengeful.citymanager.data.users.states.RegisterUiState
 import org.vengeful.citymanager.models.Person
 import org.vengeful.citymanager.models.Rights
 import org.vengeful.citymanager.models.users.User
+import kotlin.random.Random
 
 
 class AdministrationViewModel(
     private val personInteractor: IPersonInteractor,
     private val userInteractor: IUserInteractor,
+    private val administrationInteractor: IAdministrationInteractor,
 ) : BaseViewModel() {
+
+    private val _severitRate = MutableStateFlow<Double>(42.75)
+    val severitRate: StateFlow<Double> = _severitRate.asStateFlow()
+
+    private val _controlLossThreshold = MutableStateFlow<Int>(75)
+    val controlLossThreshold: StateFlow<Int> = _controlLossThreshold.asStateFlow()
+
+    private val _severitRateHistory = MutableStateFlow<List<Double>>(emptyList())
+    val severitRateHistory: StateFlow<List<Double>> = _severitRateHistory.asStateFlow()
+
+    private var updateJob: Job? = null
+    private var configUpdateJob: Job? = null
+    private var baseSeveritRate: Double = 42.75
 
     private val _persons = MutableStateFlow<List<Person>>(emptyList())
     val persons: StateFlow<List<Person>> = _persons.asStateFlow()
@@ -167,7 +185,76 @@ class AdministrationViewModel(
         }
     }
 
-    fun clearError() {
-        _errorMessage.value = null
+    fun getAdminConfig() {
+        viewModelScope.launch {
+            try {
+                val config = administrationInteractor.getAdministrationConfig()
+                baseSeveritRate = config.severiteRate
+                _severitRate.value = config.severiteRate
+                _controlLossThreshold.value = config.controlLossThreshold
+
+                // Инициализируем историю только если она пустая
+                if (_severitRateHistory.value.isEmpty()) {
+                    _severitRateHistory.value = List(GRAPH_HISTORY_SIZE) { config.severiteRate }
+                }
+
+                // Запускаем автообновление только если оно еще не запущено
+                if (updateJob == null || !updateJob!!.isActive) {
+                    startAutoUpdate()
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = e.message
+                println("Error loading admin config: ${e.message}")
+            }
+        }
     }
+
+    fun startConfigUpdates() {
+        configUpdateJob?.cancel()
+        configUpdateJob = viewModelScope.launch {
+            while (true) {
+                delay(CONFIG_UPDATE_INTERVAL_MS)
+                getAdminConfig()
+            }
+        }
+    }
+
+    private fun startAutoUpdate() {
+        updateJob?.cancel()
+        updateJob = viewModelScope.launch {
+            while (true) {
+                delay(UPDATE_INTERVAL_MS)
+                val fluctuation = Random.nextDouble(
+                    FLUCTUATION_MIN.toDouble(),
+                    FLUCTUATION_MAX.toDouble()
+                )
+                val newRate = baseSeveritRate + fluctuation
+
+                _severitRate.value = newRate
+
+                // Обновляем историю
+                val currentHistory = _severitRateHistory.value.toMutableList()
+                currentHistory.add(newRate)
+                if (currentHistory.size > GRAPH_HISTORY_SIZE) {
+                    currentHistory.removeFirst()
+                }
+                _severitRateHistory.value = currentHistory
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        updateJob?.cancel()
+    }
+
+    companion object {
+        const val UPDATE_INTERVAL_MS = 2000L // 2 секунды
+        const val CONFIG_UPDATE_INTERVAL_MS = 15000L // 15 секунд
+
+        const val FLUCTUATION_MIN = -5
+        const val FLUCTUATION_MAX = 5
+        const val GRAPH_HISTORY_SIZE = 20
+    }
+
 }

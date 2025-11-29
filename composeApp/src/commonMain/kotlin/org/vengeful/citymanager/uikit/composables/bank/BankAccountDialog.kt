@@ -23,6 +23,7 @@ import org.vengeful.citymanager.uikit.ColorTheme
 import org.vengeful.citymanager.uikit.DialogColors
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
+import org.vengeful.citymanager.uikit.composables.veng.VengText
 import org.vengeful.citymanager.uikit.composables.veng.VengTextField
 
 @Composable
@@ -89,7 +90,7 @@ fun BankAccountDialog(
                     )
                     .padding(24.dp)
             ) {
-                Text(
+                VengText(
                     text = "Открыть банковский счёт",
                     color = dialogColors.borderLight,
                     fontSize = 20.sp,
@@ -154,7 +155,7 @@ fun BankAccountDialog(
                                 .padding(end = 12.dp, top = 20.dp)
                                 .clickable { personDropdownExpanded = true }
                         ) {
-                            Text(
+                            VengText(
                                 text = if (personDropdownExpanded) "▲" else "▼",
                                 color = textFieldColors.text,
                                 fontSize = 12.sp
@@ -196,7 +197,7 @@ fun BankAccountDialog(
                                     },
                                     modifier = Modifier.background(textFieldColors.background),
                                     text = {
-                                        Text(
+                                        VengText(
                                             text = "${person.firstName} ${person.lastName} (ID: ${person.id})",
                                             color = textFieldColors.text,
                                             fontWeight = FontWeight.Medium

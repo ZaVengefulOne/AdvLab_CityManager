@@ -23,6 +23,7 @@ import org.vengeful.citymanager.models.users.User
 import org.vengeful.citymanager.uikit.ColorTheme
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
+import org.vengeful.citymanager.uikit.composables.veng.VengText
 
 @Composable
 fun UserCard(
@@ -61,13 +62,13 @@ fun UserCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text(
+                    VengText(
                         text = "ID: ${user.id}",
                         color = cardColors.accent,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
                     )
-                    Text(
+                    VengText(
                         text = user.username,
                         color = cardColors.text,
                         fontSize = 16.sp,
@@ -87,7 +88,7 @@ fun UserCard(
                         )
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
-                    Text(
+                    VengText(
                         text = if (user.isActive) "Активен" else "Неактивен",
                         color = cardColors.background,
                         fontSize = 10.sp,

@@ -20,6 +20,7 @@ import androidx.compose.ui.window.Dialog
 import org.vengeful.citymanager.uikit.ColorTheme
 import org.vengeful.citymanager.uikit.DialogColors
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
+import org.vengeful.citymanager.uikit.composables.veng.VengText
 
 @Composable
 fun DeleteConfirmationDialog(
@@ -73,7 +74,7 @@ fun DeleteConfirmationDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                Text(
+                VengText(
                     text = "Подтверждение удаления",
                     color = dialogColors.borderLight,
                     fontSize = 20.sp,
@@ -81,7 +82,7 @@ fun DeleteConfirmationDialog(
                     letterSpacing = 1.sp
                 )
 
-                Text(
+                VengText(
                     text = "Вы действительно хотите удалить?",
                     color = dialogColors.borderLight,
                     fontSize = 16.sp,

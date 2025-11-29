@@ -3,7 +3,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -23,7 +22,8 @@ fun VengText(
     textAlign: TextAlign? = null,
     maxLines: Int = 1,
     overflow: TextOverflow = TextOverflow.Ellipsis,
-    fontStyle: FontStyle = FontStyle.Normal
+    fontStyle: FontStyle = FontStyle.Normal,
+    lineHeight: TextUnit = 14.sp,
 ) {
     Text(
         text = text,
@@ -35,6 +35,7 @@ fun VengText(
         textAlign = textAlign,
         fontFamily = cinzelFontFamily(fontStyle),
         maxLines = maxLines,
-        overflow = overflow
+        overflow = overflow,
+        lineHeight = lineHeight
     )
 }

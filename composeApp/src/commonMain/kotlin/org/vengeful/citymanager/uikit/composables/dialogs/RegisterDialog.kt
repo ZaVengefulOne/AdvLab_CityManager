@@ -25,6 +25,7 @@ import org.vengeful.citymanager.uikit.ColorTheme
 import org.vengeful.citymanager.uikit.DialogColors
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
+import org.vengeful.citymanager.uikit.composables.veng.VengText
 import org.vengeful.citymanager.uikit.composables.veng.VengTextField
 
 @Composable
@@ -89,7 +90,7 @@ fun RegisterDialog(
                     )
                     .padding(24.dp)
             ) {
-                Text(
+                VengText(
                     text = "Регистрация",
                     color = dialogColors.borderLight,
                     fontSize = 20.sp,
@@ -100,7 +101,7 @@ fun RegisterDialog(
                         .align(Alignment.CenterHorizontally)
                 )
 
-                Text(
+                VengText(
                     text = "Создайте новый аккаунт",
                     color = dialogColors.borderLight.copy(alpha = 0.8f),
                     fontSize = 14.sp,
@@ -168,7 +169,7 @@ fun RegisterDialog(
                             .padding(end = 12.dp, top = 20.dp)
                             .clickable { personDropdownExpanded = true }
                     ) {
-                        Text(
+                        VengText(
                             text = if (personDropdownExpanded) "▲" else "▼",
                             color = textFieldColors.text,
                             fontSize = 12.sp
@@ -209,7 +210,7 @@ fun RegisterDialog(
                                 },
                                 modifier = Modifier.background(textFieldColors.background),
                                 text = {
-                                    Text(
+                                    VengText(
                                         text = "${person.firstName} ${person.lastName}",
                                         color = textFieldColors.text,
                                         fontWeight = FontWeight.Medium
@@ -223,7 +224,7 @@ fun RegisterDialog(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 if (errorMessage != null) {
-                    Text(
+                    VengText(
                         text = errorMessage,
                         color = Color(0xFFFF6B6B),
                         fontSize = 12.sp,
@@ -247,7 +248,7 @@ fun RegisterDialog(
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text(
+                        VengText(
                             text = "Регистрация...",
                             color = dialogColors.borderLight,
                             fontSize = 14.sp

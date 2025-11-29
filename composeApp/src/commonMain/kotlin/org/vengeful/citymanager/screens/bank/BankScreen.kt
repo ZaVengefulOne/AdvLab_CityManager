@@ -25,6 +25,7 @@ import org.vengeful.citymanager.uikit.composables.dialogs.DeleteConfirmationDial
 import org.vengeful.citymanager.uikit.composables.misc.ThemeSwitcher
 import org.vengeful.citymanager.uikit.composables.veng.VengBackground
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
+import org.vengeful.citymanager.uikit.composables.veng.VengText
 import org.vengeful.citymanager.utilities.LocalTheme
 
 @Composable
@@ -75,7 +76,7 @@ fun BankScreen(navController: NavController) {
                     modifier = Modifier.weight(0.1f),
                 )
 
-                Text(
+                VengText(
                     text = stringResource(Res.string.bank_name),
                     color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
                     fontSize = 28.sp,
@@ -101,7 +102,7 @@ fun BankScreen(navController: NavController) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
+                VengText(
                     text = "Всего счетов: ${bankAccounts.size}",
                     color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
                     fontSize = 16.sp,
@@ -148,7 +149,7 @@ fun BankScreen(navController: NavController) {
                         .padding(defaultSpacer),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
+                    VengText(
                         text = stringResource(Res.string.bank_empty),
                         color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
                         fontSize = 16.sp,

@@ -4,6 +4,7 @@ import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCallPipeline
 import io.ktor.server.application.call
 import io.ktor.server.request.httpMethod
+import io.ktor.server.request.receive
 import io.ktor.server.request.uri
 import io.ktor.server.response.respond
 import io.ktor.server.routing.get
@@ -13,6 +14,7 @@ import io.ktor.server.routing.routing
 import org.vengeful.citymanager.adminPanel.AdminStats
 import org.vengeful.citymanager.adminPanel.RequestLog
 import org.vengeful.citymanager.adminPanel.ServerStats
+import org.vengeful.citymanager.models.AdministrationConfig
 import org.vengeful.citymanager.personService.IPersonRepository
 import org.vengeful.citymanager.personService.db.PersonRepository
 import java.time.LocalDateTime
@@ -20,6 +22,11 @@ import java.time.format.DateTimeFormatter
 
 // Временное хранилище для логов (в реальном приложении используй БД)
 private val requestLogs = mutableListOf<RequestLog>()
+
+private var adminConfig = AdministrationConfig(
+    severiteRate = 42.75,
+    controlLossThreshold = 75,
+)
 
 fun Application.configureAdminApi(repository: IPersonRepository) {
     routing {
@@ -33,6 +40,16 @@ fun Application.configureAdminApi(repository: IPersonRepository) {
                     memoryUsage = getMemoryUsage()
                 )
                 call.respond(stats)
+            }
+
+            get("/config") {
+                call.respond(adminConfig)
+            }
+
+            post("/config"){
+                val newConfig = call.receive<AdministrationConfig>()
+                adminConfig = newConfig
+                call.respond(mapOf("status" to "success", "message" to "Конфиг обновлён!"))
             }
 
             // 📋 Журнал запросов
