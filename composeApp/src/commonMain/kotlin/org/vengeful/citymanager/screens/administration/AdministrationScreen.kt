@@ -179,7 +179,8 @@ fun AdministrationScreen(navController: NavController) {
                 )
 
                 VengText(
-                    text = stringResource(Res.string.app_name, BUILD_VERSION),
+//                    text = stringResource(Res.string.app_name, BUILD_VERSION),
+                    text = stringResource(Res.string.administration_title),
                     color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
                     fontSize = 36.sp,
                     fontWeight = FontWeight.Bold,
@@ -187,12 +188,6 @@ fun AdministrationScreen(navController: NavController) {
                     modifier = Modifier
                         .padding(bottom = defaultPadding)
                         .weight(0.7f)
-                )
-                VengButton(
-                    onClick = { navController.popBackStack() },
-                    text = stringResource(Res.string.back),
-                    theme = currentTheme,
-                    modifier = Modifier.weight(0.1f),
                 )
             }
             Row(

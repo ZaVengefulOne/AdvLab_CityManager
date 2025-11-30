@@ -35,6 +35,7 @@ import citymanager.composeapp.generated.resources.app_name
 import org.jetbrains.compose.resources.stringResource
 import org.vengeful.citymanager.BUILD_VERSION
 import org.vengeful.citymanager.models.Person
+import org.vengeful.citymanager.models.getDisplayName
 import org.vengeful.citymanager.uikit.ColorTheme
 import org.vengeful.citymanager.uikit.SeveritepunkCardColors
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
@@ -148,7 +149,7 @@ private fun CompactPersonCardContent(person: Person, colors: SeveritepunkCardCol
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 displayedRights.forEach { right ->
                     VengText(
-                        text = "• ${right.name}",
+                        text = "• ${right.getDisplayName()}",
                         color = colors.accent,
                         fontSize = 10.sp
                     )
@@ -224,7 +225,7 @@ private fun ExpandedPersonCardContent(person: Person, colors: SeveritepunkCardCo
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         VengText(
-                            text = right.name,
+                            text = right.getDisplayName(),
                             color = colors.accent,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Medium

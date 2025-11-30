@@ -21,6 +21,7 @@
     <string name="bank_name">Банк</string>
 
     // Administration Screen
+    <string name="administration_title">Администрация г. Лэбтауна</string>
     <string name="register_user">👤 Зарегистрировать пользователя</string>
     <string name="get_all_persons">Получить всех жителей</string>
     <string name="id_search">Поиск по идентификатору</string>

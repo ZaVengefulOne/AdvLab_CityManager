@@ -18,12 +18,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.vengeful.citymanager.uikit.ColorTheme
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
+import org.vengeful.citymanager.uikit.cinzelFontFamily
 
 @Composable
 fun VengTextField(
@@ -79,7 +81,8 @@ fun VengTextField(
                 enabled = enabled,
                 textStyle = LocalTextStyle.current.copy(
                     color = colors.text,
-                    fontSize = 16.sp
+                    fontSize = 16.sp,
+                    fontFamily = cinzelFontFamily(fontStyle = FontStyle.Normal),
                 ),
                 keyboardOptions = keyboardOptions,
                 cursorBrush = SolidColor(Color.White),

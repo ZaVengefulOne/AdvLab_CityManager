@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.vengeful.citymanager.models.Rights
+import org.vengeful.citymanager.models.getDisplayName
 import org.vengeful.citymanager.uikit.ColorTheme
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
 import org.vengeful.citymanager.uikit.composables.veng.VengText
@@ -50,7 +51,7 @@ fun VengRightsMultiSelect(
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Rights.entries.forEach { right ->
+            Rights.entries.filter { it != Rights.Joker }.forEach { right ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -75,7 +76,7 @@ fun VengRightsMultiSelect(
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     VengText(
-                        text = right.name,
+                        text = right.getDisplayName(),
                         color = colors.text,
                         fontSize = 14.sp
                     )

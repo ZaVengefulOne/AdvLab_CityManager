@@ -2,7 +2,7 @@ package org.vengeful.citymanager
 
 const val SERVER_PORT = 8080
 const val SERVER_HOST = "0.0.0.0"
-const val BUILD_VERSION = "0.0.5"
+const val BUILD_VERSION = "0.0.6"
 
 
 // Routes for navigation
