@@ -6,7 +6,8 @@ import kotlinx.serialization.Serializable
 data class MasterBackupPerson(
     val id: Int,
     val firstName: String,
-    val lastName: String
+    val lastName: String,
+    val registrationPlace: String = "",
 )
 
 @Serializable

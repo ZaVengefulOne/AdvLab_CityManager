@@ -3,6 +3,7 @@ package org.vengeful.citymanager.uikit.composables.person
 import VengRightsMultiSelect
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -35,6 +36,18 @@ fun PersonEditDialog(
     var firstName by remember { mutableStateOf(person.firstName) }
     var lastName by remember { mutableStateOf(person.lastName) }
     var selectedRights by remember { mutableStateOf(person.rights.toSet()) }
+    var registrationPlace by remember {
+        mutableStateOf(person.registrationPlace)
+    }
+    var registrationPlaceDropdownExpanded by remember { mutableStateOf(false) }
+
+    val popularRegistrationPlaces = remember {
+        listOf("Эбони-Бэй", "Лэбтаун", "Советский союз")
+    }
+
+    var isCustomRegistrationPlace by remember {
+        mutableStateOf(person.registrationPlace !in popularRegistrationPlaces)
+    }
 
     val dialogColors = remember(theme) {
         when (theme) {
@@ -129,6 +142,82 @@ fun PersonEditDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                // Поле "Место регистрации"
+                Box {
+                    VengTextField(
+                        value = if (isCustomRegistrationPlace) registrationPlace else registrationPlace,
+                        onValueChange = {
+                            registrationPlace = it
+                            isCustomRegistrationPlace = true
+                        },
+                        label = "Место регистрации",
+                        placeholder = if (isCustomRegistrationPlace) "Введите место регистрации..." else "Выберите или введите...",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = !isCustomRegistrationPlace) {
+                                registrationPlaceDropdownExpanded = true
+                            },
+                        enabled = isCustomRegistrationPlace,
+                        theme = theme
+                    )
+
+                    if (!isCustomRegistrationPlace) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .padding(end = 12.dp, top = 20.dp)
+                                .clickable { registrationPlaceDropdownExpanded = true }
+                        ) {
+                            VengText(
+                                text = if (registrationPlaceDropdownExpanded) "▲" else "▼",
+                                fontSize = 12.sp,
+                            )
+                        }
+                    }
+
+                    DropdownMenu(
+                        expanded = registrationPlaceDropdownExpanded,
+                        onDismissRequest = { registrationPlaceDropdownExpanded = false },
+                        modifier = Modifier
+                            .background(dialogColors.surface)
+                            .border(2.dp, dialogColors.borderLight, RoundedCornerShape(6.dp))
+                            .width(350.dp)
+                    ) {
+                        popularRegistrationPlaces.forEach { place ->
+                            DropdownMenuItem(
+                                onClick = {
+                                    registrationPlace = place
+                                    isCustomRegistrationPlace = false
+                                    registrationPlaceDropdownExpanded = false
+                                },
+                                modifier = Modifier.background(dialogColors.surface),
+                                text = {
+                                    VengText(
+                                        text = place,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            )
+                        }
+                        DropdownMenuItem(
+                            onClick = {
+                                isCustomRegistrationPlace = true
+                                registrationPlace = ""
+                                registrationPlaceDropdownExpanded = false
+                            },
+                            modifier = Modifier.background(dialogColors.surface),
+                            text = {
+                                VengText(
+                                    text = "Ввести свой вариант",
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
                 // Права доступа
                 VengRightsMultiSelect(
                     selectedRights = selectedRights,
@@ -159,6 +248,7 @@ fun PersonEditDialog(
                                 id = person.id,
                                 firstName = firstName,
                                 lastName = lastName,
+                                registrationPlace = registrationPlace,
                                 rights = selectedRights.toList()
                             )
                             onSave(updatedPerson)
@@ -169,7 +259,7 @@ fun PersonEditDialog(
                             .weight(1f)
                             .padding(start = 8.dp),
                         padding = 12.dp,
-                        enabled = firstName.isNotBlank() && lastName.isNotBlank() && selectedRights.isNotEmpty(),
+                        enabled = firstName.isNotBlank() && lastName.isNotBlank() && registrationPlace.isNotBlank() && selectedRights.isNotEmpty(),
                         theme = theme
                     )
                 }

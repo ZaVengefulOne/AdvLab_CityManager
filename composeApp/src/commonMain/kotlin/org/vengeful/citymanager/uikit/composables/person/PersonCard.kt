@@ -202,6 +202,11 @@ private fun ExpandedPersonCardContent(person: Person, colors: SeveritepunkCardCo
             InfoRow(label = "Идентификатор:", value = person.id.toString(), cardColors = colors)
             InfoRow(label = "Фамилия:", value = person.lastName, cardColors = colors)
             InfoRow(label = "Имя:", value = person.firstName, cardColors = colors)
+            InfoRow(
+                label = "Место регистрации:",
+                value = person.registrationPlace.ifEmpty { "Не указано" },
+                cardColors = colors
+            )
         }
 
         // Права доступа

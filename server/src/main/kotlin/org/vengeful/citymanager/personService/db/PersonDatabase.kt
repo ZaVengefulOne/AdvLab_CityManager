@@ -12,6 +12,7 @@ import org.vengeful.citymanager.models.Rights
 object Persons : IntIdTable("persons") {
     val firstName = varchar("first_name", 255)
     val lastName = varchar("last_name", 255)
+    val registrationPlace = varchar("registration_place", 255).default("")
 }
 
 object RightsTable : IntIdTable("rights") {
@@ -30,6 +31,7 @@ class PersonDao(id: EntityID<Int>) : IntEntity(id) {
 
     var firstName by Persons.firstName
     var lastName by Persons.lastName
+    var registrationPlace by Persons.registrationPlace
 
     // Связь многие-ко-многим с правами
     val rights by RightDao via PersonRights
@@ -38,6 +40,7 @@ class PersonDao(id: EntityID<Int>) : IntEntity(id) {
         id = id.value,
         firstName = firstName,
         lastName = lastName,
+        registrationPlace = registrationPlace,
         rights = rights.map { it.right }.toList()
     )
 }

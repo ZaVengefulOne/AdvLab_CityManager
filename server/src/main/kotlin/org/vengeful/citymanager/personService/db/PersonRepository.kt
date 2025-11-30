@@ -65,6 +65,7 @@ class PersonRepository : IPersonRepository {
         val personDao = PersonDao.new(person.id) {
             firstName = person.firstName
             lastName = person.lastName
+            registrationPlace = person.registrationPlace
         }
 
         // Добавляем права
@@ -83,6 +84,7 @@ class PersonRepository : IPersonRepository {
         PersonDao.findById(person.id)?.apply {
             firstName = person.firstName
             lastName = person.lastName
+            registrationPlace = person.registrationPlace
 
             // Получаем текущие права как Set для удобства сравнения
             val currentRightsSet = rights.map { it.right }.toSet()

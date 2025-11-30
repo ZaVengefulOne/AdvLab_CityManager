@@ -16,7 +16,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -24,7 +23,6 @@ import org.vengeful.citymanager.models.Person
 import org.vengeful.citymanager.models.Rights
 import org.vengeful.citymanager.uikit.ColorTheme
 import org.vengeful.citymanager.uikit.DialogColors
-import org.vengeful.citymanager.uikit.SeveritepunkThemes
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
 import org.vengeful.citymanager.uikit.composables.veng.VengText
 import org.vengeful.citymanager.uikit.composables.veng.VengTextField
@@ -39,7 +37,13 @@ fun PersonDialog(
     var lastName by remember { mutableStateOf("") }
     var selectedRights by remember { mutableStateOf(emptySet<Rights>()) }
     var id by remember { mutableStateOf("") }
-    var rightsSearchQuery by remember { mutableStateOf("") }
+    var registrationPlace by remember { mutableStateOf("") }
+    var registrationPlaceDropdownExpanded by remember { mutableStateOf(false) }
+    var isCustomRegistrationPlace by remember { mutableStateOf(false) }
+
+    val popularRegistrationPlaces = remember {
+        listOf("Эбони-Бэй", "Лэбтаун", "Советский союз")
+    }
 
     val dialogColors = remember(theme) {
         when (theme) {
@@ -96,7 +100,7 @@ fun PersonDialog(
                         .align(Alignment.CenterHorizontally)
                 )
 
-                // Поля ввода
+                // Поле идентификатора
                 VengTextField(
                     value = id,
                     onValueChange = { id = it },
@@ -109,6 +113,7 @@ fun PersonDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                // Поле имени
                 VengTextField(
                     value = firstName,
                     onValueChange = { firstName = it },
@@ -120,6 +125,7 @@ fun PersonDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                // Поле фамилии
                 VengTextField(
                     value = lastName,
                     onValueChange = { lastName = it },
@@ -131,6 +137,86 @@ fun PersonDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                // Поле "Место регистрации"
+                Box {
+                    VengTextField(
+                        value = if (isCustomRegistrationPlace) registrationPlace else registrationPlace,
+                        onValueChange = {
+                            registrationPlace = it
+                            isCustomRegistrationPlace = true
+                        },
+                        label = "Место регистрации",
+                        placeholder = if (isCustomRegistrationPlace) "Введите место регистрации..." else "Выберите или введите...",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = !isCustomRegistrationPlace) {
+                                registrationPlaceDropdownExpanded = true
+                            },
+                        enabled = isCustomRegistrationPlace,
+                        theme = theme
+                    )
+
+                    if (!isCustomRegistrationPlace) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .padding(end = 12.dp, top = 20.dp)
+                                .clickable { registrationPlaceDropdownExpanded = true }
+                        ) {
+                            Text(
+                                text = if (registrationPlaceDropdownExpanded) "▲" else "▼",
+                                fontSize = 12.sp,
+                                color = dialogColors.borderLight
+                            )
+                        }
+                    }
+
+                    DropdownMenu(
+                        expanded = registrationPlaceDropdownExpanded,
+                        onDismissRequest = { registrationPlaceDropdownExpanded = false },
+                        modifier = Modifier
+                            .background(dialogColors.surface)
+                            .border(2.dp, dialogColors.borderLight, RoundedCornerShape(6.dp))
+                            .width(350.dp)
+                    ) {
+                        popularRegistrationPlaces.forEach { place ->
+                            DropdownMenuItem(
+                                onClick = {
+                                    registrationPlace = place
+                                    isCustomRegistrationPlace = false
+                                    registrationPlaceDropdownExpanded = false
+                                },
+                                modifier = Modifier.background(dialogColors.surface),
+                                text = {
+                                    VengText(
+                                        text = place,
+                                        color = dialogColors.borderLight,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            )
+                        }
+                        DropdownMenuItem(
+                            onClick = {
+                                isCustomRegistrationPlace = true
+                                registrationPlace = ""
+                                registrationPlaceDropdownExpanded = false
+                            },
+                            modifier = Modifier.background(dialogColors.surface),
+                            text = {
+                                VengText(
+                                    text = "Ввести свой вариант",
+                                    color = dialogColors.borderLight,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Права доступа
                 VengRightsMultiSelect(
                     selectedRights = selectedRights,
                     onRightsSelected = { selectedRights = it },
@@ -157,11 +243,12 @@ fun PersonDialog(
                     VengButton(
                         onClick = {
                             val personId = id.toIntOrNull() ?: 0
-                            if (personId > 0 && firstName.isNotBlank() && lastName.isNotBlank()) {
+                            if (personId > 0 && firstName.isNotBlank() && lastName.isNotBlank() && registrationPlace.isNotBlank()) {
                                 val person = Person(
                                     id = personId,
                                     firstName = firstName,
                                     lastName = lastName,
+                                    registrationPlace = registrationPlace,
                                     rights = selectedRights.toList()
                                 )
                                 onAddPerson(person)
@@ -173,7 +260,7 @@ fun PersonDialog(
                             .weight(1f)
                             .padding(start = 8.dp),
                         padding = 12.dp,
-                        enabled = id.isNotBlank() && firstName.isNotBlank() && lastName.isNotBlank() && selectedRights.isNotEmpty(),
+                        enabled = id.isNotBlank() && firstName.isNotBlank() && lastName.isNotBlank() && registrationPlace.isNotBlank() && selectedRights.isNotEmpty(),
                         theme = theme
                     )
                 }
