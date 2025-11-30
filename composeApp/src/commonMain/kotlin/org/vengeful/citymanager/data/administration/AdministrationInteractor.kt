@@ -17,8 +17,11 @@ import org.vengeful.citymanager.data.users.AuthManager
 import org.vengeful.citymanager.models.AdministrationConfig
 import org.vengeful.citymanager.models.CallRequest
 import org.vengeful.citymanager.models.CallStatus
+import org.vengeful.citymanager.models.emergencyShutdown.EmergencyShutdownRequest
+import org.vengeful.citymanager.models.emergencyShutdown.EmergencyShutdownStatusResponse
 import org.vengeful.citymanager.models.Enterprise
 import org.vengeful.citymanager.models.SendMessageRequest
+import org.vengeful.citymanager.models.emergencyShutdown.ErrorResponse
 
 class AdministrationInteractor(private val authManager: AuthManager) : IAdministrationInteractor {
 
@@ -88,6 +91,57 @@ class AdministrationInteractor(private val authManager: AuthManager) : IAdminist
             response.status.isSuccess()
         } catch (e: Exception) {
             throw Exception("Failed to reset call status: ${e.message}")
+        }
+    }
+
+    override suspend fun activateEmergencyShutdown(durationMinutes: Int, password: String): Boolean {
+        return try {
+            val token = authManager.getToken()
+            val response = client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/administration/emergency-shutdown") {
+                setHttpBuilder(withAuth = token != null)
+                setBody(EmergencyShutdownRequest(durationMinutes, password))
+            }
+
+            if (response.status.isSuccess()) {
+                true
+            } else {
+                // Пытаемся получить сообщение об ошибке из ответа
+                try {
+                    val errorResponse = response.body<ErrorResponse>()
+                    throw Exception(errorResponse.error)
+                } catch (e: Exception) {
+                    // Если не удалось распарсить ErrorResponse, используем общее сообщение
+                    if (e.message?.contains("error") == true) {
+                        throw e
+                    }
+                    val errorMessage = when (response.status.value) {
+                        403 -> "Хорошая попытка. Введите настоящий пароль."
+                        401 -> "Требуется аутентификация."
+                        400 -> "Некорректный запрос."
+                        else -> "Ошибка при активации экстренного отключения."
+                    }
+                    throw Exception(errorMessage)
+                }
+            }
+        } catch (e: Exception) {
+            throw e
+        }
+    }
+
+    override suspend fun getEmergencyShutdownStatus(): EmergencyShutdownStatusResponse {
+        return try {
+            val token = authManager.getToken()
+            val response =
+                client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/administration/emergency-shutdown/status") {
+                    setHttpBuilder(withAuth = token != null)
+                }
+            if (response.status.isSuccess()) {
+                response.body<EmergencyShutdownStatusResponse>()
+            } else {
+                EmergencyShutdownStatusResponse(isActive = false, remainingTimeSeconds = null)
+            }
+        } catch (e: Exception) {
+            EmergencyShutdownStatusResponse(isActive = false, remainingTimeSeconds = null)
         }
     }
 

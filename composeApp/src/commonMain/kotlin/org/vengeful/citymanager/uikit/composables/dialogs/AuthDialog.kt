@@ -150,7 +150,8 @@ fun AuthDialog(
                         fontSize = 12.sp,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 8.dp)
+                            .padding(bottom = 8.dp),
+                        maxLines = 3,
                     )
                 }
 

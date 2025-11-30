@@ -42,7 +42,7 @@ fun PersonEditDialog(
     var registrationPlaceDropdownExpanded by remember { mutableStateOf(false) }
 
     val popularRegistrationPlaces = remember {
-        listOf("Эбони-Бэй", "Лэбтаун", "Советский союз")
+        listOf("Эбони-Бэй", "Лэбтаун", "Техносоюз")
     }
 
     var isCustomRegistrationPlace by remember {

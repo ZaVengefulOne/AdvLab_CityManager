@@ -42,7 +42,7 @@ fun PersonDialog(
     var isCustomRegistrationPlace by remember { mutableStateOf(false) }
 
     val popularRegistrationPlaces = remember {
-        listOf("Эбони-Бэй", "Лэбтаун", "Советский союз")
+        listOf("Эбони-Бэй", "Лэбтаун", "Техносоюз")
     }
 
     val dialogColors = remember(theme) {

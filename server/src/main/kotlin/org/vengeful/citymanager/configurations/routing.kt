@@ -26,13 +26,20 @@ import org.vengeful.citymanager.models.users.User
 import org.vengeful.citymanager.personService.IPersonRepository
 import java.util.Date
 import io.ktor.server.request.contentType
+import io.ktor.server.request.header
 import io.ktor.server.routing.put
+import org.vengeful.citymanager.auth.EmergencyShutdownConfig
+import org.vengeful.citymanager.auth.SessionLockManager
 import org.vengeful.citymanager.backupService.BackupService
 import org.vengeful.citymanager.bankService.IBankRepository
 import org.vengeful.citymanager.models.BankAccount
 import org.vengeful.citymanager.models.CallRequest
 import org.vengeful.citymanager.models.CallStatus
+import org.vengeful.citymanager.models.emergencyShutdown.EmergencyShutdownRequest
+import org.vengeful.citymanager.models.emergencyShutdown.EmergencyShutdownResponse
+import org.vengeful.citymanager.models.emergencyShutdown.EmergencyShutdownStatusResponse
 import org.vengeful.citymanager.models.Enterprise
+import org.vengeful.citymanager.models.emergencyShutdown.ErrorResponse
 import org.vengeful.citymanager.models.backup.MasterBackup
 import org.vengeful.citymanager.models.users.CreateBankAccountRequest
 import org.vengeful.citymanager.models.users.RegisterRequest
@@ -53,6 +60,7 @@ fun Application.configureSerialization(
     personRepository: IPersonRepository,
     userRepository: IUserRepository,
     bankRepository: IBankRepository,
+    emergencyShutdownConfig: EmergencyShutdownConfig
 ) {
 
     fun getCurrentUser(call: ApplicationCall, userRepository: IUserRepository): User? {
@@ -65,6 +73,14 @@ fun Application.configureSerialization(
                     return null
                 }
                 val userId = userIdClaim.asInt()
+
+                // Проверяем блокировку сессий
+                val token = call.request.header("Authorization")?.removePrefix("Bearer ") ?: ""
+                if (SessionLockManager.isSessionBlocked(userId, token)) {
+                    println("getCurrentUser: Session blocked for user $userId")
+                    return null
+                }
+
                 println("getCurrentUser: extracted userId=$userId")
                 val user = userRepository.findById(userId)
                 if (user == null) {
@@ -165,24 +181,32 @@ fun Application.configureSerialization(
                     when (user) {
                         wrongPasswordUser -> call.respond(HttpStatusCode.Forbidden)
                         is User -> {
+                            // Проверяем блокировку перед выдачей токена
+                            if (!SessionLockManager.isUserAllowedToLogin(user.id)) {
+                                call.respond(
+                                    HttpStatusCode.ServiceUnavailable,
+                                    ErrorResponse("Система под блокировкой. Повторите попытку позже")
+                                )
+                                return@post
+                            }
+
                             val token = generateJwtToken(user)
                             call.respond(HttpStatusCode.OK, AuthResponse(token, user, user.rights))
                         }
 
-                        null -> call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "Invalid credentials"))
-
+                        null -> call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Invalid credentials"))
                     }
 
                 } catch (e: JsonConvertException) {
                     println("JSON deserialization error: ${e::class.simpleName}")
                     println("Error message: ${e.message}")
                     e.printStackTrace()
-                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid JSON format: ${e.message}"))
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid JSON format: ${e.message}"))
                 } catch (e: Exception) {
                     println("Login error: ${e::class.simpleName}")
                     println("Error message: ${e.message}")
                     e.printStackTrace()
-                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid request: ${e.message}"))
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid request: ${e.message}"))
                 }
             }
 
@@ -851,8 +875,82 @@ fun Application.configureSerialization(
                 }
             }
 
+            route("/administration") {
+                post("/emergency-shutdown") {
+                    try {
+                        val currentUser = getCurrentUser(call, userRepository)
+                        if (currentUser == null) {
+                            call.respond(HttpStatusCode.Unauthorized, ErrorResponse("User not authenticated"))
+                            return@post
+                        }
+
+                        val request = call.receive<EmergencyShutdownRequest>()
+
+                        if (request.durationMinutes !in 1..30) {
+                            call.respond(
+                                HttpStatusCode.BadRequest,
+                                ErrorResponse("Duration must be between 1 and 30 minutes")
+                            )
+                            return@post
+                        }
+
+                        // Проверяем отдельный пароль экстренного отключения
+                        if (request.password != emergencyShutdownConfig.password) {
+                            call.respond(
+                                HttpStatusCode.Forbidden,
+                                ErrorResponse("Invalid emergency shutdown password")
+                            )
+                            return@post
+                        }
+
+                        SessionLockManager.activateEmergencyShutdown(
+                            allowedUserId = currentUser.id,
+                            durationMinutes = request.durationMinutes
+                        )
+
+                        call.respond(
+                            HttpStatusCode.OK,
+                            EmergencyShutdownResponse(
+                                message = "Emergency shutdown activated",
+                                durationMinutes = request.durationMinutes,
+                                allowedUserId = currentUser.id
+                            )
+                        )
+                    } catch (e: IllegalArgumentException) {
+                        call.respond(HttpStatusCode.BadRequest, ErrorResponse(e.message ?: "Invalid argument"))
+                    } catch (e: Exception) {
+                        println("Emergency shutdown error: ${e::class.simpleName} - ${e.message}")
+                        e.printStackTrace()
+                        call.respond(
+                            HttpStatusCode.InternalServerError,
+                            ErrorResponse("Failed to activate emergency shutdown: ${e.message}")
+                        )
+                    }
+                }
+
+                get("/emergency-shutdown/status") {
+                    try {
+                        val isActive = SessionLockManager.isEmergencyShutdownActive()
+                        val remainingTimeMillis = SessionLockManager.getRemainingTimeMillis()
+                        val remainingTimeSeconds = remainingTimeMillis?.let { it / 1000 } ?: 0L
+
+                        call.respond(
+                            HttpStatusCode.OK,
+                            EmergencyShutdownStatusResponse(
+                                isActive = isActive,
+                                remainingTimeSeconds = if (isActive) remainingTimeSeconds else null
+                            )
+                        )
+                    } catch (e: Exception) {
+                        call.respond(
+                            HttpStatusCode.InternalServerError,
+                            ErrorResponse("Failed to get status: ${e.message}")
+                        )
+                    }
+                }
+            }
+
             route("/call") {
-                // Получить статус вызова для предприятия
                 get("/status/{enterprise}") {
                     val enterpriseStr = call.parameters["enterprise"]
                     val enterprise = try {
@@ -866,11 +964,9 @@ fun Application.configureSerialization(
                     call.respond(status)
                 }
 
-                // Вызвать представителя предприятия
                 post("/send") {
                     val request = call.receive<CallRequest>()
 
-                    // Устанавливаем статус вызова
                     callStatuses[request.enterprise] = CallStatus(
                         enterprise = request.enterprise,
                         isCalled = true,
@@ -894,7 +990,6 @@ fun Application.configureSerialization(
                     call.respond(mapOf("status" to "success", "message" to "Call reset"))
                 }
             }
-
         }
     }
 }

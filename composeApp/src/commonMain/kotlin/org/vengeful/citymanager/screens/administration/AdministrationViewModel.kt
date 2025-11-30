@@ -54,6 +54,13 @@ class AdministrationViewModel(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
+    private val _isEmergencyShutdownActive = MutableStateFlow<Boolean>(false)
+    val isEmergencyShutdownActive: StateFlow<Boolean> = _isEmergencyShutdownActive.asStateFlow()
+
+    private val _remainingTimeSeconds = MutableStateFlow<Long?>(null)
+    val remainingTimeSeconds: StateFlow<Long?> = _remainingTimeSeconds.asStateFlow()
+
+    private var emergencyShutdownStatusJob: Job? = null
     private var updateJob: Job? = null
     private var configUpdateJob: Job? = null
     private var baseSeveritRate: Double = 42.75
@@ -276,9 +283,81 @@ class AdministrationViewModel(
         }
     }
 
+    fun activateEmergencyShutdown(durationMinutes: Int, password: String) {
+        viewModelScope.launch {
+            try {
+                _errorMessage.value = null
+
+                val success = administrationInteractor.activateEmergencyShutdown(durationMinutes, password)
+                if (success) {
+                    _isEmergencyShutdownActive.value = true
+                    _errorMessage.value = null
+                    checkEmergencyShutdownStatus()
+                } else {
+                    _errorMessage.value = "Не удалось активировать экстренное отключение"
+                }
+            } catch (e: Exception) {
+                // Сохраняем сообщение об ошибке для отображения в диалоге
+                val errorMsg = e.message ?: "Ошибка при активации экстренного отключения"
+                _errorMessage.value = errorMsg
+                println("Error activating emergency shutdown: ${e.message}")
+            }
+        }
+    }
+
+    fun clearErrorMessage() {
+        _errorMessage.value = null
+    }
+
+    fun checkEmergencyShutdownStatus() {
+        viewModelScope.launch {
+            try {
+                val status = administrationInteractor.getEmergencyShutdownStatus()
+                _isEmergencyShutdownActive.value = status.isActive
+                _remainingTimeSeconds.value = status.remainingTimeSeconds
+
+                if (status.isActive) {
+                    startPeriodicStatusSync()
+                } else {
+                    stopPeriodicStatusSync()
+                }
+            } catch (e: Exception) {
+                println("Error checking emergency shutdown status: ${e.message}")
+            }
+        }
+    }
+
+    private fun startPeriodicStatusSync() {
+        emergencyShutdownStatusJob?.cancel()
+        emergencyShutdownStatusJob = viewModelScope.launch {
+            while (true) {
+                delay(1000) // Обновляем каждую секунду
+                try {
+                    val status = administrationInteractor.getEmergencyShutdownStatus()
+                    _isEmergencyShutdownActive.value = status.isActive
+                    _remainingTimeSeconds.value = status.remainingTimeSeconds
+
+                    if (!status.isActive) {
+                        stopPeriodicStatusSync()
+                        break
+                    }
+                } catch (e: Exception) {
+                    println("Error syncing emergency shutdown status: ${e.message}")
+                }
+            }
+        }
+    }
+
+    private fun stopPeriodicStatusSync() {
+        emergencyShutdownStatusJob?.cancel()
+        emergencyShutdownStatusJob = null
+    }
+
     override fun onCleared() {
         super.onCleared()
         updateJob?.cancel()
+        configUpdateJob?.cancel()
+        stopPeriodicStatusSync()
     }
 
     companion object {

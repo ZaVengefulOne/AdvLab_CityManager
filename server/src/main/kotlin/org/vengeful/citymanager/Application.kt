@@ -13,7 +13,9 @@ import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.response.respond
 import kotlinx.serialization.json.Json
 import org.vengeful.citymanager.adminPanel.configurations.configureAdminApi
+import org.vengeful.citymanager.auth.EmergencyShutdownConfig
 import org.vengeful.citymanager.auth.JWTConfig
+import org.vengeful.citymanager.auth.SessionLockManager
 import org.vengeful.citymanager.bankService.db.BankRepository
 import org.vengeful.citymanager.configurations.configureDatabase
 import org.vengeful.citymanager.configurations.configureSerialization
@@ -25,6 +27,8 @@ fun main(args: Array<String>): Unit = EngineMain.main(args)
 
 fun Application.module() {
     val jwtConfig = JWTConfig(this.environment.config)
+    val emergencyShutdownConfig = EmergencyShutdownConfig(this.environment.config)
+
     install(ContentNegotiation) {
         json(Json {
             ignoreUnknownKeys = true
@@ -45,6 +49,7 @@ fun Application.module() {
             )
             validate { credential ->
                 val username = credential.payload.getClaim("username").asString()
+                val userIdClaim = credential.payload.getClaim("userId")
                 val rightsClaim = credential.payload.getClaim("rights")
                 val rightsList = if (rightsClaim.isNull) {
                     emptyList<String>()
@@ -58,7 +63,14 @@ fun Application.module() {
                 }
 
                 if (username != null && rights != null && rights.isNotEmpty()) {
-                    JWTPrincipal(credential.payload)
+                    val userId = userIdClaim.asInt()
+                    // Проверяем блокировку сессий
+                    val token = credential.payload.getClaim("token").asString()
+                    if (SessionLockManager.isSessionBlocked(userId, token)) {
+                        null // Блокируем аутентификацию
+                    } else {
+                        JWTPrincipal(credential.payload)
+                    }
                 } else {
                     null
                 }
@@ -77,6 +89,7 @@ fun Application.module() {
         personRepository = personRepository,
         userRepository = userRepository,
         bankRepository = bankRepository,
+        emergencyShutdownConfig = emergencyShutdownConfig
         )
     configureDatabase(repository = personRepository)
     configureAdminApi(repository = personRepository)

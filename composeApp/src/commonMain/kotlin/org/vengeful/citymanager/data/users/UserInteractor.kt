@@ -25,6 +25,7 @@ import org.vengeful.citymanager.data.persons.PersonInteractor.Companion.SERVER_A
 import org.vengeful.citymanager.data.users.models.LoginResult
 import org.vengeful.citymanager.data.users.models.RegisterResult
 import org.vengeful.citymanager.models.Rights
+import org.vengeful.citymanager.models.emergencyShutdown.ErrorResponse
 import org.vengeful.citymanager.models.users.AuthResponse
 import org.vengeful.citymanager.models.users.LoginRequest
 import org.vengeful.citymanager.models.users.RegisterRequest
@@ -55,11 +56,23 @@ class UserInteractor(private val authManager: AuthManager) : IUserInteractor {
                 )
                 LoginResult.Success
             } else {
-                val errorMessage = when (response.status.value) {
-                    401 -> "Указанного профиля не существует"
-                    400 -> "Некорректный запрос"
-                    403 -> "Неверный пароль"
-                    else -> "Ошибка сервера: ${response.status.description}"
+                // Пытаемся получить сообщение об ошибке из ответа
+                val errorMessage = try {
+                    // Сначала пробуем ErrorResponse
+                    try {
+                        val errorResponse = response.body<ErrorResponse>()
+                        errorResponse.error
+                    } catch (e: Exception) {
+                        // Если не получилось, пробуем Map
+                        try {
+                            val errorBody = response.body<Map<String, String>>()
+                            errorBody["error"] ?: getDefaultErrorMessage(response.status.value)
+                        } catch (e2: Exception) {
+                            getDefaultErrorMessage(response.status.value)
+                        }
+                    }
+                } catch (e: Exception) {
+                    getDefaultErrorMessage(response.status.value)
                 }
                 LoginResult.Error(errorMessage)
             }
@@ -77,6 +90,16 @@ class UserInteractor(private val authManager: AuthManager) : IUserInteractor {
                 else -> "Ошибка: ${e.message ?: "Не удалось выполнить вход. Попробуйте позже."}"
             }
             LoginResult.Error(errorMessage)
+        }
+    }
+
+    private fun getDefaultErrorMessage(statusCode: Int): String {
+        return when (statusCode) {
+            401 -> "Указанного профиля не существует"
+            400 -> "Некорректный запрос"
+            403 -> "Неверный пароль"
+            503 -> "Система под блокировкой. Повторите попытку позже"
+            else -> "Ошибка сервера: $statusCode"
         }
     }
 

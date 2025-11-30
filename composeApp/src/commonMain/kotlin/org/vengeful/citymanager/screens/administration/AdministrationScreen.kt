@@ -8,7 +8,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,7 +23,6 @@ import citymanager.composeapp.generated.resources.*
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import org.vengeful.citymanager.BUILD_VERSION
 import org.vengeful.citymanager.data.users.states.RegisterUiState
 import org.vengeful.citymanager.di.koinViewModel
 import org.vengeful.citymanager.models.Person
@@ -34,6 +32,7 @@ import org.vengeful.citymanager.uikit.animations.RestartAnimation
 import org.vengeful.citymanager.uikit.animations.ShutdownAnimation
 import org.vengeful.citymanager.uikit.composables.administration.AdminChatWidget
 import org.vengeful.citymanager.uikit.composables.administration.ControlLossIndicator
+import org.vengeful.citymanager.uikit.composables.administration.EmergencyShutdownDialog
 import org.vengeful.citymanager.uikit.composables.administration.EnterpriseCallWidget
 import org.vengeful.citymanager.uikit.composables.administration.SeveriteRateGraph
 import org.vengeful.citymanager.uikit.composables.dialogs.DeleteConfirmationDialog
@@ -46,6 +45,8 @@ import org.vengeful.citymanager.uikit.composables.veng.VengBackground
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
 import org.vengeful.citymanager.uikit.composables.veng.VengText
 import org.vengeful.citymanager.utilities.LocalTheme
+import androidx.compose.runtime.collectAsState
+import org.vengeful.citymanager.models.emergencyShutdown.ErrorResponse
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,10 +58,14 @@ fun AdministrationScreen(navController: NavController) {
     val controlLossThreshold = administrationViewModel.controlLossThreshold.collectAsState().value
     val severitRateHistory = administrationViewModel.severitRateHistory.collectAsState().value
     val chatMessages = administrationViewModel.chatMessages.collectAsState().value
+    val isEmergencyShutdownActive = administrationViewModel.isEmergencyShutdownActive.collectAsState().value
+    val remainingTimeSeconds = administrationViewModel.remainingTimeSeconds.collectAsState().value
 
 
     var currentTheme by remember { mutableStateOf(LocalTheme) }
     var showAddDialog by remember { mutableStateOf(false) }
+    var showEmergencyShutdownDialog by remember { mutableStateOf(false) }
+    var emergencyShutdownError by remember { mutableStateOf<String?>(null) }
     var showRegisterDialog by remember { mutableStateOf(false) }
     var selectedPerson by remember { mutableStateOf<Person?>(null) }
     var selectedUser by remember { mutableStateOf<User?>(null) }
@@ -68,6 +73,10 @@ fun AdministrationScreen(navController: NavController) {
     var personToEdit by remember { mutableStateOf<Person?>(null) }
     var userToDelete by remember { mutableStateOf<User?>(null) }
     var personToDelete by remember { mutableStateOf<Person?>(null) }
+    var showShutdownAnimation by remember { mutableStateOf(false) }
+    var showRestartAnimation by remember { mutableStateOf(false) }
+    var isRefreshing by remember { mutableStateOf(false) }
+    var refreshTrigger by remember { mutableIntStateOf(0) }
 
     val getId = remember { mutableStateOf("") }
     val delId = remember { mutableStateOf("") }
@@ -80,11 +89,6 @@ fun AdministrationScreen(navController: NavController) {
 
     val dividerColor = Color(0xFFD4AF37)
     val transColor = Color.Transparent
-
-    var showShutdownAnimation by remember { mutableStateOf(false) }
-    var showRestartAnimation by remember { mutableStateOf(false) }
-    var isRefreshing by remember { mutableStateOf(false) }
-    var refreshTrigger by remember { mutableIntStateOf(0) }
 
     val rotationAngle by animateFloatAsState(
         targetValue = if (isRefreshing) 720f else 0f,
@@ -120,6 +124,7 @@ fun AdministrationScreen(navController: NavController) {
         administrationViewModel.getUsers()
         administrationViewModel.getAdminConfig()
         administrationViewModel.startConfigUpdates()
+        administrationViewModel.checkEmergencyShutdownStatus()
     }
 
     LaunchedEffect(refreshTrigger) {
@@ -205,7 +210,7 @@ fun AdministrationScreen(navController: NavController) {
                 horizontalArrangement = Arrangement.spacedBy(defaultSpacer),
                 modifier = Modifier
                     .fillMaxWidth()
-                ) {
+            ) {
                 Column(
                     modifier = Modifier,
                     verticalArrangement = Arrangement.spacedBy(defaultSpacer),
@@ -228,118 +233,292 @@ fun AdministrationScreen(navController: NavController) {
                             .wrapContentHeight(),
                         backgroundColor = SeveritepunkThemes.getColorScheme(currentTheme).background.copy(alpha = 0.3f)
                     )
-                }
-                Column(
-                    modifier = Modifier,
-                    verticalArrangement = Arrangement.spacedBy(defaultSpacer),
-                    horizontalAlignment = Alignment.End
-                ) {
-                    AdminChatWidget(
-                        messages = chatMessages,
-                        onSendMessage = { text ->
-                            administrationViewModel.sendChatMessage(text)
-                        },
+
+                    Column(
                         modifier = Modifier
+                            .fillMaxWidth(0.3f)
                             .wrapContentHeight(),
-                        backgroundColor = SeveritepunkThemes.getColorScheme(currentTheme).background.copy(alpha = 0.3f),
-                        borderColor = SeveritepunkThemes.getColorScheme(currentTheme).borderLight
-                    )
-
-                    EnterpriseCallWidget(
-                        onCallEnterprise = { enterprise ->
-                            administrationViewModel.callEnterprise(enterprise)
-                        },
-                        modifier = Modifier
-                            .wrapContentHeight(),
-                        backgroundColor = SeveritepunkThemes.getColorScheme(currentTheme).background.copy(alpha = 0.3f),
-                        borderColor = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
-                        theme = currentTheme
-                    )
-                }
-
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(vertical = defaultSpacer),
-                horizontalArrangement = Arrangement.spacedBy(defaultSpacer)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
-                    verticalArrangement = Arrangement.spacedBy(mediumPadding)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        VengText(
-                            text = stringResource(Res.string.user_list, users.size),
-                            color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.weight(1f)
-                        )
                         VengButton(
                             onClick = {
-                                showRegisterDialog = true
-                                administrationViewModel.getPersons()
+                                emergencyShutdownError = null
+                                showEmergencyShutdownDialog = true
                             },
-                            text = stringResource(Res.string.add_new_person),
-                            modifier = Modifier,
-                            padding = 10.dp,
+                            text = "Экстренное отключение",
+                            modifier = Modifier.fillMaxWidth(),
+                            theme = currentTheme,
+                            enabled = !isEmergencyShutdownActive,
+                            padding = 16.dp
+                        )
+
+                        // Текст с информацией о блокировке
+                        if (isEmergencyShutdownActive && remainingTimeSeconds != null) {
+                            val minutes = remainingTimeSeconds / 60
+                            val seconds = remainingTimeSeconds % 60
+                            val timeText = if (minutes > 0) {
+                                "$minutes мин ${seconds}с"
+                            } else {
+                                "${seconds}с"
+                            }
+
+                            VengText(
+                                text = "Блокировка активна. Осталось: $timeText",
+                                color = Color(0xFFE74C3C),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp),
+                                textAlign = TextAlign.Center
+                            )
+                        } else if (isEmergencyShutdownActive) {
+                            VengText(
+                                text = "Блокировка активна",
+                                color = Color(0xFFE74C3C),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                        if (showEmergencyShutdownDialog) {
+                            EmergencyShutdownDialog(
+                                onDismiss = {
+                                    showEmergencyShutdownDialog = false
+                                    emergencyShutdownError = null
+                                    // Очищаем ошибку в ViewModel при закрытии диалога
+                                    administrationViewModel.clearErrorMessage()
+                                },
+                                onConfirm = { durationMinutes, password ->
+                                    emergencyShutdownError = null // Сбрасываем ошибку при новой попытке
+                                    administrationViewModel.activateEmergencyShutdown(durationMinutes, password)
+                                },
+                                theme = currentTheme,
+                                errorMessage = emergencyShutdownError
+                            )
+
+                            // Обработка ошибок из ViewModel (исправленный LaunchedEffect)
+                            val errorMessageState = administrationViewModel.errorMessage.collectAsState()
+                            LaunchedEffect(errorMessageState.value) {
+                                val error = errorMessageState.value
+                                if (error != null) {
+                                    // Проверяем различные варианты сообщений об ошибке пароля
+                                    if (error.contains("password", ignoreCase = true) ||
+                                        error.contains("пароль", ignoreCase = true) ||
+                                        error.contains("Invalid emergency shutdown", ignoreCase = true) ||
+                                        error.contains("Неверный пароль", ignoreCase = true)) {
+                                        emergencyShutdownError = error
+                                    } else if (error.contains("Failed to activate", ignoreCase = true)) {
+                                        // Для других ошибок активации тоже показываем в диалоге
+                                        emergencyShutdownError = error
+                                    }
+                                }
+                            }
+
+                            // Закрываем диалог только при успехе
+                            LaunchedEffect(isEmergencyShutdownActive) {
+                                if (isEmergencyShutdownActive) {
+                                    showEmergencyShutdownDialog = false
+                                    emergencyShutdownError = null
+                                    administrationViewModel.clearErrorMessage()
+                                }
+                            }
+                        }
+                    }
+                }
+                    Column(
+                        modifier = Modifier,
+                        verticalArrangement = Arrangement.spacedBy(defaultSpacer),
+                        horizontalAlignment = Alignment.End
+                    ) {
+                        AdminChatWidget(
+                            messages = chatMessages,
+                            onSendMessage = { text ->
+                                administrationViewModel.sendChatMessage(text)
+                            },
+                            modifier = Modifier
+                                .wrapContentHeight(),
+                            backgroundColor = SeveritepunkThemes.getColorScheme(currentTheme).background.copy(alpha = 0.3f),
+                            borderColor = SeveritepunkThemes.getColorScheme(currentTheme).borderLight
+                        )
+
+                        EnterpriseCallWidget(
+                            onCallEnterprise = { enterprise ->
+                                administrationViewModel.callEnterprise(enterprise)
+                            },
+                            modifier = Modifier
+                                .wrapContentHeight(),
+                            backgroundColor = SeveritepunkThemes.getColorScheme(currentTheme).background.copy(alpha = 0.3f),
+                            borderColor = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
                             theme = currentTheme
                         )
                     }
 
-                    if (users.isNotEmpty()) {
-                        UserList(
-                            users = users,
-                            modifier = Modifier.fillMaxSize(),
-                            onEditClick = { user ->
-                                userToEdit = user
-                            },
-                            onDeleteClick = { user ->
-                                userToDelete = user
-                            },
-                            onToggleActive = { user ->
-                                administrationViewModel.toggleUserStatus(user.id, user.isActive)
-                            },
-                            theme = currentTheme
-                        )
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    SeveritepunkThemes.getColorScheme(currentTheme).borderLight.copy(alpha = 0.1f)
-                                )
-                                .border(
-                                    1.dp,
-                                    SeveritepunkThemes.getColorScheme(currentTheme).borderLight.copy(alpha = 0.2f)
-                                )
-                                .padding(defaultSpacer),
-                            contentAlignment = Alignment.Center
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(vertical = defaultSpacer),
+                    horizontalArrangement = Arrangement.spacedBy(defaultSpacer)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(),
+                        verticalArrangement = Arrangement.spacedBy(mediumPadding)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             VengText(
-                                text = "Нет пользователей",
+                                text = stringResource(Res.string.user_list, users.size),
                                 color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Medium,
-                                textAlign = TextAlign.Center
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.weight(1f)
                             )
+                            VengButton(
+                                onClick = {
+                                    showRegisterDialog = true
+                                    administrationViewModel.getPersons()
+                                },
+                                text = stringResource(Res.string.add_new_person),
+                                modifier = Modifier,
+                                padding = 10.dp,
+                                theme = currentTheme
+                            )
+                        }
+
+                        if (users.isNotEmpty()) {
+                            UserList(
+                                users = users,
+                                modifier = Modifier.fillMaxSize(),
+                                onEditClick = { user ->
+                                    userToEdit = user
+                                },
+                                onDeleteClick = { user ->
+                                    userToDelete = user
+                                },
+                                onToggleActive = { user ->
+                                    administrationViewModel.toggleUserStatus(user.id, user.isActive)
+                                },
+                                theme = currentTheme
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        SeveritepunkThemes.getColorScheme(currentTheme).borderLight.copy(alpha = 0.1f)
+                                    )
+                                    .border(
+                                        1.dp,
+                                        SeveritepunkThemes.getColorScheme(currentTheme).borderLight.copy(alpha = 0.2f)
+                                    )
+                                    .padding(defaultSpacer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                VengText(
+                                    text = "Нет пользователей",
+                                    color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+
+                    // Правая колонка - Жители
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(),
+                        verticalArrangement = Arrangement.spacedBy(mediumPadding)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            VengText(
+                                text = stringResource(Res.string.person_list, persons.size),
+                                color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.weight(1f)
+                            )
+                            VengButton(
+                                onClick = { showAddDialog = true },
+                                text = stringResource(Res.string.add_new_person),
+                                modifier = Modifier,
+                                padding = 10.dp,
+                                theme = currentTheme
+                            )
+                        }
+
+                        if (persons.isNotEmpty()) {
+                            PersonList(
+                                persons = persons,
+                                modifier = Modifier.fillMaxSize(),
+                                onEditClick = { person ->
+                                    personToEdit = person
+                                },
+                                onDeleteClick = { person ->
+                                    personToDelete = person
+                                },
+                                theme = currentTheme
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        SeveritepunkThemes.getColorScheme(currentTheme).borderLight.copy(alpha = 0.1f)
+                                    )
+                                    .border(
+                                        1.dp,
+                                        SeveritepunkThemes.getColorScheme(currentTheme).borderLight.copy(alpha = 0.2f)
+                                    )
+                                    .padding(defaultSpacer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                VengText(
+                                    text = stringResource(Res.string.base_empty),
+                                    color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    textAlign = TextAlign.Center,
+                                    lineHeight = 24.sp
+                                )
+                            }
                         }
                     }
                 }
 
-                // Правая колонка - Жители
-                Column(
+                Box(
                     modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
+                        .fillMaxWidth(0.8f)
+                        .height(1.dp)
+                        .background(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(
+                                    transColor,
+                                    dividerColor,
+                                    transColor,
+                                )
+                            )
+                        )
+                )
+
+                Column(
+                    modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(mediumPadding)
                 ) {
                     Row(
@@ -350,38 +529,32 @@ fun AdministrationScreen(navController: NavController) {
                         VengText(
                             text = stringResource(Res.string.person_list, persons.size),
                             color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
-                            fontSize = 20.sp,
+                            fontSize = 36.sp,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(0.7f)
                         )
                         VengButton(
                             onClick = { showAddDialog = true },
                             text = stringResource(Res.string.add_new_person),
-                            modifier = Modifier,
-                            padding = 10.dp,
-                            theme = currentTheme
+                            modifier = Modifier.weight(0.1f),
+                            theme = currentTheme,
                         )
                     }
 
                     if (persons.isNotEmpty()) {
-                        PersonList(
+                        PersonsGrid(
                             persons = persons,
                             modifier = Modifier.fillMaxSize(),
-                            onEditClick = { person ->
-                                personToEdit = person
+                            onPersonClick = { person ->
+                                selectedPerson = person
                             },
-                            onDeleteClick = { person ->
-                                personToDelete = person
-                            },
-                            theme = currentTheme
+                            theme = currentTheme,
                         )
                     } else {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(
-                                    SeveritepunkThemes.getColorScheme(currentTheme).borderLight.copy(alpha = 0.1f)
-                                )
+                                .background(SeveritepunkThemes.getColorScheme(currentTheme).borderLight.copy(alpha = 0.1f))
                                 .border(
                                     1.dp,
                                     SeveritepunkThemes.getColorScheme(currentTheme).borderLight.copy(alpha = 0.2f)
@@ -402,174 +575,142 @@ fun AdministrationScreen(navController: NavController) {
                 }
             }
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(0.8f)
-                    .height(1.dp)
-                    .background(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(
-                                transColor,
-                                dividerColor,
-                                transColor,
-                            )
-                        )
-                    )
-            )
+            if (showAddDialog) {
+                PersonDialog(
+                    onDismiss = { showAddDialog = false },
+                    onAddPerson = { person ->
+                        administrationViewModel.addPerson(person)
+                        administrationViewModel.getPersons()
+                    },
+                    theme = currentTheme,
+                )
+            }
 
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(mediumPadding)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    VengText(
-                        text = stringResource(Res.string.person_list, persons.size),
-                        color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
-                        fontSize = 36.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(0.7f)
-                    )
-                    VengButton(
-                        onClick = { showAddDialog = true },
-                        text = stringResource(Res.string.add_new_person),
-                        modifier = Modifier.weight(0.1f),
-                        theme = currentTheme,
-                    )
+            selectedPerson?.let { person ->
+                PersonDetailedDialog(
+                    person = person,
+                    onDismiss = { selectedPerson = null },
+                    theme = currentTheme,
+                )
+            }
+
+            // Диалог редактирования пользователя
+            userToEdit?.let { user ->
+                UserEditDialog(
+                    user = user,
+                    persons = persons,
+                    onDismiss = { userToEdit = null },
+                    onSave = { updatedUser, password, personId ->
+                        administrationViewModel.updateUser(updatedUser, password, personId)
+                        userToEdit = null
+                    },
+                    theme = currentTheme
+                )
+            }
+
+            // Диалог редактирования жителя
+            personToEdit?.let { person ->
+                PersonEditDialog(
+                    person = person,
+                    onDismiss = { personToEdit = null },
+                    onSave = { updatedPerson ->
+                        administrationViewModel.updatePerson(updatedPerson)
+                        personToEdit = null
+                    },
+                    theme = currentTheme
+                )
+            }
+
+            // Диалог подтверждения удаления пользователя
+            userToDelete?.let { user ->
+                DeleteConfirmationDialog(
+                    onDismiss = { userToDelete = null },
+                    onConfirm = {
+                        administrationViewModel.deleteUser(user.id)
+                        userToDelete = null
+                    },
+                    theme = currentTheme
+                )
+            }
+
+            // Диалог подтверждения удаления жителя
+            personToDelete?.let { person ->
+                DeleteConfirmationDialog(
+                    onDismiss = { personToDelete = null },
+                    onConfirm = {
+                        administrationViewModel.deletePerson(person.id)
+                        personToDelete = null
+                    },
+                    theme = currentTheme
+                )
+            }
+
+            if (showRegisterDialog) {
+                val registerState = administrationViewModel.registerState.collectAsState().value
+                RegisterDialog(
+                    onDismiss = {
+                        showRegisterDialog = false
+                        administrationViewModel.resetRegisterState()
+                    },
+                    onRegister = { username, password, personId ->
+                        administrationViewModel.register(username, password, personId)
+                    },
+                    persons = persons,
+                    isLoading = registerState is RegisterUiState.Loading,
+                    errorMessage = when (registerState) {
+                        is RegisterUiState.Error -> registerState.message
+                        else -> null
+                    },
+                    theme = currentTheme
+                )
+
+                LaunchedEffect(registerState) {
+                    if (registerState is RegisterUiState.Success) {
+                        showRegisterDialog = false
+                        administrationViewModel.resetRegisterState()
+                    }
                 }
+            }
 
-                if (persons.isNotEmpty()) {
-                    PersonsGrid(
-                        persons = persons,
-                        modifier = Modifier.fillMaxSize(),
-                        onPersonClick = { person ->
-                            selectedPerson = person
-                        },
-                        theme = currentTheme,
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(SeveritepunkThemes.getColorScheme(currentTheme).borderLight.copy(alpha = 0.1f))
-                            .border(
-                                1.dp,
-                                SeveritepunkThemes.getColorScheme(currentTheme).borderLight.copy(alpha = 0.2f)
-                            )
-                            .padding(defaultSpacer),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        VengText(
-                            text = stringResource(Res.string.base_empty),
-                            color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium,
-                            textAlign = TextAlign.Center,
-                            lineHeight = 24.sp
-                        )
+            if (showEmergencyShutdownDialog) {
+                EmergencyShutdownDialog(
+                    onDismiss = {
+                        showEmergencyShutdownDialog = false
+                        emergencyShutdownError = null
+                        administrationViewModel.clearErrorMessage()
+                    },
+                    onConfirm = { durationMinutes, password ->
+                        emergencyShutdownError = null
+                        administrationViewModel.activateEmergencyShutdown(durationMinutes, password)
+                    },
+                    theme = currentTheme,
+                    errorMessage = emergencyShutdownError
+                )
+                
+                // Обработка ошибок из ViewModel
+                val errorMessageState = administrationViewModel.errorMessage.collectAsState()
+                LaunchedEffect(errorMessageState.value) {
+                    val error = errorMessageState.value
+                    if (error != null) {
+                        if (error.contains("password", ignoreCase = true) ||
+                            error.contains("пароль", ignoreCase = true) ||
+                            error.contains("Invalid emergency shutdown", ignoreCase = true) ||
+                            error.contains("Неверный пароль", ignoreCase = true)) {
+                            emergencyShutdownError = error
+                        } else if (error.contains("Failed to activate", ignoreCase = true)) {
+                            emergencyShutdownError = error
+                        }
+                    }
+                }
+                
+                // Закрываем диалог только при успехе
+                LaunchedEffect(isEmergencyShutdownActive) {
+                    if (isEmergencyShutdownActive) {
+                        showEmergencyShutdownDialog = false
+                        emergencyShutdownError = null
+                        administrationViewModel.clearErrorMessage()
                     }
                 }
             }
         }
-
-        if (showAddDialog) {
-            PersonDialog(
-                onDismiss = { showAddDialog = false },
-                onAddPerson = { person ->
-                    administrationViewModel.addPerson(person)
-                    administrationViewModel.getPersons()
-                },
-                theme = currentTheme,
-            )
-        }
-
-        selectedPerson?.let { person ->
-            PersonDetailedDialog(
-                person = person,
-                onDismiss = { selectedPerson = null },
-                theme = currentTheme,
-            )
-        }
-
-        // Диалог редактирования пользователя
-        userToEdit?.let { user ->
-            UserEditDialog(
-                user = user,
-                persons = persons,
-                onDismiss = { userToEdit = null },
-                onSave = { updatedUser, password, personId ->
-                    administrationViewModel.updateUser(updatedUser, password, personId)
-                    userToEdit = null
-                },
-                theme = currentTheme
-            )
-        }
-
-// Диалог редактирования жителя
-        personToEdit?.let { person ->
-            PersonEditDialog(
-                person = person,
-                onDismiss = { personToEdit = null },
-                onSave = { updatedPerson ->
-                    administrationViewModel.updatePerson(updatedPerson)
-                    personToEdit = null
-                },
-                theme = currentTheme
-            )
-        }
-
-// Диалог подтверждения удаления пользователя
-        userToDelete?.let { user ->
-            DeleteConfirmationDialog(
-                onDismiss = { userToDelete = null },
-                onConfirm = {
-                    administrationViewModel.deleteUser(user.id)
-                    userToDelete = null
-                },
-                theme = currentTheme
-            )
-        }
-
-// Диалог подтверждения удаления жителя
-        personToDelete?.let { person ->
-            DeleteConfirmationDialog(
-                onDismiss = { personToDelete = null },
-                onConfirm = {
-                    administrationViewModel.deletePerson(person.id)
-                    personToDelete = null
-                },
-                theme = currentTheme
-            )
-        }
-
-        if (showRegisterDialog) {
-            val registerState = administrationViewModel.registerState.collectAsState().value
-            RegisterDialog(
-                onDismiss = {
-                    showRegisterDialog = false
-                    administrationViewModel.resetRegisterState()
-                },
-                onRegister = { username, password, personId ->
-                    administrationViewModel.register(username, password, personId)
-                },
-                persons = persons,
-                isLoading = registerState is RegisterUiState.Loading,
-                errorMessage = when (registerState) {
-                    is RegisterUiState.Error -> registerState.message
-                    else -> null
-                },
-                theme = currentTheme
-            )
-
-            LaunchedEffect(registerState) {
-                if (registerState is RegisterUiState.Success) {
-                    showRegisterDialog = false
-                    administrationViewModel.resetRegisterState()
-                }
-            }
-        }
     }
-}
