@@ -47,6 +47,7 @@ import citymanager.composeapp.generated.resources.medic_name
 import citymanager.composeapp.generated.resources.police_name
 import citymanager.composeapp.generated.resources.welcome_message
 import com.composables.icons.lucide.Download
+import com.composables.icons.lucide.FileQuestion
 import com.composables.icons.lucide.Heart
 import com.composables.icons.lucide.Library
 import com.composables.icons.lucide.Lucide
@@ -63,6 +64,7 @@ import org.vengeful.citymanager.ROUTE_BANK
 import org.vengeful.citymanager.ROUTE_CLICKER
 import org.vengeful.citymanager.ROUTE_COMMON_LIBRARY
 import org.vengeful.citymanager.ROUTE_COURT
+import org.vengeful.citymanager.ROUTE_MAIN
 import org.vengeful.citymanager.ROUTE_MEDIC
 import org.vengeful.citymanager.ROUTE_POLICE
 import org.vengeful.citymanager.di.koinViewModel
@@ -135,7 +137,9 @@ fun MainScreen(navController: NavController) {
                     LocalTheme = newTheme
                     currentTheme = LocalTheme
                 },
-                modifier = Modifier.size(buttonSize),
+                modifier = Modifier
+                    .size(buttonSize)
+                    .weight(0.2f),
             )
 
             // Название (центр)
@@ -147,21 +151,22 @@ fun MainScreen(navController: NavController) {
                 letterSpacing = 2.sp,
                 modifier = Modifier
                     .padding(horizontal = defaultPadding, vertical = defaultPadding)
+                    .weight(0.6f),
             )
 
             // Кнопка входа/выхода (справа)
             if (isLoggedData.value) {
                 Column(
                     verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.End
+                    horizontalAlignment = Alignment.End,
+                    modifier = Modifier.weight(0.2f),
                 ) {
                     VengButton(
                         onClick = { viewModel.logout() },
                         text = stringResource(Res.string.logout),
                         theme = LocalTheme,
                         modifier = Modifier
-                            .size(buttonSize)
-                            .padding(bottom = defaultPadding),
+                            .padding(bottom = defaultPadding)
                     )
                     VengText(
                         text = stringResource(Res.string.welcome_message, username.value),
@@ -185,7 +190,9 @@ fun MainScreen(navController: NavController) {
         }
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f) // Занимает доступное пространство, но не больше
         ) {
             val screens = listOf(
                 ScreenData(
@@ -232,15 +239,19 @@ fun MainScreen(navController: NavController) {
                     text = "Бэкап"
                 )
             } else {
-                screens
+                screens + ScreenData(
+                    route = ROUTE_MAIN,
+                    icon = { Icon(Lucide.FileQuestion, null, tint = colorTint) },
+                    text = "Заблокировано"
+                )
             }
 
-            // Фиксированный размер для каждого элемента сетки
+            // Уменьшаем размер элементов сетки для компактности
             val gridItemSize = 200.dp
 
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
                     .wrapContentSize(Alignment.Center)
             ) {
                 LazyVerticalGrid(
@@ -284,36 +295,36 @@ fun MainScreen(navController: NavController) {
                 }
             }
         }
-            Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-                TerminalControls(
-                    onShutdown = { showShutdownAnimation = true },
-                    onRestart = { showRestartAnimation = true },
-                    theme = LocalTheme,
-                    modifier = Modifier.size(buttonSize)
-                )
-            }
-            if (showLoggingDialog) {
-                AuthDialog(
-                    onDismiss = {
-                        showLoggingDialog = false
-                        viewModel.resetLoginState()
-                    },
-                    onLogin = { login, password ->
-                        viewModel.login(login, password)
-                    },
-                    isLoading = loginState.value is LoginUiState.Loading,
-                    errorMessage = when (val state = loginState.value) {
-                        is LoginUiState.Error -> state.message
-                        else -> null
-                    },
-                    theme = LocalTheme
-                )
-                LaunchedEffect(loginState.value) {
-                    if (loginState.value is LoginUiState.Success) {
-                        showLoggingDialog = false
-                        viewModel.resetLoginState()
-                    }
+        Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+            TerminalControls(
+                onShutdown = { showShutdownAnimation = true },
+                onRestart = { showRestartAnimation = true },
+                theme = LocalTheme,
+                modifier = Modifier.size(buttonSize)
+            )
+        }
+        if (showLoggingDialog) {
+            AuthDialog(
+                onDismiss = {
+                    showLoggingDialog = false
+                    viewModel.resetLoginState()
+                },
+                onLogin = { login, password ->
+                    viewModel.login(login, password)
+                },
+                isLoading = loginState.value is LoginUiState.Loading,
+                errorMessage = when (val state = loginState.value) {
+                    is LoginUiState.Error -> state.message
+                    else -> null
+                },
+                theme = LocalTheme
+            )
+            LaunchedEffect(loginState.value) {
+                if (loginState.value is LoginUiState.Success) {
+                    showLoggingDialog = false
+                    viewModel.resetLoginState()
                 }
             }
         }
     }
+}

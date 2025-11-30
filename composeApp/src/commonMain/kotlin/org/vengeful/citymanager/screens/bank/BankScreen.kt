@@ -18,6 +18,7 @@ import org.jetbrains.compose.resources.stringResource
 import org.vengeful.citymanager.di.koinViewModel
 import org.vengeful.citymanager.models.BankAccount
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
+import org.vengeful.citymanager.uikit.composables.CallIndicator
 import org.vengeful.citymanager.uikit.composables.bank.BankAccountDialog
 import org.vengeful.citymanager.uikit.composables.bank.BankAccountEditDialog
 import org.vengeful.citymanager.uikit.composables.bank.BankAccountGrid
@@ -33,6 +34,7 @@ fun BankScreen(navController: NavController) {
     val viewModel: BankViewModel = koinViewModel()
     val persons = viewModel.persons.collectAsState().value
     val bankAccounts = viewModel.bankAccounts.collectAsState().value
+    val callStatus = viewModel.callStatus.collectAsState().value
 
     var currentTheme by remember { mutableStateOf(LocalTheme) }
     var showAddDialog by remember { mutableStateOf(false) }
@@ -46,6 +48,7 @@ fun BankScreen(navController: NavController) {
     LaunchedEffect(Unit) {
         viewModel.getPersons()
         viewModel.getBankAccounts()
+        viewModel.startStatusCheck()
     }
 
     VengBackground(
@@ -95,6 +98,16 @@ fun BankScreen(navController: NavController) {
                     modifier = Modifier.weight(0.15f),
                 )
             }
+
+            CallIndicator(
+                isCalled = callStatus?.isCalled ?: false,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                onDismiss = {
+                    viewModel.resetCall()
+                }
+            )
 
             // Панель управления
             Row(

@@ -45,7 +45,7 @@ val appModule = module {
     factory { AdministrationViewModel(get(), get(), get()) }
     factory { MainViewModel(get(), get()) }
     factory { ClickerViewModel(get(), get()) }
-    factory { BankViewModel(get(), get(), get()) }
+    factory { BankViewModel(get(), get(), get(), get()) }
     factory { BackupViewModel(get()) }
     factory { UserManagementViewModel(get(), get()) }
 }

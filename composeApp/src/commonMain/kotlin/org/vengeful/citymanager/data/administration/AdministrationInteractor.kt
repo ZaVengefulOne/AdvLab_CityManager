@@ -15,6 +15,9 @@ import org.vengeful.citymanager.data.persons.PersonInteractor.Companion.SERVER_A
 import org.vengeful.citymanager.data.persons.PersonInteractor.Companion.SERVER_PREFIX
 import org.vengeful.citymanager.data.users.AuthManager
 import org.vengeful.citymanager.models.AdministrationConfig
+import org.vengeful.citymanager.models.CallRequest
+import org.vengeful.citymanager.models.CallStatus
+import org.vengeful.citymanager.models.Enterprise
 import org.vengeful.citymanager.models.SendMessageRequest
 
 class AdministrationInteractor(private val authManager: AuthManager) : IAdministrationInteractor {
@@ -44,6 +47,47 @@ class AdministrationInteractor(private val authManager: AuthManager) : IAdminist
             response.status.isSuccess()
         } catch (e: Exception) {
             throw Exception("Failed to send message: ${e.message}")
+        }
+    }
+
+    override suspend fun callEnterprise(enterprise: Enterprise): Boolean {
+        return try {
+            val token = authManager.getToken()
+            val response = client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/call/send") {
+                setHttpBuilder(withAuth = token != null)
+                setBody(CallRequest(enterprise))
+            }
+            response.status.isSuccess()
+        } catch (e: Exception) {
+            throw Exception("Failed to call enterprise: ${e.message}")
+        }
+    }
+
+    override suspend fun getCallStatus(enterprise: Enterprise): CallStatus {
+        return try {
+            val token = authManager.getToken()
+            val response = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/call/status/${enterprise.name}") {
+                setHttpBuilder(withAuth = token != null)
+            }
+            if (response.status.isSuccess()) {
+                response.body<CallStatus>()
+            } else {
+                throw Exception("HTTP error ${response.status}")
+            }
+        } catch (e: Exception) {
+            throw Exception("Failed to get call status: ${e.message}")
+        }
+    }
+
+    override suspend fun resetCallStatus(enterprise: Enterprise): Boolean {
+        return try {
+            val token = authManager.getToken()
+            val response = client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/call/reset/${enterprise.name}") {
+                setHttpBuilder(withAuth = token != null)
+            }
+            response.status.isSuccess()
+        } catch (e: Exception) {
+            throw Exception("Failed to reset call status: ${e.message}")
         }
     }
 

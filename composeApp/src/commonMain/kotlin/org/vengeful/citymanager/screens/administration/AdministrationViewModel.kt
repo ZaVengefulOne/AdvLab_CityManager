@@ -14,6 +14,7 @@ import org.vengeful.citymanager.data.users.IUserInteractor
 import org.vengeful.citymanager.data.users.models.RegisterResult
 import org.vengeful.citymanager.data.users.states.RegisterUiState
 import org.vengeful.citymanager.models.ChatMessage
+import org.vengeful.citymanager.models.Enterprise
 import org.vengeful.citymanager.models.Person
 import org.vengeful.citymanager.models.Rights
 import org.vengeful.citymanager.models.users.User
@@ -257,6 +258,20 @@ class AdministrationViewModel(
                     currentHistory.removeFirst()
                 }
                 _severitRateHistory.value = currentHistory
+            }
+        }
+    }
+
+    fun callEnterprise(enterprise: Enterprise) {
+        viewModelScope.launch {
+            try {
+                val success = administrationInteractor.callEnterprise(enterprise)
+                if (!success) {
+                    _errorMessage.value = "Не удалось вызвать представителя"
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = e.message
+                println("Error calling enterprise: ${e.message}")
             }
         }
     }

@@ -34,6 +34,7 @@ import org.vengeful.citymanager.uikit.animations.RestartAnimation
 import org.vengeful.citymanager.uikit.animations.ShutdownAnimation
 import org.vengeful.citymanager.uikit.composables.administration.AdminChatWidget
 import org.vengeful.citymanager.uikit.composables.administration.ControlLossIndicator
+import org.vengeful.citymanager.uikit.composables.administration.EnterpriseCallWidget
 import org.vengeful.citymanager.uikit.composables.administration.SeveriteRateGraph
 import org.vengeful.citymanager.uikit.composables.dialogs.DeleteConfirmationDialog
 import org.vengeful.citymanager.uikit.composables.dialogs.RegisterDialog
@@ -179,7 +180,6 @@ fun AdministrationScreen(navController: NavController) {
                 )
 
                 VengText(
-//                    text = stringResource(Res.string.app_name, BUILD_VERSION),
                     text = stringResource(Res.string.administration_title),
                     color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
                     fontSize = 36.sp,
@@ -188,6 +188,17 @@ fun AdministrationScreen(navController: NavController) {
                     modifier = Modifier
                         .padding(bottom = defaultPadding)
                         .weight(0.7f)
+                )
+
+                VengButton(
+                    text = stringResource(Res.string.back),
+                    onClick = {
+                        navController.popBackStack()
+                    },
+                    theme = currentTheme,
+                    modifier = Modifier
+                        .padding(bottom = defaultPadding)
+                        .weight(0.1f)
                 )
             }
             Row(
@@ -218,17 +229,34 @@ fun AdministrationScreen(navController: NavController) {
                         backgroundColor = SeveritepunkThemes.getColorScheme(currentTheme).background.copy(alpha = 0.3f)
                     )
                 }
+                Column(
+                    modifier = Modifier,
+                    verticalArrangement = Arrangement.spacedBy(defaultSpacer),
+                    horizontalAlignment = Alignment.End
+                ) {
+                    AdminChatWidget(
+                        messages = chatMessages,
+                        onSendMessage = { text ->
+                            administrationViewModel.sendChatMessage(text)
+                        },
+                        modifier = Modifier
+                            .wrapContentHeight(),
+                        backgroundColor = SeveritepunkThemes.getColorScheme(currentTheme).background.copy(alpha = 0.3f),
+                        borderColor = SeveritepunkThemes.getColorScheme(currentTheme).borderLight
+                    )
 
-                AdminChatWidget(
-                    messages = chatMessages,
-                    onSendMessage = { text ->
-                        administrationViewModel.sendChatMessage(text)
-                    },
-                    modifier = Modifier
-                        .wrapContentHeight(),
-                    backgroundColor = SeveritepunkThemes.getColorScheme(currentTheme).background.copy(alpha = 0.3f),
-                    borderColor = SeveritepunkThemes.getColorScheme(currentTheme).borderLight
-                )
+                    EnterpriseCallWidget(
+                        onCallEnterprise = { enterprise ->
+                            administrationViewModel.callEnterprise(enterprise)
+                        },
+                        modifier = Modifier
+                            .wrapContentHeight(),
+                        backgroundColor = SeveritepunkThemes.getColorScheme(currentTheme).background.copy(alpha = 0.3f),
+                        borderColor = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
+                        theme = currentTheme
+                    )
+                }
+
             }
 
             Row(

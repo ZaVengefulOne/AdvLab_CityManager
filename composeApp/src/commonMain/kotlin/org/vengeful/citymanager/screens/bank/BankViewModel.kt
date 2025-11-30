@@ -1,23 +1,35 @@
 package org.vengeful.citymanager.screens.bank
 
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.vengeful.citymanager.base.BaseViewModel
+import org.vengeful.citymanager.data.administration.AdministrationInteractor
+import org.vengeful.citymanager.data.administration.IAdministrationInteractor
 import org.vengeful.citymanager.data.bank.IBankInteractor
 import org.vengeful.citymanager.data.persons.IPersonInteractor
 import org.vengeful.citymanager.data.users.IUserInteractor
 import org.vengeful.citymanager.models.BankAccount
+import org.vengeful.citymanager.models.CallStatus
+import org.vengeful.citymanager.models.Enterprise
 import org.vengeful.citymanager.models.Person
 import org.vengeful.citymanager.models.users.User
 
 class BankViewModel(
     private val personInteractor: IPersonInteractor,
     private val userInteractor: IUserInteractor,
-    private val bankInteractor: IBankInteractor
+    private val bankInteractor: IBankInteractor,
+    private val administrationInteractor: IAdministrationInteractor
 ) : BaseViewModel() {
+
+    private val _callStatus = MutableStateFlow<CallStatus?>(null)
+    val callStatus: StateFlow<CallStatus?> = _callStatus.asStateFlow()
+
+    private var statusCheckJob: Job? = null
 
     private val _persons = MutableStateFlow<List<Person>>(emptyList())
     val persons: StateFlow<List<Person>> = _persons.asStateFlow()
@@ -30,6 +42,38 @@ class BankViewModel(
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+
+    fun startStatusCheck() {
+        statusCheckJob?.cancel()
+        statusCheckJob = viewModelScope.launch {
+            while (true) {
+//                delay(15000)
+                delay(3000)
+                try {
+                    val status = administrationInteractor.getCallStatus(Enterprise.BANK)
+                    _callStatus.value = status
+                } catch (e: Exception) {
+                    println("Error checking call status: ${e.message}")
+                }
+            }
+        }
+    }
+
+    fun resetCall() {
+        viewModelScope.launch {
+            try {
+                administrationInteractor.resetCallStatus(Enterprise.BANK)
+                _callStatus.value = CallStatus(Enterprise.BANK, false)
+            } catch (e: Exception) {
+                println("Error resetting call: ${e.message}")
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        statusCheckJob?.cancel()
+    }
 
     fun getPersons() {
         viewModelScope.launch {

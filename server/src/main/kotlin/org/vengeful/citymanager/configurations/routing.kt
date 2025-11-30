@@ -30,6 +30,9 @@ import io.ktor.server.routing.put
 import org.vengeful.citymanager.backupService.BackupService
 import org.vengeful.citymanager.bankService.IBankRepository
 import org.vengeful.citymanager.models.BankAccount
+import org.vengeful.citymanager.models.CallRequest
+import org.vengeful.citymanager.models.CallStatus
+import org.vengeful.citymanager.models.Enterprise
 import org.vengeful.citymanager.models.backup.MasterBackup
 import org.vengeful.citymanager.models.users.CreateBankAccountRequest
 import org.vengeful.citymanager.models.users.RegisterRequest
@@ -38,6 +41,13 @@ import org.vengeful.citymanager.models.users.UpdateBankAccountRequest
 import org.vengeful.citymanager.models.users.UpdateClicksRequest
 import org.vengeful.citymanager.models.users.UpdateUserRequest
 import org.vengeful.citymanager.userService.IUserRepository
+
+private val callStatuses = mutableMapOf(
+    Enterprise.POLICE to CallStatus(Enterprise.POLICE, false),
+    Enterprise.MEDIC to CallStatus(Enterprise.MEDIC, false),
+    Enterprise.BANK to CallStatus(Enterprise.BANK, false),
+    Enterprise.COURT to CallStatus(Enterprise.COURT, false)
+)
 
 fun Application.configureSerialization(
     personRepository: IPersonRepository,
@@ -840,6 +850,51 @@ fun Application.configureSerialization(
                     }
                 }
             }
+
+            route("/call") {
+                // Получить статус вызова для предприятия
+                get("/status/{enterprise}") {
+                    val enterpriseStr = call.parameters["enterprise"]
+                    val enterprise = try {
+                        Enterprise.valueOf(enterpriseStr ?: "")
+                    } catch (e: Exception) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid enterprise"))
+                        return@get
+                    }
+
+                    val status = callStatuses[enterprise] ?: CallStatus(enterprise, false)
+                    call.respond(status)
+                }
+
+                // Вызвать представителя предприятия
+                post("/send") {
+                    val request = call.receive<CallRequest>()
+
+                    // Устанавливаем статус вызова
+                    callStatuses[request.enterprise] = CallStatus(
+                        enterprise = request.enterprise,
+                        isCalled = true,
+                        calledAt = System.currentTimeMillis()
+                    )
+
+                    call.respond(mapOf("status" to "success", "message" to "Call sent"))
+                }
+
+                // Сбросить статус вызова (когда представитель ответил)
+                post("/reset/{enterprise}") {
+                    val enterpriseStr = call.parameters["enterprise"]
+                    val enterprise = try {
+                        Enterprise.valueOf(enterpriseStr ?: "")
+                    } catch (e: Exception) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid enterprise"))
+                        return@post
+                    }
+
+                    callStatuses[enterprise] = CallStatus(enterprise, false)
+                    call.respond(mapOf("status" to "success", "message" to "Call reset"))
+                }
+            }
+
         }
     }
 }
