@@ -13,6 +13,7 @@ import org.vengeful.citymanager.data.persons.IPersonInteractor
 import org.vengeful.citymanager.data.users.IUserInteractor
 import org.vengeful.citymanager.data.users.models.RegisterResult
 import org.vengeful.citymanager.data.users.states.RegisterUiState
+import org.vengeful.citymanager.models.ChatMessage
 import org.vengeful.citymanager.models.Person
 import org.vengeful.citymanager.models.Rights
 import org.vengeful.citymanager.models.users.User
@@ -34,9 +35,8 @@ class AdministrationViewModel(
     private val _severitRateHistory = MutableStateFlow<List<Double>>(emptyList())
     val severitRateHistory: StateFlow<List<Double>> = _severitRateHistory.asStateFlow()
 
-    private var updateJob: Job? = null
-    private var configUpdateJob: Job? = null
-    private var baseSeveritRate: Double = 42.75
+    private val _chatMessages = MutableStateFlow<List<ChatMessage>>(emptyList())
+    val chatMessages: StateFlow<List<ChatMessage>> = _chatMessages.asStateFlow()
 
     private val _persons = MutableStateFlow<List<Person>>(emptyList())
     val persons: StateFlow<List<Person>> = _persons.asStateFlow()
@@ -52,6 +52,10 @@ class AdministrationViewModel(
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+
+    private var updateJob: Job? = null
+    private var configUpdateJob: Job? = null
+    private var baseSeveritRate: Double = 42.75
 
 
     fun register(username: String, password: String, personId: Int?) {
@@ -192,19 +196,33 @@ class AdministrationViewModel(
                 baseSeveritRate = config.severiteRate
                 _severitRate.value = config.severiteRate
                 _controlLossThreshold.value = config.controlLossThreshold
+                _chatMessages.value = config.recentMessages
 
-                // Инициализируем историю только если она пустая
                 if (_severitRateHistory.value.isEmpty()) {
                     _severitRateHistory.value = List(GRAPH_HISTORY_SIZE) { config.severiteRate }
                 }
 
-                // Запускаем автообновление только если оно еще не запущено
                 if (updateJob == null || !updateJob!!.isActive) {
                     startAutoUpdate()
                 }
             } catch (e: Exception) {
                 _errorMessage.value = e.message
                 println("Error loading admin config: ${e.message}")
+            }
+        }
+    }
+
+    fun sendChatMessage(text: String) {
+        if (text.isBlank()) return
+        viewModelScope.launch {
+            try {
+                val success = administrationInteractor.sendMessage(text, "desktop")
+                if (success) {
+                    getAdminConfig()
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = e.message
+                println("Error sending message: ${e.message}")
             }
         }
     }

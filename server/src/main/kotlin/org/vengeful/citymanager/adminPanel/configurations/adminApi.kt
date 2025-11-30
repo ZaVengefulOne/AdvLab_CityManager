@@ -15,18 +15,24 @@ import org.vengeful.citymanager.adminPanel.AdminStats
 import org.vengeful.citymanager.adminPanel.RequestLog
 import org.vengeful.citymanager.adminPanel.ServerStats
 import org.vengeful.citymanager.models.AdministrationConfig
+import org.vengeful.citymanager.models.ChatMessage
+import org.vengeful.citymanager.models.SendMessageRequest
 import org.vengeful.citymanager.personService.IPersonRepository
 import org.vengeful.citymanager.personService.db.PersonRepository
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-// Временное хранилище для логов (в реальном приложении используй БД)
 private val requestLogs = mutableListOf<RequestLog>()
+private val chatMessages = mutableListOf<ChatMessage>()
 
 private var adminConfig = AdministrationConfig(
     severiteRate = 42.75,
     controlLossThreshold = 75,
 )
+
+private fun getRecentMessages(count: Int = 5): List<ChatMessage> {
+    return chatMessages.takeLast(count)
+}
 
 fun Application.configureAdminApi(repository: IPersonRepository) {
     routing {
@@ -43,7 +49,9 @@ fun Application.configureAdminApi(repository: IPersonRepository) {
             }
 
             get("/config") {
-                call.respond(adminConfig)
+                val recentMessages = getRecentMessages(5)
+                val config = adminConfig.copy(recentMessages = recentMessages)
+                call.respond(config)
             }
 
             post("/config"){
@@ -68,6 +76,24 @@ fun Application.configureAdminApi(repository: IPersonRepository) {
                 val allData = getAllDataFromDB(repository)
                 addLogEntry("GET", "/admin/export", 200)
                 call.respond(allData)
+            }
+
+            post("/chat/send") {
+                val request = call.receive<SendMessageRequest>()
+                val message = ChatMessage(
+                    text = request.text,
+                    timestamp = System.currentTimeMillis(),
+                    sender = request.sender
+                )
+
+                chatMessages.add(message)
+
+                // Ограничиваем размер (последние 50 сообщений)
+                if (chatMessages.size > 50) {
+                    chatMessages.removeFirst()
+                }
+
+                call.respond(mapOf("status" to "success", "message" to "Message sent"))
             }
         }
 

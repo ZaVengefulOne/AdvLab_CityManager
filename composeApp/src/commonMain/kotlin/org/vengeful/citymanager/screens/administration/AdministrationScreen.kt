@@ -32,6 +32,7 @@ import org.vengeful.citymanager.models.users.User
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
 import org.vengeful.citymanager.uikit.animations.RestartAnimation
 import org.vengeful.citymanager.uikit.animations.ShutdownAnimation
+import org.vengeful.citymanager.uikit.composables.administration.AdminChatWidget
 import org.vengeful.citymanager.uikit.composables.administration.ControlLossIndicator
 import org.vengeful.citymanager.uikit.composables.administration.SeveriteRateGraph
 import org.vengeful.citymanager.uikit.composables.dialogs.DeleteConfirmationDialog
@@ -54,6 +55,7 @@ fun AdministrationScreen(navController: NavController) {
     val severitRate = administrationViewModel.severitRate.collectAsState().value
     val controlLossThreshold = administrationViewModel.controlLossThreshold.collectAsState().value
     val severitRateHistory = administrationViewModel.severitRateHistory.collectAsState().value
+    val chatMessages = administrationViewModel.chatMessages.collectAsState().value
 
 
     var currentTheme by remember { mutableStateOf(LocalTheme) }
@@ -193,30 +195,44 @@ fun AdministrationScreen(navController: NavController) {
                     modifier = Modifier.weight(0.1f),
                 )
             }
-
-            Column(
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(defaultSpacer),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = defaultSpacer),
-                verticalArrangement = Arrangement.spacedBy(defaultSpacer),
-                horizontalAlignment = Alignment.Start
-            ) {
-                SeveriteRateGraph(
-                    currentRate = severitRate,
-                    history = severitRateHistory,
-                    modifier = Modifier
-                        .fillMaxWidth(0.3f)
-                        .wrapContentHeight(),
-                    graphColor = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
-                    backgroundColor = SeveritepunkThemes.getColorScheme(currentTheme).background.copy(alpha = 0.3f)
-                )
+                ) {
+                Column(
+                    modifier = Modifier,
+                    verticalArrangement = Arrangement.spacedBy(defaultSpacer),
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    SeveriteRateGraph(
+                        currentRate = severitRate,
+                        history = severitRateHistory,
+                        modifier = Modifier
+                            .fillMaxWidth(0.3f)
+                            .wrapContentHeight(),
+                        graphColor = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
+                        backgroundColor = SeveritepunkThemes.getColorScheme(currentTheme).background.copy(alpha = 0.3f)
+                    )
 
-                ControlLossIndicator(
-                    threshold = controlLossThreshold,
+                    ControlLossIndicator(
+                        threshold = controlLossThreshold,
+                        modifier = Modifier
+                            .fillMaxWidth(0.3f)
+                            .wrapContentHeight(),
+                        backgroundColor = SeveritepunkThemes.getColorScheme(currentTheme).background.copy(alpha = 0.3f)
+                    )
+                }
+
+                AdminChatWidget(
+                    messages = chatMessages,
+                    onSendMessage = { text ->
+                        administrationViewModel.sendChatMessage(text)
+                    },
                     modifier = Modifier
-                        .fillMaxWidth(0.3f)
                         .wrapContentHeight(),
-                    backgroundColor = SeveritepunkThemes.getColorScheme(currentTheme).background.copy(alpha = 0.3f)
+                    backgroundColor = SeveritepunkThemes.getColorScheme(currentTheme).background.copy(alpha = 0.3f),
+                    borderColor = SeveritepunkThemes.getColorScheme(currentTheme).borderLight
                 )
             }
 
@@ -238,7 +254,7 @@ fun AdministrationScreen(navController: NavController) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         VengText(
-                            text = stringResource(Res.string.user_list,users.size),
+                            text = stringResource(Res.string.user_list, users.size),
                             color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,

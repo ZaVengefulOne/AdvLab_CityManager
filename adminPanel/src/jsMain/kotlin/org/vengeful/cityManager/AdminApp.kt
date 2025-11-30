@@ -15,7 +15,9 @@ import org.jetbrains.compose.web.attributes.InputType
 import org.vengeful.cityManager.models.RequestLog
 import org.vengeful.cityManager.models.ServerStats
 import org.vengeful.citymanager.models.AdministrationConfig
+import org.vengeful.citymanager.models.ChatMessage
 import org.vengeful.citymanager.models.backup.MasterBackup
+import kotlin.js.Date
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
@@ -53,6 +55,9 @@ fun AdminApp() {
     var controlLossThreshold by mutableStateOf("75")
     var isConfigLoading by mutableStateOf(false)
 
+    var chatMessageText by mutableStateOf("")
+    var chatMessages by mutableStateOf<List<ChatMessage>>(emptyList())
+
     // Загрузка данных при старте (только если залогинен)
     if (isLoggedIn) {
         LaunchedEffect(Unit) {
@@ -63,6 +68,7 @@ fun AdminApp() {
                 val config = apiClient.getConfig()
                 severitRate = config.severiteRate.toString()
                 controlLossThreshold = config.controlLossThreshold.toString()
+                chatMessages = config.recentMessages
             } catch (e: Exception) {
                 window.alert("Ошибка подключения к серверу: ${e.message}")
             }
@@ -472,7 +478,6 @@ fun AdminApp() {
                                     backupData = jsonString
 
                                     // Скачать файл
-                                    val blob = js("new Blob([jsonString], { type: 'application/json' })")
                                     val url = js("URL.createObjectURL(blob)")
                                     val link = js("document.createElement('a')")
                                     link.href = url
@@ -638,6 +643,167 @@ fun AdminApp() {
                                 }
                             }
                         }
+                    }
+                }
+            }
+
+            Div({
+                style {
+                    backgroundColor(Color("#34495E"))
+                    border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                    borderRadius(8.px)
+                    padding(20.px)
+                    marginBottom(16.px)
+                }
+            }) {
+                H3({
+                    style {
+                        marginTop(0.px)
+                        marginBottom(16.px)
+                        fontSize(18.px)
+                    }
+                }) {
+                    Text("💬 ЧАТ")
+                }
+
+                // Список сообщений
+                Div({
+                    style {
+                        maxHeight(120.px)
+                        overflowY("auto")
+                        backgroundColor(Color("#1A2530"))
+                        borderRadius(4.px)
+                        padding(12.px)
+                        marginBottom(12.px)
+                    }
+                }) {
+                    if (chatMessages.isEmpty()) {
+                        P({
+                            style {
+                                color(Color("#7B9EB0"))
+                                fontSize(12.px)
+                            }
+                        }) {
+                            Text("Нет сообщений")
+                        }
+                    } else {
+                        chatMessages.forEach { message ->
+                            Div({
+                                style {
+                                    marginBottom(8.px)
+                                    padding(8.px)
+                                    backgroundColor(Color("#2C3E50"))
+                                    borderRadius(4.px)
+                                }
+                            }) {
+                                Div({
+                                    style {
+                                        display(DisplayStyle.Flex)
+                                        justifyContent(JustifyContent.SpaceBetween)
+                                        marginBottom(4.px)
+                                    }
+                                }) {
+                                    Span({
+                                        style {
+                                            color(if (message.sender == "admin") Color("#4A90E2") else Color("#27AE60"))
+                                            fontSize(10.px)
+                                            fontWeight("bold")
+                                        }
+                                    }) {
+                                        Text(if (message.sender == "admin") "Эбони-Бэй" else "Лэбтаун")
+                                    }
+                                    Span({
+                                        style {
+                                            color(Color("#7B9EB0"))
+                                            fontSize(10.px)
+                                        }
+                                    }) {
+                                        Text(Date(message.timestamp).toLocaleTimeString())
+                                    }
+                                }
+                                P({
+                                    style {
+                                        color(Color("#FFFFFF"))
+                                        fontSize(12.px)
+                                        margin(0.px)
+                                    }
+                                }) {
+                                    Text(message.text)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Поле ввода и кнопка
+                Div({
+                    style {
+                        display(DisplayStyle.Flex)
+                        gap(8.px)
+                    }
+                }) {
+                    Input(InputType.Text, {
+                        style {
+                            flex(1)
+                            padding(8.px)
+                            backgroundColor(Color("#1A2530"))
+                            color(Color("#4A90E2"))
+                            border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                            borderRadius(4.px)
+                            fontFamily("'Courier New', monospace")
+                            fontSize(14.px)
+                        }
+                        value(chatMessageText)
+                        onInput { event ->
+                            chatMessageText = event.target.value
+                        }
+                        onKeyDown { event ->
+                            if (event.key == "Enter") {
+                                if (chatMessageText.isNotBlank()) {
+                                    coroutineScope.launch {
+                                        try {
+                                            apiClient.sendChatMessage(chatMessageText)
+                                            chatMessageText = ""
+                                            // Обновить конфигурацию для получения новых сообщений
+                                            val config = apiClient.getConfig()
+                                            chatMessages = config.recentMessages
+                                        } catch (e: Exception) {
+                                            window.alert("Ошибка отправки: ${e.message}")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    })
+
+                    Button({
+                        style {
+                            backgroundColor(Color("#4A90E2"))
+                            color(Color("#FFFFFF"))
+                            borderWidth(0.px)
+                            padding(8.px, 16.px)
+                            borderRadius(4.px)
+                            fontFamily("'Courier New', monospace")
+                            fontWeight("bold")
+                            cursor("pointer")
+                            fontSize(14.px)
+                        }
+                        onClick {
+                            if (chatMessageText.isNotBlank()) {
+                                coroutineScope.launch {
+                                    try {
+                                        apiClient.sendChatMessage(chatMessageText)
+                                        chatMessageText = ""
+                                        val config = apiClient.getConfig()
+                                        chatMessages = config.recentMessages
+                                    } catch (e: Exception) {
+                                        window.alert("Ошибка отправки: ${e.message}")
+                                    }
+                                }
+                            }
+                        }
+                    }) {
+                        Text("Отправить")
                     }
                 }
             }

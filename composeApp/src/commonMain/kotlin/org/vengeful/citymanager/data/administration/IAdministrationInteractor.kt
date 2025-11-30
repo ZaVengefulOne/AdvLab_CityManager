@@ -4,4 +4,5 @@ import org.vengeful.citymanager.models.AdministrationConfig
 
 interface IAdministrationInteractor {
     suspend fun getAdministrationConfig(): AdministrationConfig
+    suspend fun sendMessage(text: String, sender: String): Boolean
 }

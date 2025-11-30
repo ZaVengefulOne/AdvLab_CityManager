@@ -3,6 +3,8 @@ package org.vengeful.citymanager.data.administration
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import org.vengeful.citymanager.SERVER_PORT
@@ -13,6 +15,7 @@ import org.vengeful.citymanager.data.persons.PersonInteractor.Companion.SERVER_A
 import org.vengeful.citymanager.data.persons.PersonInteractor.Companion.SERVER_PREFIX
 import org.vengeful.citymanager.data.users.AuthManager
 import org.vengeful.citymanager.models.AdministrationConfig
+import org.vengeful.citymanager.models.SendMessageRequest
 
 class AdministrationInteractor(private val authManager: AuthManager) : IAdministrationInteractor {
 
@@ -29,6 +32,18 @@ class AdministrationInteractor(private val authManager: AuthManager) : IAdminist
             }
         } catch (e: Exception) {
             throw Exception("Failed to fetch admin config: ${e.message}")
+        }
+    }
+
+    override suspend fun sendMessage(text: String, sender: String): Boolean {
+        return try {
+            val response = client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/admin/chat/send") {
+                setHttpBuilder()
+                setBody(SendMessageRequest(text, sender))
+            }
+            response.status.isSuccess()
+        } catch (e: Exception) {
+            throw Exception("Failed to send message: ${e.message}")
         }
     }
 

@@ -13,6 +13,7 @@ import kotlinx.serialization.json.Json
 import org.vengeful.cityManager.models.RequestLog
 import org.vengeful.cityManager.models.ServerStats
 import org.vengeful.citymanager.models.AdministrationConfig
+import org.vengeful.citymanager.models.SendMessageRequest
 import org.vengeful.citymanager.models.backup.MasterBackup
 import org.vengeful.citymanager.models.users.AuthResponse
 import org.vengeful.citymanager.models.users.LoginRequest
@@ -134,5 +135,16 @@ class ApiClient(
             setBody(config)
         }
         handleResponse(response) { }
+    }
+
+    suspend fun sendChatMessage(text: String): Boolean {
+        val response = client.post("$baseUrl/admin/chat/send") {
+            contentType(ContentType.Application.Json)
+            addAuthHeader()
+            setBody(SendMessageRequest(text, "admin"))
+        }
+        return handleResponse(response) {
+            response.status.value in 200..299
+        }
     }
 }
