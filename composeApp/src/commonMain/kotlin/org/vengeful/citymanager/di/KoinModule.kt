@@ -18,6 +18,8 @@ import org.vengeful.citymanager.data.backup.BackupInteractor
 import org.vengeful.citymanager.data.backup.IBackupInteractor
 import org.vengeful.citymanager.data.bank.BankInteractor
 import org.vengeful.citymanager.data.bank.IBankInteractor
+import org.vengeful.citymanager.data.medic.IMedicInteractor
+import org.vengeful.citymanager.data.medic.MedicInteractor
 import org.vengeful.citymanager.data.persons.IPersonInteractor
 import org.vengeful.citymanager.data.persons.PersonInteractor
 import org.vengeful.citymanager.data.users.AuthManager
@@ -28,6 +30,7 @@ import org.vengeful.citymanager.screens.backup.BackupViewModel
 import org.vengeful.citymanager.screens.bank.BankViewModel
 import org.vengeful.citymanager.screens.clicker.ClickerViewModel
 import org.vengeful.citymanager.screens.main.MainViewModel
+import org.vengeful.citymanager.screens.medic.MedicViewModel
 import org.vengeful.citymanager.screens.userManagement.UserManagementViewModel
 import kotlin.reflect.KClass
 
@@ -41,13 +44,15 @@ val appModule = module {
     single<IBankInteractor> { BankInteractor(get()) }
     single<IBackupInteractor> { BackupInteractor(get()) }
     single<IAdministrationInteractor> { AdministrationInteractor(get()) }
+    single<IMedicInteractor> { MedicInteractor(get()) }
 
-    factory { AdministrationViewModel(get(), get(), get()) }
+    factory { AdministrationViewModel(get(), get(), get(), get()) }
     factory { MainViewModel(get(), get()) }
     factory { ClickerViewModel(get(), get()) }
     factory { BankViewModel(get(), get(), get(), get()) }
     factory { BackupViewModel(get()) }
     factory { UserManagementViewModel(get(), get()) }
+    factory { MedicViewModel(get(), get()) }
 }
 
 fun initKoin() = startKoin {

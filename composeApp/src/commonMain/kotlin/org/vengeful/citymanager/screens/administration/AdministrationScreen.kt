@@ -284,6 +284,17 @@ fun AdministrationScreen(navController: NavController) {
                                 textAlign = TextAlign.Center
                             )
                         }
+
+                        VengButton(
+                            onClick = {
+                                administrationViewModel.downloadGameBackup("html")
+                            },
+                            text = "Выгрузить бэкап",
+                            modifier = Modifier.fillMaxWidth(),
+                            theme = LocalTheme,
+                            enabled = true
+                        )
+
                         if (showEmergencyShutdownDialog) {
                             EmergencyShutdownDialog(
                                 onDismiss = {
@@ -300,19 +311,16 @@ fun AdministrationScreen(navController: NavController) {
                                 errorMessage = emergencyShutdownError
                             )
 
-                            // Обработка ошибок из ViewModel (исправленный LaunchedEffect)
                             val errorMessageState = administrationViewModel.errorMessage.collectAsState()
                             LaunchedEffect(errorMessageState.value) {
                                 val error = errorMessageState.value
                                 if (error != null) {
-                                    // Проверяем различные варианты сообщений об ошибке пароля
                                     if (error.contains("password", ignoreCase = true) ||
                                         error.contains("пароль", ignoreCase = true) ||
                                         error.contains("Invalid emergency shutdown", ignoreCase = true) ||
                                         error.contains("Неверный пароль", ignoreCase = true)) {
                                         emergencyShutdownError = error
                                     } else if (error.contains("Failed to activate", ignoreCase = true)) {
-                                        // Для других ошибок активации тоже показываем в диалоге
                                         emergencyShutdownError = error
                                     }
                                 }
@@ -686,7 +694,7 @@ fun AdministrationScreen(navController: NavController) {
                     theme = currentTheme,
                     errorMessage = emergencyShutdownError
                 )
-                
+
                 // Обработка ошибок из ViewModel
                 val errorMessageState = administrationViewModel.errorMessage.collectAsState()
                 LaunchedEffect(errorMessageState.value) {
@@ -702,7 +710,7 @@ fun AdministrationScreen(navController: NavController) {
                         }
                     }
                 }
-                
+
                 // Закрываем диалог только при успехе
                 LaunchedEffect(isEmergencyShutdownActive) {
                     if (isEmergencyShutdownActive) {

@@ -45,4 +45,23 @@ object DateFormatter {
 
         return date1950.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
     }
+
+    fun formatDateTimeTo1950(dateString: String): Long {
+        return try {
+            val parts = dateString.split(".")
+            if (parts.size == 3) {
+                val day = parts[0].toInt()
+                val month = parts[1].toInt()
+                val year = parts[2].toInt()
+                java.time.LocalDate.of(1950, month, day)
+                    .atStartOfDay(java.time.ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli()
+            } else {
+                System.currentTimeMillis()
+            }
+        } catch (e: Exception) {
+            System.currentTimeMillis()
+        }
+    }
 }

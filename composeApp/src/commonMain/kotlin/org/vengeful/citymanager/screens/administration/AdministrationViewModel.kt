@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.vengeful.citymanager.base.BaseViewModel
 import org.vengeful.citymanager.data.administration.IAdministrationInteractor
+import org.vengeful.citymanager.data.backup.IBackupInteractor
 import org.vengeful.citymanager.data.persons.IPersonInteractor
 import org.vengeful.citymanager.data.users.IUserInteractor
 import org.vengeful.citymanager.data.users.models.RegisterResult
@@ -25,6 +26,7 @@ class AdministrationViewModel(
     private val personInteractor: IPersonInteractor,
     private val userInteractor: IUserInteractor,
     private val administrationInteractor: IAdministrationInteractor,
+    private val backupInteractor: IBackupInteractor
 ) : BaseViewModel() {
 
     private val _severitRate = MutableStateFlow<Double>(42.75)
@@ -324,6 +326,17 @@ class AdministrationViewModel(
             } catch (e: Exception) {
                 println("Error checking emergency shutdown status: ${e.message}")
             }
+        }
+    }
+
+    fun downloadGameBackup(format: String) {
+        viewModelScope.launch {
+            _errorMessage.value = null
+            try {
+                backupInteractor.downloadGameBackup(format)
+            } catch (e: Exception) {
+                _errorMessage.value = "Ошибка: ${e.message}"
+            } 
         }
     }
 

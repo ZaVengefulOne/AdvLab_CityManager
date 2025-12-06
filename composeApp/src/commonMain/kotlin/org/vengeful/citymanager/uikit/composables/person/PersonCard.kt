@@ -142,6 +142,26 @@ private fun CompactPersonCardContent(person: Person, colors: SeveritepunkCardCol
                 overflow = TextOverflow.Ellipsis
             )
 
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val isHealthy = person.health == "здоров"
+                val healthColor = if (isHealthy) Color(0xFF4CAF50) else Color(0xFFF44336)
+
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(healthColor, CircleShape)
+                )
+                VengText(
+                    text = if (isHealthy) "Здоров" else person.health,
+                    color = healthColor,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
             // Краткий список прав (первые 2)
             val displayedRights = person.rights.take(2)
             val remainingCount = person.rights.size - 2
@@ -207,6 +227,36 @@ private fun ExpandedPersonCardContent(person: Person, colors: SeveritepunkCardCo
                 value = person.registrationPlace.ifEmpty { "Не указано" },
                 cardColors = colors
             )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                VengText(
+                    text = "Здоровье:",
+                    color = colors.text.copy(alpha = 0.8f),
+                    fontSize = 12.sp
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val isHealthy = person.health == "здоров"
+                    val healthColor = if (isHealthy) Color(0xFF4CAF50) else Color(0xFFF44336)
+
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .background(healthColor, CircleShape)
+                    )
+                    VengText(
+                        text = if (isHealthy) "Здоров" else person.health,
+                        color = healthColor,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
         }
 
         // Права доступа

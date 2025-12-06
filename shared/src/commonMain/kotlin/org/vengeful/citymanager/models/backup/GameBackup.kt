@@ -8,6 +8,7 @@ data class GameBackupPerson(
     val id: Int,
     val firstName: String,
     val lastName: String,
+    val health: String = "здоров",
     val rights: List<String>
 )
 

@@ -8,5 +8,6 @@ data class Person(
     val firstName: String,
     val lastName: String,
     val registrationPlace: String = "",
+    val health: String = "здоров",
     val rights: List<Rights>,
 )

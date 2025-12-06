@@ -13,6 +13,7 @@ object Persons : IntIdTable("persons") {
     val firstName = varchar("first_name", 255)
     val lastName = varchar("last_name", 255)
     val registrationPlace = varchar("registration_place", 255).default("")
+    val health = varchar("health", 255).default("здоров")
 }
 
 object RightsTable : IntIdTable("rights") {
@@ -32,8 +33,8 @@ class PersonDao(id: EntityID<Int>) : IntEntity(id) {
     var firstName by Persons.firstName
     var lastName by Persons.lastName
     var registrationPlace by Persons.registrationPlace
+    var health by Persons.health
 
-    // Связь многие-ко-многим с правами
     val rights by RightDao via PersonRights
 
     fun toPerson() = Person(
@@ -41,6 +42,7 @@ class PersonDao(id: EntityID<Int>) : IntEntity(id) {
         firstName = firstName,
         lastName = lastName,
         registrationPlace = registrationPlace,
+        health = health,
         rights = rights.map { it.right }.toList()
     )
 }

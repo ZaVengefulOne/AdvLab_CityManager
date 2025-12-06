@@ -8,6 +8,7 @@ data class MasterBackupPerson(
     val firstName: String,
     val lastName: String,
     val registrationPlace: String = "",
+    val health: String = "здоров"
 )
 
 @Serializable

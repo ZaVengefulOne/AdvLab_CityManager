@@ -32,13 +32,16 @@ import org.vengeful.citymanager.auth.EmergencyShutdownConfig
 import org.vengeful.citymanager.auth.SessionLockManager
 import org.vengeful.citymanager.backupService.BackupService
 import org.vengeful.citymanager.bankService.IBankRepository
+import org.vengeful.citymanager.medicService.MedicalRepository
 import org.vengeful.citymanager.models.BankAccount
 import org.vengeful.citymanager.models.CallRequest
 import org.vengeful.citymanager.models.CallStatus
+import org.vengeful.citymanager.models.CreateMedicalRecordRequest
 import org.vengeful.citymanager.models.emergencyShutdown.EmergencyShutdownRequest
 import org.vengeful.citymanager.models.emergencyShutdown.EmergencyShutdownResponse
 import org.vengeful.citymanager.models.emergencyShutdown.EmergencyShutdownStatusResponse
 import org.vengeful.citymanager.models.Enterprise
+import org.vengeful.citymanager.models.UpdateMedicalRecordRequest
 import org.vengeful.citymanager.models.emergencyShutdown.ErrorResponse
 import org.vengeful.citymanager.models.backup.MasterBackup
 import org.vengeful.citymanager.models.users.CreateBankAccountRequest
@@ -764,6 +767,92 @@ fun Application.configureSerialization(
                 }
             }
 
+            route("/medic") {
+                val medicalRepository = MedicalRepository()
+
+                // Создание медицинской карточки
+                post("/medical-records") {
+                    try {
+                        val request = call.receive<CreateMedicalRecordRequest>()
+                        val record = medicalRepository.createMedicalRecord(
+                            record = request.record,
+                            healthStatus = request.healthStatus
+                        )
+                        call.respond(HttpStatusCode.OK, record)
+                    } catch (e: IllegalStateException) {
+                        call.respond(HttpStatusCode.BadRequest, e.message ?: "")
+                    } catch (e: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, e.message ?: "")
+                    }
+                }
+
+                // Получение списка пациентов с медкартами
+                get("/patients") {
+                    try {
+                        val patients = medicalRepository.getPatientsWithRecords()
+                        call.respond(HttpStatusCode.OK, patients)
+                    } catch (e: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, e.message ?: "")
+                    }
+                }
+
+                // Получение медкарт по personId
+                get("/medical-records/{personId}") {
+                    val personId = call.parameters["personId"]?.toInt()
+                    if (personId == null) {
+                        call.respond(HttpStatusCode.BadRequest)
+                        return@get
+                    }
+                    try {
+                        val records = medicalRepository.getMedicalRecordsByPersonId(personId)
+                        call.respond(HttpStatusCode.OK, records)
+                    } catch (e: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, e.message ?: "")
+                    }
+                }
+
+                put("/medical-records/{recordId}") {
+                    try {
+                        val recordId = call.parameters["recordId"]?.toInt()
+                        if (recordId == null) {
+                            call.respond(HttpStatusCode.BadRequest, "Invalid record ID")
+                            return@put
+                        }
+                        val request = call.receive<UpdateMedicalRecordRequest>()
+                        val record = medicalRepository.updateMedicalRecord(
+                            recordId = recordId,
+                            record = request.record,
+                            healthStatus = request.healthStatus
+                        )
+                        call.respond(HttpStatusCode.OK, record)
+                    } catch (e: IllegalStateException) {
+                        call.respond(HttpStatusCode.BadRequest, e.message ?: "")
+                    } catch (e: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, e.message ?: "")
+                    }
+                }
+
+                // НОВЫЙ: Получение медкарты по ID
+                get("/medical-records/byId/{recordId}") {
+                    try {
+                        val recordId = call.parameters["recordId"]?.toInt()
+                        if (recordId == null) {
+                            call.respond(HttpStatusCode.BadRequest)
+                            return@get
+                        }
+                        val record = medicalRepository.getMedicalRecordById(recordId)
+                        if (record == null) {
+                            call.respond(HttpStatusCode.NotFound)
+                        } else {
+                            call.respond(HttpStatusCode.OK, record)
+                        }
+                    } catch (e: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, e.message ?: "")
+                    }
+                }
+            }
+
+
             route("/backup") {
                 // Проверка прав Joker
                 fun checkJokerAccess(call: ApplicationCall, userRepository: IUserRepository): Boolean {
@@ -875,6 +964,7 @@ fun Application.configureSerialization(
                 }
             }
 
+
             route("/administration") {
                 post("/emergency-shutdown") {
                     try {
@@ -950,6 +1040,7 @@ fun Application.configureSerialization(
                 }
             }
 
+
             route("/call") {
                 get("/status/{enterprise}") {
                     val enterpriseStr = call.parameters["enterprise"]
@@ -990,6 +1081,8 @@ fun Application.configureSerialization(
                     call.respond(mapOf("status" to "success", "message" to "Call reset"))
                 }
             }
+
+
         }
     }
 }

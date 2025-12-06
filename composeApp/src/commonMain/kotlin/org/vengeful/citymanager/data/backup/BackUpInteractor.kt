@@ -24,7 +24,7 @@ class BackupInteractor(
         val contentType = response.headers[HttpHeaders.ContentType]
 
         // Вызываем expect функцию на уровне пакета
-        saveFile(content, "game_backup.$format", contentType ?: "text/html")
+        saveFile(content, "Бэкап.$format", contentType ?: "text/html")
     }
 }
 

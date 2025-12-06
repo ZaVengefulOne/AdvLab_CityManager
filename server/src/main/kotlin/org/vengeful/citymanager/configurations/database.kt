@@ -5,6 +5,7 @@ import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.vengeful.citymanager.bankService.db.BankAccounts
+import org.vengeful.citymanager.medicService.db.MedicalRecords
 import org.vengeful.citymanager.personService.db.PersonRepository
 import org.vengeful.citymanager.personService.db.PersonRights
 import org.vengeful.citymanager.personService.db.Persons
@@ -36,7 +37,8 @@ fun Application.configureDatabase(repository: PersonRepository) {
             PersonRights,
             Users,
             UserRights,
-            BankAccounts
+            BankAccounts,
+            MedicalRecords
         )
         repository.initializeRights()
     }

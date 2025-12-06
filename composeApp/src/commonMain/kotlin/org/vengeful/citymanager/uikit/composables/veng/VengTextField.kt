@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusState
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -37,6 +38,8 @@ fun VengTextField(
     visualTransformation: VisualTransformation = VisualTransformation.None,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     enabled: Boolean = true,
+    onFocusChange: (FocusState) -> Unit = {},
+    maxLines: Int = 1,
     theme: ColorTheme = ColorTheme.GOLDEN
 ) {
     val colors = remember(enabled, theme) {
@@ -74,7 +77,6 @@ fun VengTextField(
                     modifier = Modifier.padding(bottom = 4.dp)
                 )
             }
-
             BasicTextField(
                 value = value,
                 onValueChange = onValueChange,
@@ -99,6 +101,7 @@ fun VengTextField(
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
+                maxLines = maxLines,
                 visualTransformation = visualTransformation
             )
         }

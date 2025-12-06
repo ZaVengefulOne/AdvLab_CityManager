@@ -61,6 +61,7 @@ class BackupService(
                         id = person.id,
                         firstName = person.firstName,
                         lastName = person.lastName,
+                        health = person.health,
                         rights = person.rights.map { it.name }
                     ),
                     user = user?.let {
@@ -146,7 +147,8 @@ class BackupService(
                 <th>ID</th>
                 <th>Имя</th>
                 <th>Фамилия</th>
-                <th>Права Person</th>
+                <th>Здоровье</th>
+                <th>Права</th>
                 <th>Username</th>
                 <th>Клики</th>
                 <th>Права User</th>
@@ -164,6 +166,7 @@ class BackupService(
             html.append("<td>${entry.person?.id ?: "-"}</td>")
             html.append("<td>${entry.person?.firstName ?: "-"}</td>")
             html.append("<td>${entry.person?.lastName ?: "-"}</td>")
+            html.append("<td>${entry.person?.health ?: "-"}</td>")
             html.append("<td>${entry.person?.rights?.joinToString(", ") ?: "-"}</td>")
             html.append("<td>${entry.user?.username ?: "-"}</td>")
             html.append("<td>${entry.user?.clicks ?: "-"}</td>")
@@ -217,7 +220,9 @@ class BackupService(
             MasterBackupPerson(
                 id = dao.id.value,
                 firstName = dao.firstName,
-                lastName = dao.lastName
+                lastName = dao.lastName,
+                registrationPlace = dao.registrationPlace,
+                health = dao.health // ДОБАВИТЬ
             )
         }
 
