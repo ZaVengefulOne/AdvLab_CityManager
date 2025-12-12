@@ -32,21 +32,30 @@ import org.vengeful.citymanager.auth.EmergencyShutdownConfig
 import org.vengeful.citymanager.auth.SessionLockManager
 import org.vengeful.citymanager.backupService.BackupService
 import org.vengeful.citymanager.bankService.IBankRepository
+import org.vengeful.citymanager.bankService.db.BankRepository
 import org.vengeful.citymanager.medicService.MedicalRepository
+import org.vengeful.citymanager.medicService.MedicineRepository
 import org.vengeful.citymanager.models.BankAccount
 import org.vengeful.citymanager.models.CallRequest
 import org.vengeful.citymanager.models.CallStatus
-import org.vengeful.citymanager.models.CreateMedicalRecordRequest
+import org.vengeful.citymanager.models.ChatMessage
+import org.vengeful.citymanager.models.users.CreateMedicalRecordRequest
 import org.vengeful.citymanager.models.emergencyShutdown.EmergencyShutdownRequest
 import org.vengeful.citymanager.models.emergencyShutdown.EmergencyShutdownResponse
 import org.vengeful.citymanager.models.emergencyShutdown.EmergencyShutdownStatusResponse
 import org.vengeful.citymanager.models.Enterprise
-import org.vengeful.citymanager.models.UpdateMedicalRecordRequest
+import org.vengeful.citymanager.models.users.UpdateMedicalRecordRequest
 import org.vengeful.citymanager.models.emergencyShutdown.ErrorResponse
 import org.vengeful.citymanager.models.backup.MasterBackup
+import org.vengeful.citymanager.models.medicine.CreateMedicineOrderRequest
+import org.vengeful.citymanager.models.medicine.Medicine
+import org.vengeful.citymanager.models.medicine.MedicineOrder
+import org.vengeful.citymanager.models.medicine.MedicineOrderNotification
 import org.vengeful.citymanager.models.users.CreateBankAccountRequest
+import org.vengeful.citymanager.models.users.CurrentUserResponse
 import org.vengeful.citymanager.models.users.RegisterRequest
 import org.vengeful.citymanager.models.users.RegisterResponse
+import org.vengeful.citymanager.models.users.TransferMoneyRequest
 import org.vengeful.citymanager.models.users.UpdateBankAccountRequest
 import org.vengeful.citymanager.models.users.UpdateClicksRequest
 import org.vengeful.citymanager.models.users.UpdateUserRequest
@@ -197,7 +206,10 @@ fun Application.configureSerialization(
                             call.respond(HttpStatusCode.OK, AuthResponse(token, user, user.rights))
                         }
 
-                        null -> call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Invalid credentials"))
+                        null -> call.respond(
+                            HttpStatusCode.Unauthorized,
+                            ErrorResponse("Неверное имя пользователя или пароль.")
+                        )
                     }
 
                 } catch (e: JsonConvertException) {
@@ -276,6 +288,31 @@ fun Application.configureSerialization(
                         call.respond(
                             HttpStatusCode.InternalServerError,
                             mapOf("error" to "Failed to get users: ${e.message}")
+                        )
+                    }
+                }
+
+                get("/me") {
+                    try {
+                        val currentUser = getCurrentUser(call, userRepository)
+                        if (currentUser == null) {
+                            call.respond(HttpStatusCode.Unauthorized, "User not authenticated")
+                            return@get
+                        }
+                        val personId = currentUser.personId
+                        val response = CurrentUserResponse(
+                            id = currentUser.id,
+                            username = currentUser.username,
+                            rights = currentUser.rights.map { it.name },
+                            isActive = currentUser.isActive,
+                            personId = personId ?: -1
+                        )
+                        call.respond(HttpStatusCode.OK, response)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(
+                            HttpStatusCode.InternalServerError,
+                            "Failed to get current user: ${e.message}"
                         )
                     }
                 }
@@ -562,6 +599,59 @@ fun Application.configureSerialization(
                         call.respond(HttpStatusCode.NotFound)
                     }
                 }
+
+                // POST /persons/transfer - перевод денег между персонами
+                post("/transfer") {
+                    try {
+                        val request = call.receive<TransferMoneyRequest>()
+
+                        // Валидация
+                        if (request.amount <= 0) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Amount must be positive"))
+                            return@post
+                        }
+
+                        if (request.fromPersonId == request.toPersonId) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Cannot transfer to yourself"))
+                            return@post
+                        }
+
+                        val fromPerson = personRepository.personById(request.fromPersonId)
+                        val toPerson = personRepository.personById(request.toPersonId)
+
+                        if (fromPerson == null) {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "Sender person not found"))
+                            return@post
+                        }
+
+                        if (toPerson == null) {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "Recipient person not found"))
+                            return@post
+                        }
+
+                        if (fromPerson.balance < request.amount) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Insufficient balance"))
+                            return@post
+                        }
+
+                        // Выполняем перевод
+                        val success = personRepository.addToPersonBalance(request.fromPersonId, -request.amount) &&
+                            personRepository.addToPersonBalance(request.toPersonId, request.amount)
+
+                        if (success) {
+                            call.respond(HttpStatusCode.OK, mapOf("message" to "Transfer successful"))
+                        } else {
+                            call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Transfer failed"))
+                        }
+                    } catch (e: JsonConvertException) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid JSON format: ${e.message}"))
+                    } catch (e: Exception) {
+                        call.respond(
+                            HttpStatusCode.InternalServerError,
+                            mapOf("error" to "Internal server error: ${e.message}")
+                        )
+                    }
+                }
             }
 
             route("/bank") {
@@ -638,12 +728,19 @@ fun Application.configureSerialization(
                             return@post
                         }
 
-                        if (request.depositAmount < 0 || request.creditAmount < 0) {
+                        if (request.creditAmount < 0) {
                             call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Amounts cannot be negative"))
                             return@post
                         }
 
-                        // Если это предприятие, должно быть указано название
+                        if (request.personBalance != null && request.personBalance!! < 0) {
+                            call.respond(
+                                HttpStatusCode.BadRequest,
+                                mapOf("error" to "Person balance cannot be negative")
+                            )
+                            return@post
+                        }
+
                         if (request.personId == null && (request.enterpriseName.isNullOrBlank())) {
                             call.respond(
                                 HttpStatusCode.BadRequest,
@@ -654,10 +751,11 @@ fun Application.configureSerialization(
 
                         val account = bankRepository.createBankAccount(
                             personId = request.personId,
-                            enterpriseName = request.enterpriseName, // НОВОЕ
-                            depositAmount = request.depositAmount,
-                            creditAmount = request.creditAmount
+                            enterpriseName = request.enterpriseName,
+                            creditAmount = request.creditAmount,
+                            personBalance = request.personBalance
                         )
+
                         call.respond(HttpStatusCode.Created, account)
                     } catch (e: IllegalStateException) {
                         call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
@@ -692,7 +790,7 @@ fun Application.configureSerialization(
                             return@put
                         }
 
-                        if (request.depositAmount < 0 || request.creditAmount < 0) {
+                        if (request.creditAmount < 0) {
                             call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Amounts cannot be negative"))
                             return@put
                         }
@@ -706,12 +804,11 @@ fun Application.configureSerialization(
                         val bankAccount = BankAccount(
                             id = request.id,
                             personId = request.personId,
-                            enterpriseName = request.enterpriseName, // НОВОЕ
-                            depositAmount = request.depositAmount,
+                            enterpriseName = request.enterpriseName,
                             creditAmount = request.creditAmount
                         )
 
-                        val updatedAccount = bankRepository.updateBankAccount(bankAccount)
+                        val updatedAccount = bankRepository.updateBankAccount(bankAccount, request.personBalance)
                         if (updatedAccount == null) {
                             call.respond(
                                 HttpStatusCode.InternalServerError,
@@ -765,10 +862,60 @@ fun Application.configureSerialization(
                         )
                     }
                 }
+
+                // POST /bank/accounts/{id}/close-credit - закрыть кредит
+                post("/accounts/{id}/close-credit") {
+                    try {
+                        val id = call.parameters["id"]?.toIntOrNull()
+                        if (id == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid account ID"))
+                            return@post
+                        }
+
+                        val updatedAccount = bankRepository.closeCredit(id)
+                        if (updatedAccount == null) {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "Bank account not found"))
+                        } else {
+                            call.respond(HttpStatusCode.OK, updatedAccount)
+                        }
+                    } catch (e: IllegalStateException) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+                    } catch (e: Exception) {
+                        println("Close credit error: ${e::class.simpleName} - ${e.message}")
+                        e.printStackTrace()
+                        call.respond(
+                            HttpStatusCode.InternalServerError,
+                            mapOf("error" to "Failed to close credit: ${e.message}")
+                        )
+                    }
+                }
+
+                get("/accounts/enterprise/{enterpriseName}") {
+                    try {
+                        val enterpriseName = call.parameters["enterpriseName"]
+                        if (enterpriseName == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid enterprise name"))
+                            return@get
+                        }
+                        val account = bankRepository.getBankAccountByEnterpriseName(enterpriseName)
+                        if (account == null) {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "Bank account not found"))
+                        } else {
+                            call.respond(HttpStatusCode.OK, account)
+                        }
+                    } catch (e: Exception) {
+                        call.respond(
+                            HttpStatusCode.InternalServerError,
+                            mapOf("error" to "Failed to retrieve bank account: ${e.message}")
+                        )
+                    }
+                }
             }
 
             route("/medic") {
                 val medicalRepository = MedicalRepository()
+                val medicineRepository = MedicineRepository()
+                val bankRepository = BankRepository(personRepository)
 
                 // Создание медицинской карточки
                 post("/medical-records") {
@@ -832,6 +979,41 @@ fun Application.configureSerialization(
                     }
                 }
 
+                // GET /medic/orders - получить все заказы лекарств
+                get("/orders") {
+                    try {
+                        val notifications =
+                            org.vengeful.citymanager.adminPanel.configurations.getMedicineOrderNotifications(100)
+                        call.respond(HttpStatusCode.OK, notifications)
+                    } catch (e: Exception) {
+                        println("Error getting medicine orders: ${e.message}")
+                        e.printStackTrace()
+                        call.respond(
+                            HttpStatusCode.InternalServerError,
+                            mapOf("error" to "Failed to get medicine orders: ${e.message}")
+                        )
+                    }
+                }
+
+                // DELETE /medic/medical-records/{recordId} - удалить мед.карту
+                delete("/medical-records/{recordId}") {
+                    try {
+                        val recordId = call.parameters["recordId"]?.toInt()
+                        if (recordId == null) {
+                            call.respond(HttpStatusCode.BadRequest, "Invalid record ID")
+                            return@delete
+                        }
+                        val success = medicalRepository.deleteMedicalRecord(recordId)
+                        if (success) {
+                            call.respond(HttpStatusCode.OK, mapOf("status" to "success", "message" to "Medical record deleted"))
+                        } else {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "Medical record not found"))
+                        }
+                    } catch (e: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Failed to delete medical record: ${e.message}"))
+                    }
+                }
+
                 // НОВЫЙ: Получение медкарты по ID
                 get("/medical-records/byId/{recordId}") {
                     try {
@@ -850,240 +1032,396 @@ fun Application.configureSerialization(
                         call.respond(HttpStatusCode.InternalServerError, e.message ?: "")
                     }
                 }
-            }
 
-
-            route("/backup") {
-                // Проверка прав Joker
-                fun checkJokerAccess(call: ApplicationCall, userRepository: IUserRepository): Boolean {
-                    val currentUser = getCurrentUser(call, userRepository)
-                    return currentUser?.rights?.contains(Rights.Joker) == true
-                }
-
-                // GET /backup/game?format=html - получить игровой бэкап в формате HTML
-                get("/game") {
-                    try {
-                        if (!checkJokerAccess(call, userRepository)) {
-                            call.respond(
-                                HttpStatusCode.Forbidden,
-                                mapOf("error" to "Access denied. You have no rights!")
-                            )
-                            return@get
+                route("/medicines") {
+                    // Получить все лекарства
+                    get {
+                        try {
+                            val medicines = medicineRepository.getAllMedicines()
+                            call.respond(HttpStatusCode.OK, medicines)
+                        } catch (e: Exception) {
+                            call.respond(HttpStatusCode.InternalServerError, e.message ?: "")
                         }
+                    }
 
-                        val format = call.request.queryParameters["format"] ?: "html"
-                        val backupService = BackupService(personRepository, userRepository, bankRepository)
-
-                        when (format.lowercase()) {
-                            "html" -> {
-                                val html = backupService.createGameBackupHtml()
-                                call.response.headers.append("Content-Type", "text/html; charset=UTF-8")
-                                call.respondText(html, contentType = io.ktor.http.ContentType.Text.Html)
+                    // Получить лекарство по ID
+                    get("/{id}") {
+                        try {
+                            val id = call.parameters["id"]?.toInt()
+                            if (id == null) {
+                                call.respond(HttpStatusCode.BadRequest)
+                                return@get
                             }
-
-                            "markdown" -> {
-                                val markdown = backupService.createGameBackupMarkdown()
-                                call.response.headers.append("Content-Type", "text/markdown; charset=UTF-8")
-                                call.respondText(markdown, contentType = io.ktor.http.ContentType.Text.Plain)
+                            val medicine = medicineRepository.getMedicineById(id)
+                            if (medicine == null) {
+                                call.respond(HttpStatusCode.NotFound)
+                            } else {
+                                call.respond(HttpStatusCode.OK, medicine)
                             }
-
-                            else -> {
-                                call.respond(
-                                    HttpStatusCode.BadRequest,
-                                    mapOf("error" to "Invalid format. Use 'html' or 'markdown'")
-                                )
-                            }
+                        } catch (e: Exception) {
+                            call.respond(HttpStatusCode.InternalServerError, e.message ?: "")
                         }
-                    } catch (e: Exception) {
-                        println("Get game backup error: ${e::class.simpleName} - ${e.message}")
-                        e.printStackTrace()
-                        call.respond(
-                            HttpStatusCode.InternalServerError,
-                            mapOf("error" to "Failed to create game backup: ${e.message}")
-                        )
+                    }
+
+                    // Создать лекарство (для админ-панели)
+                    post {
+                        try {
+                            val medicine = call.receive<Medicine>()
+                            val created = medicineRepository.createMedicine(medicine)
+                            call.respond(HttpStatusCode.OK, created)
+                        } catch (e: Exception) {
+                            call.respond(HttpStatusCode.BadRequest, e.message ?: "")
+                        }
+                    }
+
+                    // Обновить лекарство (для админ-панели)
+                    put("/{id}") {
+                        try {
+                            val id = call.parameters["id"]?.toInt()
+                            if (id == null) {
+                                call.respond(HttpStatusCode.BadRequest)
+                                return@put
+                            }
+                            val medicine = call.receive<Medicine>()
+                            val updated = medicineRepository.updateMedicine(medicine.copy(id = id))
+                            call.respond(HttpStatusCode.OK, updated)
+                        } catch (e: Exception) {
+                            call.respond(HttpStatusCode.BadRequest, e.message ?: "")
+                        }
+                    }
+
+                    // Удалить лекарство (для админ-панели)
+                    delete("/{id}") {
+                        try {
+                            val id = call.parameters["id"]?.toInt()
+                            if (id == null) {
+                                call.respond(HttpStatusCode.BadRequest)
+                                return@delete
+                            }
+                            if (medicineRepository.deleteMedicine(id)) {
+                                call.respond(HttpStatusCode.OK)
+                            } else {
+                                call.respond(HttpStatusCode.NotFound)
+                            }
+                        } catch (e: Exception) {
+                            call.respond(HttpStatusCode.InternalServerError, e.message ?: "")
+                        }
                     }
                 }
 
-                // GET /backup/master - получить мастерский бэкап (JSON)
-                get("/master") {
+                post("/order-medicine") {
                     try {
-                        if (!checkJokerAccess(call, userRepository)) {
-                            call.respond(
-                                HttpStatusCode.Forbidden,
-                                mapOf("error" to "Access denied. You have no rights!")
-                            )
-                            return@get
-                        }
-
-                        val backupService = BackupService(personRepository, userRepository, bankRepository)
-                        val masterBackup = backupService.createMasterBackup()
-                        call.respond(HttpStatusCode.OK, masterBackup)
-                    } catch (e: Exception) {
-                        println("Get master backup error: ${e::class.simpleName} - ${e.message}")
-                        e.printStackTrace()
-                        call.respond(
-                            HttpStatusCode.InternalServerError,
-                            mapOf("error" to "Failed to create master backup: ${e.message}")
-                        )
-                    }
-                }
-
-                // POST /backup/restore - загрузить и восстановить мастерский бэкап
-                post("/restore") {
-                    try {
-                        if (!checkJokerAccess(call, userRepository)) {
-                            call.respond(
-                                HttpStatusCode.Forbidden,
-                                mapOf("error" to "Access denied. You have no rights!")
-                            )
-                            return@post
-                        }
-
-                        val masterBackup = call.receive<MasterBackup>()
-                        val backupService = BackupService(personRepository, userRepository, bankRepository)
-
-                        backupService.restoreFromMasterBackup(masterBackup)
-
-                        call.respond(
-                            HttpStatusCode.OK,
-                            mapOf("message" to "Database restored successfully from master backup")
-                        )
-                    } catch (e: JsonConvertException) {
-                        call.respond(
-                            HttpStatusCode.BadRequest,
-                            mapOf("error" to "Invalid JSON format: ${e.message}")
-                        )
-                    } catch (e: Exception) {
-                        println("Restore backup error: ${e::class.simpleName} - ${e.message}")
-                        e.printStackTrace()
-                        call.respond(
-                            HttpStatusCode.InternalServerError,
-                            mapOf("error" to "Failed to restore backup: ${e.message}")
-                        )
-                    }
-                }
-            }
-
-
-            route("/administration") {
-                post("/emergency-shutdown") {
-                    try {
+                        val request = call.receive<CreateMedicineOrderRequest>()
                         val currentUser = getCurrentUser(call, userRepository)
                         if (currentUser == null) {
-                            call.respond(HttpStatusCode.Unauthorized, ErrorResponse("User not authenticated"))
+                            call.respond(HttpStatusCode.Unauthorized, "User not authenticated")
                             return@post
                         }
-
-                        val request = call.receive<EmergencyShutdownRequest>()
-
-                        if (request.durationMinutes !in 1..30) {
-                            call.respond(
-                                HttpStatusCode.BadRequest,
-                                ErrorResponse("Duration must be between 1 and 30 minutes")
+                        val medicine = medicineRepository.getMedicineById(request.medicineId)
+                            ?: throw IllegalStateException("Medicine not found")
+                        val totalPrice = medicine.price * request.quantity
+                        val account = bankRepository.getBankAccountById(request.accountId)
+                            ?: throw IllegalStateException("Bank account not found")
+                        if (account.personId != null) {
+                            val person = personRepository.personById(account.personId!!)
+                                ?: throw IllegalStateException("Person not found for account")
+                            if (person.balance < totalPrice) {
+                                call.respond(
+                                    HttpStatusCode.BadRequest,
+                                    mapOf("error" to "Недостаточно средств на счете")
+                                )
+                                return@post
+                            }
+                            val success = personRepository.addToPersonBalance(account.personId!!, -totalPrice)
+                            if (!success) {
+                                throw IllegalStateException("Failed to deduct from person balance")
+                            }
+                        } else {
+                            if (account.creditAmount < totalPrice) {
+                                call.respond(
+                                    HttpStatusCode.BadRequest,
+                                    mapOf("error" to "Недостаточно средств на счете")
+                                )
+                                return@post
+                            }
+                            val updatedAccount = bankRepository.updateBankAccount(
+                                account.copy(creditAmount = account.creditAmount - totalPrice)
                             )
-                            return@post
+                            if (updatedAccount == null) {
+                                throw IllegalStateException("Failed to update bank account")
+                            }
                         }
-
-                        // Проверяем отдельный пароль экстренного отключения
-                        if (request.password != emergencyShutdownConfig.password) {
-                            call.respond(
-                                HttpStatusCode.Forbidden,
-                                ErrorResponse("Invalid emergency shutdown password")
-                            )
-                            return@post
-                        }
-
-                        SessionLockManager.activateEmergencyShutdown(
-                            allowedUserId = currentUser.id,
-                            durationMinutes = request.durationMinutes
+                        val personId = currentUser.personId
+                        val order = medicineRepository.createMedicineOrder(
+                            medicineId = request.medicineId,
+                            medicineName = medicine.name,
+                            quantity = request.quantity,
+                            totalPrice = totalPrice,
+                            accountId = request.accountId,
+                            orderedByPersonId = personId
                         )
-
-                        call.respond(
-                            HttpStatusCode.OK,
-                            EmergencyShutdownResponse(
-                                message = "Emergency shutdown activated",
-                                durationMinutes = request.durationMinutes,
-                                allowedUserId = currentUser.id
-                            )
+                        val orderedByPersonName: String? = if (personId != null) {
+                            val person = personRepository.personById(personId)
+                            person?.let { "${it.firstName} ${it.lastName}" }
+                        } else null
+                        val orderedByEnterprise: String? = if (account.enterpriseName != null) {
+                            account.enterpriseName
+                        } else null
+                        val notification = MedicineOrderNotification(
+                            id = order.id,
+                            medicineName = medicine.name,
+                            quantity = request.quantity,
+                            totalPrice = totalPrice,
+                            orderedByPersonName = orderedByPersonName,
+                            orderedByEnterprise = orderedByEnterprise,
+                            timestamp = order.createdAt,
+                            status = "pending"
                         )
-                    } catch (e: IllegalArgumentException) {
-                        call.respond(HttpStatusCode.BadRequest, ErrorResponse(e.message ?: "Invalid argument"))
+                        org.vengeful.citymanager.adminPanel.configurations.addMedicineOrderNotification(notification)
+                        call.respond(HttpStatusCode.OK, order)
                     } catch (e: Exception) {
-                        println("Emergency shutdown error: ${e::class.simpleName} - ${e.message}")
+                        println("Error in /order-medicine: ${e.message}")
                         e.printStackTrace()
                         call.respond(
                             HttpStatusCode.InternalServerError,
-                            ErrorResponse("Failed to activate emergency shutdown: ${e.message}")
-                        )
-                    }
-                }
-
-                get("/emergency-shutdown/status") {
-                    try {
-                        val isActive = SessionLockManager.isEmergencyShutdownActive()
-                        val remainingTimeMillis = SessionLockManager.getRemainingTimeMillis()
-                        val remainingTimeSeconds = remainingTimeMillis?.let { it / 1000 } ?: 0L
-
-                        call.respond(
-                            HttpStatusCode.OK,
-                            EmergencyShutdownStatusResponse(
-                                isActive = isActive,
-                                remainingTimeSeconds = if (isActive) remainingTimeSeconds else null
-                            )
-                        )
-                    } catch (e: Exception) {
-                        call.respond(
-                            HttpStatusCode.InternalServerError,
-                            ErrorResponse("Failed to get status: ${e.message}")
+                            mapOf("error" to e.message)
                         )
                     }
                 }
             }
+        }
 
 
-            route("/call") {
-                get("/status/{enterprise}") {
-                    val enterpriseStr = call.parameters["enterprise"]
-                    val enterprise = try {
-                        Enterprise.valueOf(enterpriseStr ?: "")
-                    } catch (e: Exception) {
-                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid enterprise"))
+        route("/backup") {
+            // Проверка прав Joker
+            fun checkJokerAccess(call: ApplicationCall, userRepository: IUserRepository): Boolean {
+                val currentUser = getCurrentUser(call, userRepository)
+                return currentUser?.rights?.contains(Rights.Joker) == true
+            }
+
+            // GET /backup/game?format=html - получить игровой бэкап в формате HTML
+            get("/game") {
+                try {
+                    if (!checkJokerAccess(call, userRepository)) {
+                        call.respond(
+                            HttpStatusCode.Forbidden,
+                            mapOf("error" to "Access denied. You have no rights!")
+                        )
                         return@get
                     }
 
-                    val status = callStatuses[enterprise] ?: CallStatus(enterprise, false)
-                    call.respond(status)
-                }
+                    val format = call.request.queryParameters["format"] ?: "html"
+                    val backupService = BackupService(personRepository, userRepository, bankRepository)
 
-                post("/send") {
-                    val request = call.receive<CallRequest>()
+                    when (format.lowercase()) {
+                        "html" -> {
+                            val html = backupService.createGameBackupHtml()
+                            call.response.headers.append("Content-Type", "text/html; charset=UTF-8")
+                            call.respondText(html, contentType = io.ktor.http.ContentType.Text.Html)
+                        }
 
-                    callStatuses[request.enterprise] = CallStatus(
-                        enterprise = request.enterprise,
-                        isCalled = true,
-                        calledAt = System.currentTimeMillis()
-                    )
+                        "markdown" -> {
+                            val markdown = backupService.createGameBackupMarkdown()
+                            call.response.headers.append("Content-Type", "text/markdown; charset=UTF-8")
+                            call.respondText(markdown, contentType = io.ktor.http.ContentType.Text.Plain)
+                        }
 
-                    call.respond(mapOf("status" to "success", "message" to "Call sent"))
-                }
-
-                // Сбросить статус вызова (когда представитель ответил)
-                post("/reset/{enterprise}") {
-                    val enterpriseStr = call.parameters["enterprise"]
-                    val enterprise = try {
-                        Enterprise.valueOf(enterpriseStr ?: "")
-                    } catch (e: Exception) {
-                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid enterprise"))
-                        return@post
+                        else -> {
+                            call.respond(
+                                HttpStatusCode.BadRequest,
+                                mapOf("error" to "Invalid format. Use 'html' or 'markdown'")
+                            )
+                        }
                     }
-
-                    callStatuses[enterprise] = CallStatus(enterprise, false)
-                    call.respond(mapOf("status" to "success", "message" to "Call reset"))
+                } catch (e: Exception) {
+                    println("Get game backup error: ${e::class.simpleName} - ${e.message}")
+                    e.printStackTrace()
+                    call.respond(
+                        HttpStatusCode.InternalServerError,
+                        mapOf("error" to "Failed to create game backup: ${e.message}")
+                    )
                 }
             }
 
+            // GET /backup/master - получить мастерский бэкап (JSON)
+            get("/master") {
+                try {
+                    if (!checkJokerAccess(call, userRepository)) {
+                        call.respond(
+                            HttpStatusCode.Forbidden,
+                            mapOf("error" to "Access denied. You have no rights!")
+                        )
+                        return@get
+                    }
 
+                    val backupService = BackupService(personRepository, userRepository, bankRepository)
+                    val masterBackup = backupService.createMasterBackup()
+                    call.respond(HttpStatusCode.OK, masterBackup)
+                } catch (e: Exception) {
+                    println("Get master backup error: ${e::class.simpleName} - ${e.message}")
+                    e.printStackTrace()
+                    call.respond(
+                        HttpStatusCode.InternalServerError,
+                        mapOf("error" to "Failed to create master backup: ${e.message}")
+                    )
+                }
+            }
+
+            // POST /backup/restore - загрузить и восстановить мастерский бэкап
+            post("/restore") {
+                try {
+                    if (!checkJokerAccess(call, userRepository)) {
+                        call.respond(
+                            HttpStatusCode.Forbidden,
+                            mapOf("error" to "Access denied. You have no rights!")
+                        )
+                        return@post
+                    }
+
+                    val masterBackup = call.receive<MasterBackup>()
+                    val backupService = BackupService(personRepository, userRepository, bankRepository)
+
+                    backupService.restoreFromMasterBackup(masterBackup)
+
+                    call.respond(
+                        HttpStatusCode.OK,
+                        mapOf("message" to "Database restored successfully from master backup")
+                    )
+                } catch (e: JsonConvertException) {
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        mapOf("error" to "Invalid JSON format: ${e.message}")
+                    )
+                } catch (e: Exception) {
+                    println("Restore backup error: ${e::class.simpleName} - ${e.message}")
+                    e.printStackTrace()
+                    call.respond(
+                        HttpStatusCode.InternalServerError,
+                        mapOf("error" to "Failed to restore backup: ${e.message}")
+                    )
+                }
+            }
         }
+
+
+        route("/administration") {
+            post("/emergency-shutdown") {
+                try {
+                    val currentUser = getCurrentUser(call, userRepository)
+                    if (currentUser == null) {
+                        call.respond(HttpStatusCode.Unauthorized, ErrorResponse("User not authenticated"))
+                        return@post
+                    }
+
+                    val request = call.receive<EmergencyShutdownRequest>()
+
+                    if (request.durationMinutes !in 1..30) {
+                        call.respond(
+                            HttpStatusCode.BadRequest,
+                            ErrorResponse("Duration must be between 1 and 30 minutes")
+                        )
+                        return@post
+                    }
+
+                    // Проверяем отдельный пароль экстренного отключения
+                    if (request.password != emergencyShutdownConfig.password) {
+                        call.respond(
+                            HttpStatusCode.Forbidden,
+                            ErrorResponse("Invalid emergency shutdown password")
+                        )
+                        return@post
+                    }
+
+                    SessionLockManager.activateEmergencyShutdown(
+                        allowedUserId = currentUser.id,
+                        durationMinutes = request.durationMinutes
+                    )
+
+                    call.respond(
+                        HttpStatusCode.OK,
+                        EmergencyShutdownResponse(
+                            message = "Emergency shutdown activated",
+                            durationMinutes = request.durationMinutes,
+                            allowedUserId = currentUser.id
+                        )
+                    )
+                } catch (e: IllegalArgumentException) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(e.message ?: "Invalid argument"))
+                } catch (e: Exception) {
+                    println("Emergency shutdown error: ${e::class.simpleName} - ${e.message}")
+                    e.printStackTrace()
+                    call.respond(
+                        HttpStatusCode.InternalServerError,
+                        ErrorResponse("Failed to activate emergency shutdown: ${e.message}")
+                    )
+                }
+            }
+
+            get("/emergency-shutdown/status") {
+                try {
+                    val isActive = SessionLockManager.isEmergencyShutdownActive()
+                    val remainingTimeMillis = SessionLockManager.getRemainingTimeMillis()
+                    val remainingTimeSeconds = remainingTimeMillis?.let { it / 1000 } ?: 0L
+
+                    call.respond(
+                        HttpStatusCode.OK,
+                        EmergencyShutdownStatusResponse(
+                            isActive = isActive,
+                            remainingTimeSeconds = if (isActive) remainingTimeSeconds else null
+                        )
+                    )
+                } catch (e: Exception) {
+                    call.respond(
+                        HttpStatusCode.InternalServerError,
+                        ErrorResponse("Failed to get status: ${e.message}")
+                    )
+                }
+            }
+        }
+
+
+        route("/call") {
+            get("/status/{enterprise}") {
+                val enterpriseStr = call.parameters["enterprise"]
+                val enterprise = try {
+                    Enterprise.valueOf(enterpriseStr ?: "")
+                } catch (e: Exception) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid enterprise"))
+                    return@get
+                }
+
+                val status = callStatuses[enterprise] ?: CallStatus(enterprise, false)
+                call.respond(status)
+            }
+
+            post("/send") {
+                val request = call.receive<CallRequest>()
+
+                callStatuses[request.enterprise] = CallStatus(
+                    enterprise = request.enterprise,
+                    isCalled = true,
+                    calledAt = System.currentTimeMillis()
+                )
+
+                call.respond(mapOf("status" to "success", "message" to "Call sent"))
+            }
+
+            // Сбросить статус вызова (когда представитель ответил)
+            post("/reset/{enterprise}") {
+                val enterpriseStr = call.parameters["enterprise"]
+                val enterprise = try {
+                    Enterprise.valueOf(enterpriseStr ?: "")
+                } catch (e: Exception) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid enterprise"))
+                    return@post
+                }
+
+                callStatuses[enterprise] = CallStatus(enterprise, false)
+                call.respond(mapOf("status" to "success", "message" to "Call reset"))
+            }
+        }
+
+
     }
 }
 

@@ -14,6 +14,7 @@ object Persons : IntIdTable("persons") {
     val lastName = varchar("last_name", 255)
     val registrationPlace = varchar("registration_place", 255).default("")
     val health = varchar("health", 255).default("здоров")
+    val balance = double("balance").default(0.0)
 }
 
 object RightsTable : IntIdTable("rights") {
@@ -34,7 +35,7 @@ class PersonDao(id: EntityID<Int>) : IntEntity(id) {
     var lastName by Persons.lastName
     var registrationPlace by Persons.registrationPlace
     var health by Persons.health
-
+    var balance by Persons.balance
     val rights by RightDao via PersonRights
 
     fun toPerson() = Person(
@@ -43,7 +44,8 @@ class PersonDao(id: EntityID<Int>) : IntEntity(id) {
         lastName = lastName,
         registrationPlace = registrationPlace,
         health = health,
-        rights = rights.map { it.right }.toList()
+        rights = rights.map { it.right }.toList(),
+        balance = balance
     )
 }
 
@@ -56,7 +58,6 @@ class RightDao(id: EntityID<Int>) : IntEntity(id) {
                 }
         }
 
-        // Вспомогательный метод для получения всех прав
         fun getAllRights(): List<RightDao> = all().toList()
     }
 
@@ -65,6 +66,5 @@ class RightDao(id: EntityID<Int>) : IntEntity(id) {
     val right: Rights
         get() = Rights.valueOf(name)
 
-    // Связь с персонажами - теперь будет работать
     val persons by PersonDao via PersonRights
 }

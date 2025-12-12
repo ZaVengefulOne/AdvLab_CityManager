@@ -45,7 +45,6 @@ data class MasterBackupBankAccount(
     val id: Int,
     val personId: Int?,
     val enterpriseName: String?,
-    val depositAmount: Double,
     val creditAmount: Double
 )
 

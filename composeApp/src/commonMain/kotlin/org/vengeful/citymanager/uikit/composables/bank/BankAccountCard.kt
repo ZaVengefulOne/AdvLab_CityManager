@@ -25,6 +25,7 @@ import org.vengeful.citymanager.uikit.SeveritepunkCardColors
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
 import org.vengeful.citymanager.uikit.composables.veng.VengText
 
+@Suppress("DefaultLocale")
 @Composable
 fun BankAccountCard(
     account: BankAccount,
@@ -69,7 +70,8 @@ fun BankAccountCard(
                         fontWeight = FontWeight.Bold
                     )
                     VengText(
-                        text = person?.let { "${it.firstName} ${it.lastName}" } ?: (account.enterpriseName ?: "Предприятие"),
+                        text = person?.let { "${it.firstName} ${it.lastName}" } ?: (account.enterpriseName
+                            ?: "Предприятие"),
                         color = cardColors.text,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
@@ -109,68 +111,71 @@ fun BankAccountCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Вклад
-                Column(
-                    horizontalAlignment = Alignment.Start,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    VengText(
-                        text = "Счёт",
-                        color = cardColors.text.copy(alpha = 0.7f),
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    VengText(
-                        text = String.format("%.0f", account.depositAmount),
-                        color = Color(0xFF4CAF50),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Visible
-                    )
-                }
+                // Для личных счетов: баланс персоны и кредит
+                // Для предприятий: только баланс предприятия
+                if (person != null) {
+                    // Личный счет - показываем баланс и кредит
+                    Column(
+                        horizontalAlignment = Alignment.Start,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        VengText(
+                            text = "Баланс",
+                            color = cardColors.text.copy(alpha = 0.7f),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        VengText(
+                            text = String.format("%.0f", person.balance),
+                            color = Color(0xFF4CAF50),
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Visible
+                        )
+                    }
 
-                // Кредит
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    VengText(
-                        text = "Кредит",
-                        color = cardColors.text.copy(alpha = 0.7f),
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    VengText(
-                        text = String.format("%.0f", account.creditAmount),
-                        color = Color(0xFFFF4444),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Visible
-                    )
-                }
-
-                // Баланс
-                Column(
-                    horizontalAlignment = Alignment.End,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    VengText(
-                        text = "Баланс",
-                        color = cardColors.accent,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    val balance = account.depositAmount - account.creditAmount
-                    VengText(
-                        text = String.format("%.0f", balance),
-                        color = if (balance >= 0) Color(0xFF4CAF50) else Color(0xFFFF4444),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Visible
-                    )
+                    // Кредит
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        VengText(
+                            text = "Кредит",
+                            color = cardColors.text.copy(alpha = 0.7f),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        VengText(
+                            text = String.format("%.0f", account.creditAmount),
+                            color = Color(0xFFFF4444),
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Visible
+                        )
+                    }
+                } else {
+                    // Счет предприятия - показываем только баланс
+                    Column(
+                        horizontalAlignment = Alignment.Start,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        VengText(
+                            text = "Баланс предприятия",
+                            color = cardColors.text.copy(alpha = 0.7f),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        VengText(
+                            text = String.format("%.0f", account.creditAmount),
+                            color = Color(0xFF4CAF50),
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Visible
+                        )
+                    }
                 }
             }
         }

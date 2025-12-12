@@ -26,20 +26,25 @@ import org.vengeful.citymanager.uikit.composables.veng.VengButton
 import org.vengeful.citymanager.uikit.composables.veng.VengText
 import org.vengeful.citymanager.uikit.composables.veng.VengTextField
 
+@Suppress("DefaultLocale")
 @Composable
 fun BankAccountDialog(
     persons: List<Person>,
     onDismiss: () -> Unit,
-    onCreateAccount: (Int?, String?, Double, Double) -> Unit, // personId теперь nullable
+    onCreateAccount: (Int?, String?, Double, Double?) -> Unit,
     theme: ColorTheme = ColorTheme.GOLDEN
 ) {
     var selectedPersonId by remember { mutableStateOf<Int?>(null) }
-    var depositAmount by remember { mutableStateOf("0.0") }
     var creditAmount by remember { mutableStateOf("0.0") }
     var enterpriseName by remember { mutableStateOf("") }
     var personDropdownExpanded by remember { mutableStateOf(false) }
     var isEnterprise by remember { mutableStateOf(false) }
     var personSearchQuery by remember { mutableStateOf("") }
+    var personBalance by remember { mutableStateOf("") }
+
+    val selectedPerson = remember(selectedPersonId) {  // ДОБАВЛЕНО: запоминаем выбранную персону
+        persons.find { it.id == selectedPersonId }
+    }
 
     val dialogColors = remember(theme) {
         when (theme) {
@@ -134,7 +139,6 @@ fun BankAccountDialog(
                 // Выбор Person (только если не предприятие)
                 if (!isEnterprise) {
                     Box {
-                        val selectedPerson = persons.find { it.id == selectedPersonId }
                         VengTextField(
                             value = selectedPerson?.let { "${it.firstName} ${it.lastName} (ID: ${it.id})" }
                                 ?: "Выберите жителя...",
@@ -209,6 +213,35 @@ fun BankAccountDialog(
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
+
+                    if (selectedPerson != null) {
+                        VengTextField(
+                            value = String.format("%.2f", selectedPerson.balance),
+                            onValueChange = { },
+                            label = "Текущий баланс жителя",
+                            placeholder = "0.00",
+                            enabled = false,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.fillMaxWidth(),
+                            theme = theme
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        VengTextField(
+                            value = personBalance,
+                            onValueChange = { newValue ->
+                                if (newValue.isEmpty() || newValue.matches(Regex("^\\d*\\.?\\d*$"))) {
+                                    personBalance = newValue
+                                }
+                            },
+                            label = "Баланс жителя",
+                            placeholder = "Введите баланс...",
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.fillMaxWidth(),
+                            theme = theme
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
                 } else {
                     // Информация о предприятии
                     Spacer(modifier = Modifier.height(12.dp))
@@ -226,23 +259,6 @@ fun BankAccountDialog(
                     Spacer(modifier = Modifier.height(12.dp))
                 }
 
-                // Размер вклада
-                VengTextField(
-                    value = depositAmount,
-                    onValueChange = { newValue ->
-                        if (newValue.isEmpty() || newValue.matches(Regex("^\\d*\\.?\\d*$"))) {
-                            depositAmount = newValue
-                        }
-                    },
-                    label = "РАЗМЕР ВКЛАДА",
-                    placeholder = "0.0",
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth(),
-                    theme = theme
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
                 // Размер кредита
                 VengTextField(
                     value = creditAmount,
@@ -251,7 +267,7 @@ fun BankAccountDialog(
                             creditAmount = newValue
                         }
                     },
-                    label = "Размер кредита",
+                    label = if (isEnterprise) "Баланс предприятия" else "Размер кредита",
                     placeholder = "0.0",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
@@ -277,13 +293,17 @@ fun BankAccountDialog(
 
                     VengButton(
                         onClick = {
-                            val deposit = depositAmount.ifBlank { "0.0" }.toDoubleOrNull() ?: 0.0
                             val credit = creditAmount.ifBlank { "0.0" }.toDoubleOrNull() ?: 0.0
+                            val balance = if (!isEnterprise && personBalance.isNotBlank()) {
+                                personBalance.toDoubleOrNull()
+                            } else {
+                                null
+                            }
 
-                            if (deposit >= 0 && credit >= 0 && (isEnterprise || selectedPersonId != null)) {
+                            if (credit >= 0 && (isEnterprise || selectedPersonId != null)) {
                                 val personId = if (isEnterprise) null else selectedPersonId
                                 val name = if (isEnterprise) enterpriseName.ifBlank { null } else null
-                                onCreateAccount(personId, name, deposit, credit) // НОВОЕ: передаем название
+                                onCreateAccount(personId, name, credit, balance) // Передаем баланс
                                 onDismiss()
                             }
                         },
@@ -293,15 +313,12 @@ fun BankAccountDialog(
                             .padding(start = 8.dp),
                         padding = 12.dp,
                         enabled = run {
-                            val depositValid = depositAmount.isBlank() || depositAmount.toDoubleOrNull() != null
                             val creditValid = creditAmount.isBlank() || creditAmount.toDoubleOrNull() != null
-                            val depositNonNegative =
-                                depositAmount.isBlank() || (depositAmount.toDoubleOrNull() ?: -1.0) >= 0
                             val creditNonNegative =
                                 creditAmount.isBlank() || (creditAmount.toDoubleOrNull() ?: -1.0) >= 0
                             val enterpriseNameValid = !isEnterprise || enterpriseName.isNotBlank()
                             val ownerValid = isEnterprise || selectedPersonId != null
-                            depositValid && creditValid && depositNonNegative && creditNonNegative && ownerValid && enterpriseNameValid
+                            creditValid && creditNonNegative && ownerValid && enterpriseNameValid
                         },
                         theme = theme
                     )

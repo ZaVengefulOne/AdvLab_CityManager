@@ -18,10 +18,12 @@ import citymanager.composeapp.generated.resources.Res
 import citymanager.composeapp.generated.resources.back
 import citymanager.composeapp.generated.resources.medic_name
 import org.jetbrains.compose.resources.stringResource
+import org.vengeful.citymanager.ROUTE_MEDIC_ORDERS
 import org.vengeful.citymanager.di.koinViewModel
 import org.vengeful.citymanager.models.Person
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
 import org.vengeful.citymanager.uikit.composables.medic.MedicalRecordDialog
+import org.vengeful.citymanager.uikit.composables.medic.OrderMedicineDialog
 import org.vengeful.citymanager.uikit.composables.medic.PatientCard
 import org.vengeful.citymanager.uikit.composables.misc.ThemeSwitcher
 import org.vengeful.citymanager.uikit.composables.veng.VengBackground
@@ -35,13 +37,18 @@ fun MedicScreen(navController: NavController) {
     val medicViewModel: MedicViewModel = koinViewModel()
     val patients by medicViewModel.patients.collectAsState()
     val isLoading by medicViewModel.isLoading.collectAsState()
+    val medicines by medicViewModel.medicines.collectAsState()
+    val availableAccounts by medicViewModel.availableAccounts.collectAsState()
+    val currentPerson by medicViewModel.currentPerson.collectAsState()
     val currentMedicalRecord by medicViewModel.currentMedicalRecord.collectAsState()
     val medicalRecords by medicViewModel.medicalRecords.collectAsState()
     val errorMessage by medicViewModel.errorMessage.collectAsState()
+    val successMessage by medicViewModel.successMessage.collectAsState()
     val allPersons by medicViewModel.allPersons.collectAsState()
 
     var currentTheme by remember { mutableStateOf(LocalTheme) }
     var showMedicalRecordDialog by remember { mutableStateOf(false) }
+    var showOrderMedicineDialog by remember { mutableStateOf(false) }
     var selectedPatientForEdit by remember { mutableStateOf<Person?>(null) }
 
     VengBackground(
@@ -93,7 +100,6 @@ fun MedicScreen(navController: NavController) {
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
-                // Отображение ошибки
                 errorMessage?.let {
                     VengText(
                         text = it,
@@ -103,6 +109,14 @@ fun MedicScreen(navController: NavController) {
                     )
                 }
 
+                successMessage?.let {
+                    VengText(
+                        text = it,
+                        color = Color(0xFF4CAF50),
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
                 Spacer(modifier = Modifier.height(80.dp))
 
                 // Индикатор загрузки или список пациентов
@@ -153,7 +167,7 @@ fun MedicScreen(navController: NavController) {
                         .padding(top = 8.dp, bottom = 8.dp)
                 )
                 VengButton(
-                    onClick = { },
+                    onClick = { showOrderMedicineDialog = true },
                     text = "Заказ лекарств",
                     theme = currentTheme,
                     modifier = Modifier
@@ -161,8 +175,8 @@ fun MedicScreen(navController: NavController) {
                         .padding(top = 8.dp, bottom = 8.dp)
                 )
                 VengButton(
-                    onClick = { },
-                    text = "Выписать направление",
+                    onClick = { navController.navigate(ROUTE_MEDIC_ORDERS) },
+                    text = "Заказы",
                     theme = currentTheme,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -194,6 +208,19 @@ fun MedicScreen(navController: NavController) {
             )
         }
 
+        if (showOrderMedicineDialog) {
+            OrderMedicineDialog(
+                medicines = medicines,
+                availableAccounts = availableAccounts,
+                currentPerson = currentPerson,
+                onDismiss = { showOrderMedicineDialog = false },
+                onOrder = { medicineId, quantity, accountId ->
+                    medicViewModel.orderMedicine(medicineId, quantity, accountId)
+                },
+                theme = currentTheme
+            )
+        }
+
         selectedPatientForEdit?.let { patient ->
             currentMedicalRecord?.let { record ->
                 EditMedicalRecordDialog(
@@ -206,6 +233,10 @@ fun MedicScreen(navController: NavController) {
                     },
                     onSave = { recordId, updatedRecord, healthStatus ->
                         medicViewModel.updateMedicalRecord(recordId, updatedRecord, healthStatus)
+                        selectedPatientForEdit = null
+                    },
+                    onDelete = { recordId ->
+                        medicViewModel.deleteMedicalRecord(recordId)
                         selectedPatientForEdit = null
                     },
                     theme = currentTheme

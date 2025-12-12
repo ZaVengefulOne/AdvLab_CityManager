@@ -3,6 +3,7 @@ package org.vengeful.citymanager.data.medic
 
 import io.ktor.client.call.body
 import io.ktor.client.request.HttpRequestBuilder
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
@@ -12,20 +13,21 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
-import org.vengeful.citymanager.BUILD_VARIANT
-import org.vengeful.citymanager.BuildVariant
 import org.vengeful.citymanager.SERVER_PORT
 import org.vengeful.citymanager.data.USER_AGENT
 import org.vengeful.citymanager.data.USER_AGENT_TAG
 import org.vengeful.citymanager.data.client
 import org.vengeful.citymanager.data.persons.PersonInteractor.Companion.SERVER_ADDRESS
-import org.vengeful.citymanager.data.persons.PersonInteractor.Companion.SERVER_ADDRESS_DEBUG
 import org.vengeful.citymanager.data.persons.PersonInteractor.Companion.SERVER_PREFIX
 import org.vengeful.citymanager.data.users.AuthManager
-import org.vengeful.citymanager.models.CreateMedicalRecordRequest
-import org.vengeful.citymanager.models.MedicalRecord
+import org.vengeful.citymanager.models.users.CreateMedicalRecordRequest
+import org.vengeful.citymanager.models.medicine.MedicalRecord
 import org.vengeful.citymanager.models.Person
-import org.vengeful.citymanager.models.UpdateMedicalRecordRequest
+import org.vengeful.citymanager.models.medicine.CreateMedicineOrderRequest
+import org.vengeful.citymanager.models.medicine.Medicine
+import org.vengeful.citymanager.models.medicine.MedicineOrder
+import org.vengeful.citymanager.models.medicine.MedicineOrderNotification
+import org.vengeful.citymanager.models.users.UpdateMedicalRecordRequest
 
 class MedicInteractor(
     private val authManager: AuthManager
@@ -97,6 +99,104 @@ class MedicInteractor(
             return response.body<MedicalRecord>()
         } else {
             throw Exception("Failed to update medical record: ${response.status}")
+        }
+    }
+
+    override suspend fun getAllMedicines(): List<Medicine> {
+        val response = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/medic/medicines") {
+            setHttpBuilder()
+        }
+
+        if (response.status == HttpStatusCode.OK) {
+            return response.body<List<Medicine>>()
+        } else {
+            throw Exception("Failed to get medicines: ${response.status}")
+        }
+    }
+
+    override suspend fun getMedicineById(id: Int): Medicine? {
+        val response = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/medic/medicines/$id") {
+            setHttpBuilder()
+        }
+
+        if (response.status == HttpStatusCode.OK) {
+            return response.body<Medicine>()
+        } else if (response.status == HttpStatusCode.NotFound) {
+            return null
+        } else {
+            throw Exception("Failed to get medicine: ${response.status}")
+        }
+    }
+
+    override suspend fun createMedicine(medicine: Medicine): Medicine {
+        val response = client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/medic/medicines") {
+            setHttpBuilder()
+            setBody(medicine)
+        }
+
+        if (response.status == HttpStatusCode.OK) {
+            return response.body<Medicine>()
+        } else {
+            throw Exception("Failed to create medicine: ${response.status}")
+        }
+    }
+
+    override suspend fun updateMedicine(medicine: Medicine): Medicine {
+        val response = client.put("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/medic/medicines/${medicine.id}") {
+            setHttpBuilder()
+            setBody(medicine)
+        }
+
+        if (response.status == HttpStatusCode.OK) {
+            return response.body<Medicine>()
+        } else {
+            throw Exception("Failed to update medicine: ${response.status}")
+        }
+    }
+
+    override suspend fun deleteMedicine(id: Int): Boolean {
+        val response = client.delete("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/medic/medicines/$id") {
+            setHttpBuilder()
+        }
+
+        return response.status == HttpStatusCode.OK
+    }
+
+    override suspend fun deleteMedicalRecord(recordId: Int): Boolean {
+        val response = client.delete("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/medic/medical-records/$recordId") {
+            setHttpBuilder()
+        }
+
+        return response.status == HttpStatusCode.OK
+    }
+
+    override suspend fun orderMedicine(medicineId: Int, quantity: Int, accountId: Int): MedicineOrder {
+        val response = client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/medic/order-medicine") {
+            setHttpBuilder()
+            setBody(CreateMedicineOrderRequest(medicineId = medicineId, quantity = quantity, accountId = accountId))
+        }
+
+        if (response.status == HttpStatusCode.OK) {
+            return response.body<MedicineOrder>()
+        } else {
+            val errorBody = try {
+                response.body<Map<String, String>>()["error"] ?: "Unknown error"
+            } catch (e: Exception) {
+                "Failed to order medicine: ${response.status}"
+            }
+            throw Exception(errorBody)
+        }
+    }
+
+    override suspend fun getMedicineOrders(): List<MedicineOrderNotification> {
+        val response = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/medic/orders") {
+            setHttpBuilder()
+        }
+
+        if (response.status == HttpStatusCode.OK) {
+            return response.body<List<MedicineOrderNotification>>()
+        } else {
+            throw Exception("Failed to get medicine orders: ${response.status}")
         }
     }
 

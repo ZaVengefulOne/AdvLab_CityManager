@@ -83,7 +83,7 @@ fun Application.module() {
 
     val personRepository = PersonRepository()
     val userRepository = UserRepository()
-    val bankRepository = BankRepository()
+    val bankRepository = BankRepository(personRepository)
 
     configureSerialization(
         personRepository = personRepository,

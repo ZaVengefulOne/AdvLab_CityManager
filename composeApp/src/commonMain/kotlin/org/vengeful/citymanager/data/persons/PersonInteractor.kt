@@ -168,6 +168,32 @@ class PersonInteractor(
         }
     }
 
+    override suspend fun transferMoney(fromPersonId: Int, toPersonId: Int, amount: Double) {
+        return try {
+            val request = org.vengeful.citymanager.models.users.TransferMoneyRequest(
+                fromPersonId = fromPersonId,
+                toPersonId = toPersonId,
+                amount = amount
+            )
+            val response = client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/persons/transfer") {
+                setHttpBuilder()
+                setBody(request)
+            }
+            if (!response.status.isSuccess()) {
+                val errorBody = try {
+                    response.body<Map<String, String>>()["error"] ?: "Unknown error"
+                } catch (e: Exception) {
+                    "HTTP error ${response.status} : ${response.status.description}"
+                }
+                throw Exception(errorBody)
+            } else {
+
+            }
+        } catch (e: Exception) {
+            throw Exception("Failed to transfer money: ${e.message}")
+        }
+    }
+
     companion object {
         const val SERVER_PREFIX = "http://"
         const val SERVER_ADDRESS = "localhost"

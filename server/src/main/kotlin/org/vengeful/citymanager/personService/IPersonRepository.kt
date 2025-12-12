@@ -13,4 +13,6 @@ interface IPersonRepository {
     fun addPerson(person: Person) : Person
     fun updatePerson(person: Person): Person?
     fun removePerson(id: Int): Boolean
+    fun updatePersonBalance(personId: Int, amount: Double): Boolean
+    fun addToPersonBalance(personId: Int, amount: Double): Boolean
 }

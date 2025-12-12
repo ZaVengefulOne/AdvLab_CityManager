@@ -36,7 +36,6 @@ fun PersonDialog(
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
     var selectedRights by remember { mutableStateOf(emptySet<Rights>()) }
-    var id by remember { mutableStateOf("") }
     var registrationPlace by remember { mutableStateOf("") }
     var registrationPlaceDropdownExpanded by remember { mutableStateOf(false) }
     var isCustomRegistrationPlace by remember { mutableStateOf(false) }
@@ -98,17 +97,6 @@ fun PersonDialog(
                     modifier = Modifier
                         .padding(bottom = 20.dp)
                         .align(Alignment.CenterHorizontally)
-                )
-
-                // Поле идентификатора
-                VengTextField(
-                    value = id,
-                    onValueChange = { id = it },
-                    label = "Идентификатор",
-                    placeholder = "Введите ID...",
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(),
-                    theme = theme
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -242,10 +230,9 @@ fun PersonDialog(
 
                     VengButton(
                         onClick = {
-                            val personId = id.toIntOrNull() ?: 0
-                            if (personId > 0 && firstName.isNotBlank() && lastName.isNotBlank() && registrationPlace.isNotBlank()) {
+                            if (firstName.isNotBlank() && lastName.isNotBlank() && registrationPlace.isNotBlank()) {
                                 val person = Person(
-                                    id = personId,
+                                    id = 0,
                                     firstName = firstName,
                                     lastName = lastName,
                                     registrationPlace = registrationPlace,
@@ -260,7 +247,7 @@ fun PersonDialog(
                             .weight(1f)
                             .padding(start = 8.dp),
                         padding = 12.dp,
-                        enabled = id.isNotBlank() && firstName.isNotBlank() && lastName.isNotBlank() && registrationPlace.isNotBlank() && selectedRights.isNotEmpty(),
+                        enabled = firstName.isNotBlank() && lastName.isNotBlank() && registrationPlace.isNotBlank() && selectedRights.isNotEmpty(),
                         theme = theme
                     )
                 }

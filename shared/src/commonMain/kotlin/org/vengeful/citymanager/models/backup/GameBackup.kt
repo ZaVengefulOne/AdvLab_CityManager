@@ -9,6 +9,7 @@ data class GameBackupPerson(
     val firstName: String,
     val lastName: String,
     val health: String = "здоров",
+    val balance: Double = 0.0,
     val rights: List<String>
 )
 
@@ -24,7 +25,6 @@ data class GameBackupUser(
 data class GameBackupBankAccount(
     val personId: Int?,
     val enterpriseName: String?,
-    val depositAmount: Double,
     val creditAmount: Double
 )
 

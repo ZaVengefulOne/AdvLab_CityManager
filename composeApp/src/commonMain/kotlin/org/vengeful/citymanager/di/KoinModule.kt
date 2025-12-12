@@ -31,6 +31,7 @@ import org.vengeful.citymanager.screens.bank.BankViewModel
 import org.vengeful.citymanager.screens.clicker.ClickerViewModel
 import org.vengeful.citymanager.screens.main.MainViewModel
 import org.vengeful.citymanager.screens.medic.MedicViewModel
+import org.vengeful.citymanager.screens.my_bank.MyBankViewModel
 import org.vengeful.citymanager.screens.userManagement.UserManagementViewModel
 import kotlin.reflect.KClass
 
@@ -52,7 +53,8 @@ val appModule = module {
     factory { BankViewModel(get(), get(), get(), get()) }
     factory { BackupViewModel(get()) }
     factory { UserManagementViewModel(get(), get()) }
-    factory { MedicViewModel(get(), get()) }
+    factory { MedicViewModel(get(), get(), get(), get(), get()) }
+    factory { MyBankViewModel(get(), get(), get(), get()) }
 }
 
 fun initKoin() = startKoin {

@@ -11,10 +11,12 @@ const val ROUTE_ADMINISTRATION = "administration"
 const val ROUTE_COMMON_LIBRARY = "common_library"
 const val ROUTE_COURT = "court"
 const val ROUTE_MEDIC = "medic"
+const val ROUTE_MEDIC_ORDERS = "medic_orders"
 const val ROUTE_POLICE = "police"
 const val ROUTE_CLICKER = "clicker"
 const val ROUTE_BANK = "bank"
 const val ROUTE_BACKUP = "backup"
+const val ROUTE_MY_BANK = "my_bank"
 
 val BUILD_VARIANT = BuildVariant.DEBUG
 

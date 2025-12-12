@@ -8,6 +8,6 @@ data class UpdateBankAccountRequest(
     val id: Int,
     val personId: Int?,
     val enterpriseName: String? = null,
-    val depositAmount: Double,
-    val creditAmount: Double
+    val creditAmount: Double,
+    val personBalance: Double? = null
 )

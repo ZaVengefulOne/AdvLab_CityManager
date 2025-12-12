@@ -1,4 +1,4 @@
-package org.vengeful.citymanager.models
+package org.vengeful.citymanager.models.medicine
 
 import kotlinx.serialization.Serializable
 import kotlin.time.Clock

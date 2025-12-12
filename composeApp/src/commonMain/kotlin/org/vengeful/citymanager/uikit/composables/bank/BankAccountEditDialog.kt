@@ -18,23 +18,31 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import org.vengeful.citymanager.models.BankAccount
+import org.vengeful.citymanager.models.Person
 import org.vengeful.citymanager.uikit.ColorTheme
 import org.vengeful.citymanager.uikit.DialogColors
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
 import org.vengeful.citymanager.uikit.composables.veng.VengText
 import org.vengeful.citymanager.uikit.composables.veng.VengTextField
 
+@Suppress("DefaultLocale")
 @Composable
 fun BankAccountEditDialog(
     account: BankAccount,
+    person: Person?,
     onDismiss: () -> Unit,
-    onSave: (BankAccount) -> Unit,
+    onSave: (BankAccount, Double?) -> Unit,
     onDelete: (Int) -> Unit,
+    onCloseCredit: (Int) -> Unit,
     theme: ColorTheme = ColorTheme.GOLDEN
 ) {
-    var depositAmount by remember { mutableStateOf(account.depositAmount.toString()) }
+    val isEnterpriseAccount = account.personId == null
+
     var creditAmount by remember { mutableStateOf(account.creditAmount.toString()) }
     var enterpriseName by remember { mutableStateOf(account.enterpriseName ?: "") }
+    var personBalance by remember { mutableStateOf(person?.balance?.toString() ?: "") }
+    var balanceWasManuallyChanged by remember { mutableStateOf(false) }
+    var showCreditWarning by remember { mutableStateOf(false) }
 
     val dialogColors = remember(theme) {
         when (theme) {
@@ -44,6 +52,7 @@ fun BankAccountEditDialog(
                 borderDark = Color(0xFF8B7355),
                 surface = Color(0xFF5D4A2E)
             )
+
             ColorTheme.SEVERITE -> DialogColors(
                 background = Color(0xFF34495E),
                 borderLight = Color(0xFF4A90E2),
@@ -91,7 +100,6 @@ fun BankAccountEditDialog(
                         .align(Alignment.CenterHorizontally)
                 )
 
-                // ID (только для отображения)
                 VengTextField(
                     value = account.id.toString(),
                     onValueChange = { },
@@ -105,12 +113,11 @@ fun BankAccountEditDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Person ID или "Предприятие" (только для отображения)
                 VengTextField(
                     value = account.personId?.toString() ?: "Предприятие",
                     onValueChange = { },
                     label = "Владелец",
-                    placeholder = "Person ID или Предприятие",
+                    placeholder = "ID жителя или Предприятие",
                     enabled = false,
                     modifier = Modifier.fillMaxWidth(),
                     theme = theme
@@ -118,60 +125,111 @@ fun BankAccountEditDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Название предприятия (если это предприятие)
-                if (account.personId == null) {
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Для личного счета - баланс жителя и кредит
+                if (!isEnterpriseAccount && person != null) {
+                    // Баланс жителя
+                    VengTextField(
+                        value = personBalance,
+                        onValueChange = { newValue ->
+                            if (newValue.isEmpty() || newValue.matches(Regex("^\\d*\\.?\\d*$"))) {
+                                personBalance = newValue
+                                balanceWasManuallyChanged = true
+                            }
+                        },
+                        label = "Баланс жителя",
+                        placeholder = "0.00",
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.fillMaxWidth(),
+                        theme = theme
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Размер кредита (часть баланса)
+                    VengTextField(
+                        value = creditAmount,
+                        onValueChange = { newValue ->
+                            if (newValue.isEmpty() || newValue.matches(Regex("^\\d*\\.?\\d*$"))) {
+                                creditAmount = newValue
+                                if (newValue.toDoubleOrNull() != null) {
+                                    val newCredit = newValue.toDoubleOrNull() ?: 0.0
+                                    val creditDiff = newCredit - account.creditAmount
+                                    showCreditWarning = creditDiff != 0.0
+                                } else {
+                                    showCreditWarning = false
+                                }
+                            }
+                        },
+                        label = "Размер кредита",
+                        placeholder = "0.0",
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.fillMaxWidth(),
+                        theme = theme
+                    )
+
+                    if (account.creditAmount > 0) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        VengButton(
+                            onClick = {
+                                onCloseCredit(account.id)
+                                onDismiss()
+                            },
+                            text = "Закрыть кредит",
+                            modifier = Modifier.fillMaxWidth(),
+                            padding = 12.dp,
+                            enabled = person.balance >= account.creditAmount,
+                            theme = theme
+                        )
+                    }
+                }
+
+                // Для счета предприятия - название и баланс
+                if (isEnterpriseAccount) {
                     VengTextField(
                         value = enterpriseName,
                         onValueChange = { enterpriseName = it },
                         label = "НАЗВАНИЕ ПРЕДПРИЯТИЯ",
                         placeholder = "Введите название предприятия...",
+                        enabled = true,
                         modifier = Modifier.fillMaxWidth(),
                         theme = theme
                     )
-
                     Spacer(modifier = Modifier.height(12.dp))
+
+                    // Баланс предприятия
+                    VengTextField(
+                        value = creditAmount,
+                        onValueChange = { newValue ->
+                            if (newValue.isEmpty() || newValue.matches(Regex("^\\d*\\.?\\d*$"))) {
+                                creditAmount = newValue
+                            }
+                        },
+                        label = "Баланс предприятия",
+                        placeholder = "0.0",
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.fillMaxWidth(),
+                        theme = theme
+                    )
                 }
 
-                // Размер вклада
-                VengTextField(
-                    value = depositAmount,
-                    onValueChange = { newValue ->
-                        if (newValue.isEmpty() || newValue.matches(Regex("^\\d*\\.?\\d*$"))) {
-                            depositAmount = newValue
-                        }
-                    },
-                    label = "Размер депозита",
-                    placeholder = "0.0",
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth(),
-                    theme = theme
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Размер кредита
-                VengTextField(
-                    value = creditAmount,
-                    onValueChange = { newValue ->
-                        if (newValue.isEmpty() || newValue.matches(Regex("^\\d*\\.?\\d*$"))) {
-                            creditAmount = newValue
-                        }
-                    },
-                    label = "Размер кредита",
-                    placeholder = "0.0",
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth(),
-                    theme = theme
-                )
+                if (showCreditWarning && !isEnterpriseAccount) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    VengText(
+                        text = "⚠ Изменение кредита изменит баланс жителя",
+                        color = Color(0xFFFFA500),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Кнопки действий
                 Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    // Кнопка удаления
                     VengButton(
                         onClick = {
                             onDelete(account.id)
@@ -183,7 +241,6 @@ fun BankAccountEditDialog(
                         theme = theme
                     )
 
-                    // Кнопки отмены и сохранения
                     Row(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         modifier = Modifier.fillMaxWidth()
@@ -200,18 +257,24 @@ fun BankAccountEditDialog(
 
                         VengButton(
                             onClick = {
-                                val deposit = depositAmount.toDoubleOrNull() ?: 0.0
                                 val credit = creditAmount.toDoubleOrNull() ?: 0.0
-
-                                if (deposit >= 0 && credit >= 0) {
+                                val balance = if (!isEnterpriseAccount && balanceWasManuallyChanged && personBalance.isNotBlank()) {
+                                    personBalance.toDoubleOrNull()
+                                } else {
+                                    null
+                                }
+                                if (credit >= 0 && (balance == null || balance >= 0)) {
                                     val updatedAccount = BankAccount(
                                         id = account.id,
                                         personId = account.personId,
-                                        enterpriseName = if (account.personId == null) enterpriseName.ifBlank { null } else null, // НОВОЕ
-                                        depositAmount = deposit,
+                                        enterpriseName = if (isEnterpriseAccount) {
+                                            enterpriseName.ifBlank { account.enterpriseName }
+                                        } else {
+                                            null
+                                        },
                                         creditAmount = credit
                                     )
-                                    onSave(updatedAccount)
+                                    onSave(updatedAccount, balance)
                                     onDismiss()
                                 }
                             },
@@ -220,10 +283,9 @@ fun BankAccountEditDialog(
                                 .weight(1f)
                                 .padding(start = 8.dp),
                             padding = 12.dp,
-                            enabled = depositAmount.toDoubleOrNull() != null &&
-                                    creditAmount.toDoubleOrNull() != null &&
-                                    depositAmount.toDoubleOrNull()!! >= 0 &&
-                                    creditAmount.toDoubleOrNull()!! >= 0,
+                            enabled = creditAmount.toDoubleOrNull() != null &&
+                                creditAmount.toDoubleOrNull()!! >= 0 &&
+                                (personBalance.isEmpty() || personBalance.toDoubleOrNull() != null && personBalance.toDoubleOrNull()!! >= 0),
                             theme = theme
                         )
                     }

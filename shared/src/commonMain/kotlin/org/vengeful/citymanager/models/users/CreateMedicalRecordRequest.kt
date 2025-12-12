@@ -1,6 +1,7 @@
-package org.vengeful.citymanager.models
+package org.vengeful.citymanager.models.users
 
 import kotlinx.serialization.Serializable
+import org.vengeful.citymanager.models.medicine.MedicalRecord
 
 @Serializable
 data class CreateMedicalRecordRequest(

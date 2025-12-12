@@ -62,6 +62,7 @@ class BackupService(
                         firstName = person.firstName,
                         lastName = person.lastName,
                         health = person.health,
+                        balance = person.balance,
                         rights = person.rights.map { it.name }
                     ),
                     user = user?.let {
@@ -76,7 +77,6 @@ class BackupService(
                         GameBackupBankAccount(
                             personId = it.personId,
                             enterpriseName = it.enterpriseName,
-                            depositAmount = it.depositAmount,
                             creditAmount = it.creditAmount
                         )
                     }
@@ -101,7 +101,6 @@ class BackupService(
                             GameBackupBankAccount(
                                 personId = it.personId,
                                 enterpriseName = it.enterpriseName,
-                                depositAmount = it.depositAmount,
                                 creditAmount = it.creditAmount
                             )
                         }
@@ -149,10 +148,10 @@ class BackupService(
                 <th>Фамилия</th>
                 <th>Здоровье</th>
                 <th>Права</th>
+                <th>Баланс</th>
                 <th>Username</th>
                 <th>Клики</th>
                 <th>Права User</th>
-                <th>Депозит</th>
                 <th>Кредит</th>
                 <th>Предприятие</th>
             </tr>
@@ -168,10 +167,10 @@ class BackupService(
             html.append("<td>${entry.person?.lastName ?: "-"}</td>")
             html.append("<td>${entry.person?.health ?: "-"}</td>")
             html.append("<td>${entry.person?.rights?.joinToString(", ") ?: "-"}</td>")
+            html.append("<td>${entry.person?.balance ?: "-"}</td>")
             html.append("<td>${entry.user?.username ?: "-"}</td>")
             html.append("<td>${entry.user?.clicks ?: "-"}</td>")
             html.append("<td>${entry.user?.rights?.joinToString(", ") ?: "-"}</td>")
-            html.append("<td>${entry.bankAccount?.depositAmount ?: "-"}</td>")
             html.append("<td>${entry.bankAccount?.creditAmount ?: "-"}</td>")
             html.append("<td>${entry.bankAccount?.enterpriseName ?: "-"}</td>")
             html.append("</tr>")
@@ -195,8 +194,8 @@ class BackupService(
         val md = StringBuilder()
         md.append("# Игровой бэкап базы данных\n\n")
         md.append("**Создан:** ${java.time.Instant.ofEpochMilli(backup.createdAt)}\n\n")
-        md.append("| ID | Имя | Фамилия | Права Person | Username | Клики | Права User | Депозит | Кредит | Предприятие |\n")
-        md.append("|----|-----|---------|--------------|----------|-------|------------|---------|--------|-------------|\n")
+        md.append("| ID | Имя | Фамилия | Права Person | Username | Клики | Права User | Кредит | Предприятие |\n")
+        md.append("|----|-----|---------|--------------|----------|-------|------------|--------|-------------|\n")
 
         backup.entries.forEach { entry ->
             md.append("| ")
@@ -207,7 +206,6 @@ class BackupService(
             md.append("${entry.user?.username ?: "-"} | ")
             md.append("${entry.user?.clicks ?: "-"} | ")
             md.append("${entry.user?.rights?.joinToString(", ") ?: "-"} | ")
-            md.append("${entry.bankAccount?.depositAmount ?: "-"} | ")
             md.append("${entry.bankAccount?.creditAmount ?: "-"} | ")
             md.append("${entry.bankAccount?.enterpriseName ?: "-"} |\n")
         }
@@ -264,7 +262,6 @@ class BackupService(
                 id = dao.id.value,
                 personId = dao.personId?.value,
                 enterpriseName = dao.enterpriseName,
-                depositAmount = dao.depositAmount,
                 creditAmount = dao.creditAmount
             )
         }
@@ -322,7 +319,6 @@ class BackupService(
             BankAccountDao.new(ba.id) {
                 this.personId = ba.personId?.let { personsMap[it] }
                 this.enterpriseName = ba.enterpriseName
-                this.depositAmount = ba.depositAmount
                 this.creditAmount = ba.creditAmount
             }
         }

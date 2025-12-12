@@ -12,7 +12,6 @@ import org.vengeful.citymanager.personService.db.Persons
 object BankAccounts : IntIdTable("bank_accounts") {
     val personId = reference("person_id", Persons.id, onDelete = ReferenceOption.SET_NULL).nullable()
     val enterpriseName = varchar("enterprise_name", 255).nullable()
-    val depositAmount = double("deposit_amount").default(0.0)
     val creditAmount = double("credit_amount").default(0.0)
 }
 
@@ -21,7 +20,6 @@ class BankAccountDao(id: EntityID<Int>) : IntEntity(id) {
 
     var personId by BankAccounts.personId
     var enterpriseName by BankAccounts.enterpriseName // НОВОЕ
-    var depositAmount by BankAccounts.depositAmount
     var creditAmount by BankAccounts.creditAmount
 
     var person by PersonDao optionalReferencedOn BankAccounts.personId
@@ -30,7 +28,6 @@ class BankAccountDao(id: EntityID<Int>) : IntEntity(id) {
         id = id.value,
         personId = personId?.value,
         enterpriseName = enterpriseName,
-        depositAmount = depositAmount,
         creditAmount = creditAmount
     )
 }

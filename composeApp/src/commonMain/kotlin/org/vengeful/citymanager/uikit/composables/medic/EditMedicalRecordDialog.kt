@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,11 +14,10 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import org.vengeful.citymanager.models.MedicalRecord
+import org.vengeful.citymanager.models.medicine.MedicalRecord
 import org.vengeful.citymanager.models.Person
 import org.vengeful.citymanager.models.Rights
 import org.vengeful.citymanager.models.getDisplayName
@@ -37,7 +35,8 @@ fun EditMedicalRecordDialog(
     medicalRecord: MedicalRecord?,
     persons: List<Person>,
     onDismiss: () -> Unit,
-    onSave: (Int, MedicalRecord, String) -> Unit, // recordId, record, healthStatus
+    onSave: (Int, MedicalRecord, String) -> Unit,
+    onDelete: (Int) -> Unit,
     theme: ColorTheme = ColorTheme.GOLDEN
 ) {
     // Фильтруем медиков
@@ -97,8 +96,8 @@ fun EditMedicalRecordDialog(
             shape = RoundedCornerShape(12.dp),
             color = dialogColors.background,
             modifier = Modifier
-                .width(500.dp)
-                .heightIn(max = 600.dp)
+                .widthIn(max = 700.dp)
+                .heightIn(max = 800.dp)
                 .border(
                     width = 3.dp,
                     brush = Brush.linearGradient(
@@ -371,8 +370,13 @@ fun EditMedicalRecordDialog(
                             onCheckedChange = {
                                 isSick = it
                                 isHealthy = !it
-                                if (it && diagnosis == "здоров") {
-                                    diagnosis = ""
+                                if (it) {
+                                    if (diagnosis == "здоров") {
+                                        diagnosis = ""
+                                    }
+                                } else {
+                                    isHealthy = true
+                                    diagnosis = "здоров"
                                 }
                             },
                             colors = CheckboxDefaults.colors(
@@ -395,6 +399,11 @@ fun EditMedicalRecordDialog(
                                 isSick = !it
                                 if (it) {
                                     diagnosis = "здоров"
+                                } else {
+                                    isSick = true
+                                    if (diagnosis == "здоров") {
+                                        diagnosis = ""
+                                    }
                                 }
                             },
                             colors = CheckboxDefaults.colors(
@@ -406,6 +415,20 @@ fun EditMedicalRecordDialog(
                             color = Color(0xFF4CAF50),
                             fontSize = 16.sp,
                             modifier = Modifier.align(Alignment.CenterVertically)
+                        )
+                    }
+
+                    if (medicalRecord != null) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        VengButton(
+                            onClick = {
+                                onDelete(medicalRecord.id)
+                                onDismiss()
+                            },
+                            text = "Закрыть мед.карту",
+                            modifier = Modifier.fillMaxWidth(),
+                            padding = 12.dp,
+                            theme = theme
                         )
                     }
 

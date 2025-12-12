@@ -12,6 +12,7 @@ import org.vengeful.citymanager.ROUTE_COURT
 import org.vengeful.citymanager.ROUTE_MEDIC
 import org.vengeful.citymanager.ROUTE_POLICE
 import org.vengeful.citymanager.ROUTE_CLICKER
+import org.vengeful.citymanager.ROUTE_MY_BANK
 import org.vengeful.citymanager.base.BaseViewModel
 import org.vengeful.citymanager.data.users.AuthManager
 import org.vengeful.citymanager.data.users.IUserInteractor
@@ -104,6 +105,7 @@ class MainViewModel(
             ROUTE_BANK -> userRights.contains(Rights.Bank)
             ROUTE_BACKUP -> userRights.contains(Rights.Joker)
             ROUTE_CLICKER -> userRights.contains(Rights.Any) && isLogged
+            ROUTE_MY_BANK -> userRights.contains(Rights.Any) && isLogged
             else -> false
         }
     }

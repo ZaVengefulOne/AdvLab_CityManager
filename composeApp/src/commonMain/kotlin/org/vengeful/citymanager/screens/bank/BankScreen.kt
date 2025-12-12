@@ -64,7 +64,6 @@ fun BankScreen(navController: NavController) {
             verticalArrangement = Arrangement.spacedBy(defaultSpacer),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Заголовок с кнопками
             Row(
                 horizontalArrangement = Arrangement.spacedBy(defaultSpacer),
                 modifier = Modifier.fillMaxWidth(),
@@ -109,7 +108,6 @@ fun BankScreen(navController: NavController) {
                 }
             )
 
-            // Панель управления
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -132,7 +130,6 @@ fun BankScreen(navController: NavController) {
                 )
             }
 
-            // Список счетов в виде Grid (компактный, не занимает всё пространство)
             if (bankAccounts.isNotEmpty()) {
                 BankAccountGrid(
                     accounts = bankAccounts,
@@ -140,7 +137,7 @@ fun BankScreen(navController: NavController) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f, fill = false)
-                        .heightIn(max = 600.dp), // Ограничиваем высоту
+                        .heightIn(max = 600.dp),
                     onAccountClick = { account ->
                         accountToEdit = account
                     },
@@ -178,8 +175,8 @@ fun BankScreen(navController: NavController) {
             BankAccountDialog(
                 persons = persons,
                 onDismiss = { showAddDialog = false },
-                onCreateAccount = { personId, enterpriseName, depositAmount, creditAmount -> // НОВОЕ
-                    viewModel.createBankAccount(personId, enterpriseName, depositAmount, creditAmount) // НОВОЕ
+                onCreateAccount = { personId, enterpriseName, creditAmount, personBalance ->
+                    viewModel.createBankAccount(personId, enterpriseName, creditAmount, personBalance)
                 },
                 theme = currentTheme
             )
@@ -187,14 +184,19 @@ fun BankScreen(navController: NavController) {
 
         // Диалог редактирования банковского счета
         accountToEdit?.let { account ->
+            val personForAccount = persons.find { it.id == account.personId }
             BankAccountEditDialog(
                 account = account,
+                person = personForAccount,
                 onDismiss = { accountToEdit = null },
-                onSave = { updatedAccount ->
-                    viewModel.updateBankAccount(updatedAccount)
+                onSave = { updatedAccount, personBalance ->
+                    viewModel.updateBankAccount(updatedAccount, personBalance)
                 },
-                onDelete = { accountId -> // НОВОЕ: callback для удаления
+                onDelete = { accountId ->
                     viewModel.deleteBankAccount(accountId)
+                },
+                onCloseCredit = { accountId ->
+                    viewModel.closeCredit(accountId)
                 },
                 theme = currentTheme
             )

@@ -3,6 +3,7 @@ package org.vengeful.citymanager.data.users
 import org.vengeful.citymanager.data.users.models.LoginResult
 import org.vengeful.citymanager.data.users.models.RegisterResult
 import org.vengeful.citymanager.models.Rights
+import org.vengeful.citymanager.models.users.CurrentUserResponse
 import org.vengeful.citymanager.models.users.RegisterRequest
 import org.vengeful.citymanager.models.users.User
 
@@ -17,5 +18,6 @@ interface IUserInteractor {
     suspend fun updateClicks(userId: Int, clicks: Int): Boolean
     suspend fun getCurrentUserClicks(): Int?
 
+    suspend fun getCurrentUserWithPersonId(): CurrentUserResponse?
     suspend fun adminRegister(username: String, password: String, personId: Int?, rights: List<Rights>): RegisterResult
 }

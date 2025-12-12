@@ -27,6 +27,7 @@ import org.vengeful.citymanager.data.users.models.RegisterResult
 import org.vengeful.citymanager.models.Rights
 import org.vengeful.citymanager.models.emergencyShutdown.ErrorResponse
 import org.vengeful.citymanager.models.users.AuthResponse
+import org.vengeful.citymanager.models.users.CurrentUserResponse
 import org.vengeful.citymanager.models.users.LoginRequest
 import org.vengeful.citymanager.models.users.RegisterRequest
 import org.vengeful.citymanager.models.users.UpdateClicksRequest
@@ -173,6 +174,7 @@ class UserInteractor(private val authManager: AuthManager) : IUserInteractor {
                             "Некорректный запрос"
                         }
                     }
+
                     409 -> "Пользователь с таким именем уже существует!"
                     else -> "Ошибка сервера: ${response.status.description}"
                 }
@@ -192,7 +194,12 @@ class UserInteractor(private val authManager: AuthManager) : IUserInteractor {
         }
     }
 
-    override suspend fun register(username: String, password: String, personId: Int?, rights: List<Rights>): RegisterResult {
+    override suspend fun register(
+        username: String,
+        password: String,
+        personId: Int?,
+        rights: List<Rights>
+    ): RegisterResult {
         return try {
             val registerRequest = RegisterRequest(username, password, personId, rights)
             val response: HttpResponse = client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/auth/register") {
@@ -208,6 +215,7 @@ class UserInteractor(private val authManager: AuthManager) : IUserInteractor {
                         val errorBody = response.body<Map<String, String>>()
                         errorBody["error"] ?: "Некорректный запрос"
                     }
+
                     409 -> "Пользователь с таким именем уже существует!"
                     else -> "Ошибка сервера: ${response.status.description}"
                 }
@@ -301,6 +309,7 @@ class UserInteractor(private val authManager: AuthManager) : IUserInteractor {
                             "Некорректный запрос"
                         }
                     }
+
                     401 -> "Требуется аутентификация"
                     403 -> "Недостаточно прав доступа"
                     404 -> "Пользователь не найден"
@@ -360,6 +369,7 @@ class UserInteractor(private val authManager: AuthManager) : IUserInteractor {
                             "Некорректный запрос"
                         }
                     }
+
                     401 -> "Требуется аутентификация"
                     403 -> "Недостаточно прав доступа"
                     404 -> "Пользователь не найден"
@@ -393,12 +403,38 @@ class UserInteractor(private val authManager: AuthManager) : IUserInteractor {
         }
     }
 
-    // Модифицируем существующие методы для добавления JWT токена
+    override suspend fun getCurrentUserWithPersonId(): CurrentUserResponse? {
+        return try {
+            val response: HttpResponse = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/users/me") {
+                setHttpBuilder()
+                val requestToken = authManager.getToken()
+            }
+            if (response.status.isSuccess()) {
+                try {
+                    val userResponse = response.body<CurrentUserResponse>()
+                    userResponse
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    null
+                }
+            } else {
+                try {
+                    val errorBody = response.body<String>()
+                } catch (e: Exception) {
+                }
+                null
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
     fun HttpRequestBuilder.setAuthHeader() {
         val token = authManager.getToken()
         println("setAuthHeader: token=${if (token != null) "present (${token.take(20)}...)" else "null"}")
         if (token != null) {
-            header(HttpHeaders.Authorization, "Bearer $token")  // Использовать header вместо headers { append }
+            header(HttpHeaders.Authorization, "Bearer $token")
         } else {
             println("WARNING: No token found in AuthManager for authenticated request")
         }

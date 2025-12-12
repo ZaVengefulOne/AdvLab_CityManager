@@ -62,13 +62,14 @@ class PersonRepository : IPersonRepository {
     }
 
     override fun addPerson(person: Person): Person = transaction {
-        val personDao = PersonDao.new(person.id) {
+        val personDao = PersonDao.new {
             firstName = person.firstName
             lastName = person.lastName
             registrationPlace = person.registrationPlace
+            balance = person.balance
+            health = person.health
         }
 
-        // Добавляем права
         person.rights.forEach { right ->
             val rightDao = RightDao.getOrCreate(right)
             PersonRights.insert {
@@ -85,12 +86,11 @@ class PersonRepository : IPersonRepository {
             firstName = person.firstName
             lastName = person.lastName
             registrationPlace = person.registrationPlace
+            balance = person.balance
 
-            // Получаем текущие права как Set для удобства сравнения
             val currentRightsSet = rights.map { it.right }.toSet()
             val newRightsSet = person.rights.toSet()
 
-            // Права для удаления
             val rightsToRemove = currentRightsSet - newRightsSet
             rightsToRemove.forEach { rightToRemove ->
                 val rightDao = RightDao.find { RightsTable.name eq rightToRemove.name }.first()
@@ -99,7 +99,6 @@ class PersonRepository : IPersonRepository {
                 }
             }
 
-            // Права для добавления
             val rightsToAdd = newRightsSet - currentRightsSet
             rightsToAdd.forEach { rightToAdd ->
                 val rightDao = RightDao.getOrCreate(rightToAdd)
@@ -109,6 +108,18 @@ class PersonRepository : IPersonRepository {
                 }
             }
         }?.toPerson()
+    }
+
+    override fun updatePersonBalance(personId: Int, amount: Double): Boolean = transaction {
+        PersonDao.findById(personId)?.apply {
+            balance = amount
+        } != null
+    }
+
+    override fun addToPersonBalance(personId: Int, amount: Double): Boolean = transaction {
+        PersonDao.findById(personId)?.apply {
+            balance += amount
+        } != null
     }
 
     override fun removePerson(id: Int): Boolean = transaction {

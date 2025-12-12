@@ -38,8 +38,7 @@ subprojects {
         reports {
             html.required.set(true)
             html.outputLocation.set(file("$rootDir/build/reports/detekt/${project.name}.html"))
-            xml.required.set(true)
-            xml.outputLocation.set(file("$rootDir/build/reports/detekt/${project.name}.xml"))
+            xml.required.set(false)
             txt.required.set(false)
             sarif.required.set(true)
             sarif.outputLocation.set(file("$rootDir/build/reports/detekt/${project.name}.sarif"))
@@ -60,5 +59,45 @@ subprojects {
 
     tasks.withType<io.gitlab.arturbosch.detekt.DetektCreateBaselineTask>().configureEach {
         enabled = false
+    }
+}
+
+apply(plugin = "io.gitlab.arturbosch.detekt")
+
+tasks.register<io.gitlab.arturbosch.detekt.Detekt>("detektAll") {
+    description = "Runs detekt analysis on all modules"
+
+    // Собираем все исходные директории из всех подпроектов
+    val sourceDirs = subprojects.flatMap { subproject ->
+        subproject.projectDir.walkTopDown()
+            .filter { it.isDirectory && (it.name == "kotlin" || it.name == "java") }
+            .filter { it.path.contains("src") && !it.path.contains("build") }
+            .map { it.absolutePath }
+    }.distinct()
+
+    setSource(files(sourceDirs))
+    include("**/*.kt")
+    exclude("**/build/**", "**/.gradle/**", "**/iosApp/**", "**/generated/**")
+
+    reports {
+        html.required.set(true)
+        html.outputLocation.set(file("$rootDir/build/reports/detekt/all.html"))
+        xml.required.set(false)
+        sarif.required.set(true)
+        sarif.outputLocation.set(file("$rootDir/build/reports/detekt/all.sarif"))
+    }
+
+    ignoreFailures = true
+    buildUponDefaultConfig = true
+
+    val configFile = rootProject.file("config/detekt/detekt.yml")
+    val baselineFile = rootProject.file("config/detekt/baseline.xml")
+
+    if (configFile.exists()) {
+        config.setFrom(configFile)
+    }
+
+    if (baselineFile.exists()) {
+        baseline.set(baselineFile)
     }
 }

@@ -10,11 +10,16 @@ import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.vengeful.cityManager.models.RequestLog
 import org.vengeful.cityManager.models.ServerStats
 import org.vengeful.citymanager.models.AdministrationConfig
 import org.vengeful.citymanager.models.SendMessageRequest
 import org.vengeful.citymanager.models.backup.MasterBackup
+import org.vengeful.citymanager.models.medicine.Medicine
+import org.vengeful.citymanager.models.medicine.MedicineOrderNotification
 import org.vengeful.citymanager.models.users.AuthResponse
 import org.vengeful.citymanager.models.users.LoginRequest
 
@@ -74,6 +79,78 @@ class ApiClient(
                 authManager.saveToken(it.token)
             }
         }
+    }
+
+    suspend fun getMedicineOrderNotifications(): List<MedicineOrderNotification> {
+        val response = client.get("$baseUrl/admin/medicine-orders") {
+            addAuthHeader()
+        }
+        return handleResponse(response) {
+            response.body<List<MedicineOrderNotification>>()
+        }
+    }
+
+    suspend fun getAllMedicines(): List<Medicine> {
+        val response = client.get("$baseUrl/medic/medicines") {
+            addAuthHeader()
+        }
+        return handleResponse(response) {
+            response.body<List<Medicine>>()
+        }
+    }
+
+    suspend fun createMedicine(medicine: Medicine): Medicine {
+        val response = client.post("$baseUrl/medic/medicines") {
+            contentType(ContentType.Application.Json)
+            addAuthHeader()
+            setBody(medicine)
+        }
+        return handleResponse(response) {
+            response.body<Medicine>()
+        }
+    }
+
+    suspend fun updateMedicine(medicine: Medicine): Medicine {
+        val response = client.put("$baseUrl/medic/medicines/${medicine.id}") {
+            contentType(ContentType.Application.Json)
+            addAuthHeader()
+            setBody(medicine)
+        }
+        return handleResponse(response) {
+            response.body<Medicine>()
+        }
+    }
+
+    suspend fun deleteMedicine(id: Int): Boolean {
+        val response = client.delete("$baseUrl/medic/medicines/$id") {
+            addAuthHeader()
+        }
+        return handleResponse(response) {
+            response.status.value in 200..299
+        }
+    }
+
+    suspend fun updateMedicineOrderStatus(orderId: Int, status: String): Boolean {
+        val response = client.post("$baseUrl/admin/medicine-orders/$orderId/status") {
+            contentType(ContentType.Application.Json)
+            headers {
+                append("Authorization", "Bearer ${authManager.getToken()}")
+            }
+            setBody(Json.encodeToString(JsonObject.serializer(), buildJsonObject {
+                put("status", status)
+            }))
+        }
+        return response.status.value in 200..299
+    }
+
+    suspend fun deleteMedicineOrder(orderId: Int): Boolean {
+        val response = client.delete("$baseUrl/admin/medicine-orders/$orderId") {
+            contentType(ContentType.Application.Json)
+            headers {
+                append("Authorization", "Bearer ${authManager.getToken()}")
+            }
+        }
+        return response.status.value in 200..299
     }
 
     suspend fun getServerStats(): ServerStats {

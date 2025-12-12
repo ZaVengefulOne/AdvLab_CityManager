@@ -14,4 +14,5 @@ interface IPersonInteractor {
     suspend fun getPersonsByRights(rights: Rights): List<Person>
 
     suspend fun getAdminPersons(): List<Person>
+    suspend fun transferMoney(fromPersonId: Int, toPersonId: Int, amount: Double)
 }

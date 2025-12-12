@@ -55,6 +55,7 @@ import com.composables.icons.lucide.MousePointerClick
 import com.composables.icons.lucide.Pen
 import com.composables.icons.lucide.PiggyBank
 import com.composables.icons.lucide.UtilityPole
+import com.composables.icons.lucide.Wallet
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.vengeful.citymanager.BUILD_VERSION
@@ -66,6 +67,7 @@ import org.vengeful.citymanager.ROUTE_COMMON_LIBRARY
 import org.vengeful.citymanager.ROUTE_COURT
 import org.vengeful.citymanager.ROUTE_MAIN
 import org.vengeful.citymanager.ROUTE_MEDIC
+import org.vengeful.citymanager.ROUTE_MY_BANK
 import org.vengeful.citymanager.ROUTE_POLICE
 import org.vengeful.citymanager.di.koinViewModel
 import org.vengeful.citymanager.data.users.states.LoginUiState
@@ -232,11 +234,11 @@ fun MainScreen(navController: NavController) {
                     text = stringResource(Res.string.police_name)
                 )
             )
-            val finalScreens = if (viewModel.hasAccessToScreen(ROUTE_BACKUP)) {
+            val finalScreens = if (viewModel.hasAccessToScreen(ROUTE_MY_BANK)) {
                 screens + ScreenData(
-                    route = ROUTE_BACKUP,
-                    icon = { Icon(Lucide.Download, null, tint = colorTint) },
-                    text = "Бэкап"
+                    route = ROUTE_MY_BANK,
+                    icon = { Icon(Lucide.Wallet, null, tint = colorTint) },
+                    text = "Мой Банк"
                 )
             } else {
                 screens + ScreenData(
@@ -246,7 +248,6 @@ fun MainScreen(navController: NavController) {
                 )
             }
 
-            // Уменьшаем размер элементов сетки для компактности
             val gridItemSize = 200.dp
 
             Box(

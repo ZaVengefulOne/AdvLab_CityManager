@@ -10,4 +10,5 @@ data class Person(
     val registrationPlace: String = "",
     val health: String = "здоров",
     val rights: List<Rights>,
+    val balance: Double = 0.0,
 )

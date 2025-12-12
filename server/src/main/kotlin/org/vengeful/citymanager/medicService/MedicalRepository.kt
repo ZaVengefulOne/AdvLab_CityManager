@@ -1,11 +1,10 @@
 package org.vengeful.citymanager.medicService
 
-import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.vengeful.citymanager.medicService.db.MedicalRecordDao
 import org.vengeful.citymanager.medicService.db.MedicalRecords
-import org.vengeful.citymanager.models.MedicalRecord
+import org.vengeful.citymanager.models.medicine.MedicalRecord
 import org.vengeful.citymanager.models.Person
 import org.vengeful.citymanager.personService.db.PersonDao
 import org.vengeful.citymanager.personService.db.Persons
@@ -54,6 +53,21 @@ class MedicalRepository {
         medicalRecordDao.prescribedTreatment = record.prescribedTreatment
 
         medicalRecordDao.toMedicalRecord()
+    }
+
+    fun deleteMedicalRecord(recordId: Int): Boolean = transaction {
+        val medicalRecordDao = MedicalRecordDao.findById(recordId)
+        if (medicalRecordDao != null) {
+            // Сбрасываем статус здоровья персоны на "здоров"
+            val personDao = PersonDao.findById(medicalRecordDao.personId.value)
+            personDao?.health = "здоров"
+
+            // Удаляем мед.карту
+            medicalRecordDao.delete()
+            true
+        } else {
+            false
+        }
     }
 
     fun getMedicalRecordById(recordId: Int): MedicalRecord? = transaction {

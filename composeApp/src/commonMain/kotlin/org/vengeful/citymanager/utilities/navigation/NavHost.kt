@@ -12,6 +12,8 @@ import org.vengeful.citymanager.ROUTE_COMMON_LIBRARY
 import org.vengeful.citymanager.ROUTE_COURT
 import org.vengeful.citymanager.ROUTE_MAIN
 import org.vengeful.citymanager.ROUTE_MEDIC
+import org.vengeful.citymanager.ROUTE_MEDIC_ORDERS
+import org.vengeful.citymanager.ROUTE_MY_BANK
 import org.vengeful.citymanager.ROUTE_POLICE
 import org.vengeful.citymanager.screens.administration.AdministrationScreen
 import org.vengeful.citymanager.screens.backup.BackupScreen
@@ -20,7 +22,9 @@ import org.vengeful.citymanager.screens.clicker.ClickerScreen
 import org.vengeful.citymanager.screens.commonLibrary.CommonLibraryScreen
 import org.vengeful.citymanager.screens.court.CourtScreen
 import org.vengeful.citymanager.screens.main.MainScreen
+import org.vengeful.citymanager.screens.medic.MedicOrdersScreen
 import org.vengeful.citymanager.screens.medic.MedicScreen
+import org.vengeful.citymanager.screens.my_bank.MyBankScreen
 import org.vengeful.citymanager.screens.police.PoliceScreen
 
 
@@ -47,6 +51,9 @@ fun Host() {
         composable(route = ROUTE_MEDIC) {
             MedicScreen(navController = navController)
         }
+        composable(route = ROUTE_MEDIC_ORDERS) {
+            MedicOrdersScreen(navController = navController)
+        }
         composable(route = ROUTE_BANK) {
             BankScreen(navController = navController)
         }
@@ -58,6 +65,9 @@ fun Host() {
         }
         composable(route = ROUTE_BACKUP) {
             BackupScreen(navController = navController)
+        }
+        composable(route = ROUTE_MY_BANK) {
+            MyBankScreen(navController = navController)
         }
     }
 }

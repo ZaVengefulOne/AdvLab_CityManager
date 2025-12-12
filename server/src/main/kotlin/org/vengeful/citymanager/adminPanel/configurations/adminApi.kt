@@ -7,6 +7,7 @@ import io.ktor.server.request.httpMethod
 import io.ktor.server.request.receive
 import io.ktor.server.request.uri
 import io.ktor.server.response.respond
+import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
@@ -19,6 +20,7 @@ import org.vengeful.citymanager.models.CallStatus
 import org.vengeful.citymanager.models.ChatMessage
 import org.vengeful.citymanager.models.Enterprise
 import org.vengeful.citymanager.models.SendMessageRequest
+import org.vengeful.citymanager.models.medicine.MedicineOrderNotification
 import org.vengeful.citymanager.personService.IPersonRepository
 import org.vengeful.citymanager.personService.db.PersonRepository
 import java.time.LocalDateTime
@@ -26,11 +28,16 @@ import java.time.format.DateTimeFormatter
 
 private val requestLogs = mutableListOf<RequestLog>()
 private val chatMessages = mutableListOf<ChatMessage>()
+private val medicineOrderNotifications = mutableListOf<MedicineOrderNotification>()
 
 private var adminConfig = AdministrationConfig(
     severiteRate = 42.75,
     controlLossThreshold = 75,
 )
+
+fun getMedicineOrderNotifications(count: Int = 50): List<MedicineOrderNotification> {
+    return medicineOrderNotifications.takeLast(count)
+}
 
 private fun getRecentMessages(count: Int = 5): List<ChatMessage> {
     return chatMessages.takeLast(count)
@@ -48,6 +55,58 @@ fun Application.configureAdminApi(repository: IPersonRepository) {
                     memoryUsage = getMemoryUsage()
                 )
                 call.respond(stats)
+            }
+
+            get("/medicine-orders") {
+                val notifications = getMedicineOrderNotifications(50)
+                call.respond(notifications)
+            }
+
+            post("/medicine-orders/{orderId}/status") {
+                try {
+                    val orderId = call.parameters["orderId"]?.toIntOrNull()
+                        ?: throw IllegalArgumentException("Invalid order ID")
+
+                    val request = call.receive<Map<String, String>>()
+                    val newStatus = request["status"] ?: throw IllegalArgumentException("Status is required")
+
+                    val success = updateMedicineOrderStatus(orderId, newStatus)
+                    if (success) {
+                        call.respond(mapOf("status" to "success", "message" to "Status updated"))
+                    } else {
+                        call.respond(
+                            io.ktor.http.HttpStatusCode.NotFound,
+                            mapOf("error" to "Order not found")
+                        )
+                    }
+                } catch (e: Exception) {
+                    call.respond(
+                        io.ktor.http.HttpStatusCode.BadRequest,
+                        mapOf("error" to e.message)
+                    )
+                }
+            }
+
+            delete("/medicine-orders/{orderId}") {
+                try {
+                    val orderId = call.parameters["orderId"]?.toIntOrNull()
+                        ?: throw IllegalArgumentException("Invalid order ID")
+
+                    val success = removeMedicineOrder(orderId)
+                    if (success) {
+                        call.respond(mapOf("status" to "success", "message" to "Order removed"))
+                    } else {
+                        call.respond(
+                            io.ktor.http.HttpStatusCode.NotFound,
+                            mapOf("error" to "Order not found")
+                        )
+                    }
+                } catch (e: Exception) {
+                    call.respond(
+                        io.ktor.http.HttpStatusCode.BadRequest,
+                        mapOf("error" to e.message)
+                    )
+                }
             }
 
             get("/config") {
@@ -87,10 +146,7 @@ fun Application.configureAdminApi(repository: IPersonRepository) {
                     timestamp = System.currentTimeMillis(),
                     sender = request.sender
                 )
-
                 chatMessages.add(message)
-
-                // Ограничиваем размер (последние 50 сообщений)
                 if (chatMessages.size > 50) {
                     chatMessages.removeFirst()
                 }
@@ -99,9 +155,8 @@ fun Application.configureAdminApi(repository: IPersonRepository) {
             }
         }
 
-        // Логируем все запросы к API
         intercept(ApplicationCallPipeline.Call) {
-            if (call.request.uri.startsWith("/persons/")) {
+            if (!call.request.uri.startsWith("/admin/")) {
                 addLogEntry(
                     method = call.request.httpMethod.value,
                     endpoint = call.request.uri,
@@ -109,6 +164,36 @@ fun Application.configureAdminApi(repository: IPersonRepository) {
                 )
             }
         }
+    }
+}
+
+fun updateMedicineOrderStatus(orderId: Int, newStatus: String): Boolean {
+    val notification = medicineOrderNotifications.find { it.id == orderId }
+    return if (notification != null) {
+        val index = medicineOrderNotifications.indexOf(notification)
+        medicineOrderNotifications[index] = notification.copy(status = newStatus)
+        true
+    } else {
+        false
+    }
+}
+
+fun removeMedicineOrder(orderId: Int): Boolean {
+    val notification = medicineOrderNotifications.find { it.id == orderId }
+    return if (notification != null) {
+        medicineOrderNotifications.remove(notification)
+        true
+    } else {
+        false
+    }
+}
+
+fun addMedicineOrderNotification(notification: MedicineOrderNotification) {
+    medicineOrderNotifications.add(notification)
+
+    // Ограничиваем размер (последние 100 уведомлений)
+    if (medicineOrderNotifications.size > 100) {
+        medicineOrderNotifications.removeFirst()
     }
 }
 

@@ -17,6 +17,8 @@ import org.vengeful.cityManager.models.ServerStats
 import org.vengeful.citymanager.models.AdministrationConfig
 import org.vengeful.citymanager.models.ChatMessage
 import org.vengeful.citymanager.models.backup.MasterBackup
+import org.vengeful.citymanager.models.medicine.Medicine
+import org.vengeful.citymanager.models.medicine.MedicineOrderNotification
 import kotlin.js.Date
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
@@ -29,6 +31,7 @@ fun AdminApp() {
     val coroutineScope = MainScope()
     var isLoggedIn by mutableStateOf(authManager.isLoggedIn())
     var showLoginDialog by mutableStateOf(!authManager.isLoggedIn())
+    var medicineOrderNotifications by mutableStateOf<List<MedicineOrderNotification>>(emptyList())
 
     val onUnauthorized = {
         isLoggedIn = false
@@ -58,6 +61,12 @@ fun AdminApp() {
     var chatMessageText by mutableStateOf("")
     var chatMessages by mutableStateOf<List<ChatMessage>>(emptyList())
 
+    var medicines by mutableStateOf<List<Medicine>>(emptyList())
+    var showMedicineDialog by mutableStateOf(false)
+    var editingMedicine by mutableStateOf<Medicine?>(null)
+    var medicineName by mutableStateOf("")
+    var medicinePrice by mutableStateOf("")
+
     // Загрузка данных при старте (только если залогинен)
     if (isLoggedIn) {
         LaunchedEffect(Unit) {
@@ -69,10 +78,24 @@ fun AdminApp() {
                 severitRate = config.severiteRate.toString()
                 controlLossThreshold = config.controlLossThreshold.toString()
                 chatMessages = config.recentMessages
+                medicineOrderNotifications = apiClient.getMedicineOrderNotifications()
+                medicines = apiClient.getAllMedicines()
             } catch (e: Exception) {
                 window.alert("Ошибка подключения к серверу: ${e.message}")
             }
             isLoading = false
+        }
+    }
+
+    LaunchedEffect(isLoggedIn) {
+        if (!isLoggedIn) return@LaunchedEffect
+        while (isLoggedIn) {
+            kotlinx.coroutines.delay(30000)
+            try {
+                medicineOrderNotifications = apiClient.getMedicineOrderNotifications()
+            } catch (e: Exception) {
+
+            }
         }
     }
 
@@ -166,7 +189,11 @@ fun AdminApp() {
                 Button({
                     style {
                         width(100.percent)
-                        backgroundColor(if (isLoggingIn || loginUsername.isBlank() || loginPassword.isBlank()) Color("#7F8C8D") else Color("#4A90E2"))
+                        backgroundColor(
+                            if (isLoggingIn || loginUsername.isBlank() || loginPassword.isBlank()) Color("#7F8C8D") else Color(
+                                "#4A90E2"
+                            )
+                        )
                         color(Color("#FFFFFF"))
                         borderWidth(0.px)
                         padding(12.px, 24.px)
@@ -804,6 +831,559 @@ fun AdminApp() {
                         }
                     }) {
                         Text("Отправить")
+                    }
+                }
+            }
+
+            Div({
+                style {
+                    backgroundColor(Color("#34495E"))
+                    border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                    borderRadius(8.px)
+                    padding(20.px)
+                    marginBottom(16.px)
+                }
+            }) {
+                H3({
+                    style {
+                        marginTop(0.px)
+                        marginBottom(16.px)
+                        color(Color("#4A90E2"))
+                        fontSize(18.px)
+                        fontWeight("bold")
+                    }
+                }) {
+                    Text("💊 ЗАКАЗЫ ЛЕКАРСТВ")
+                }
+
+                Div({
+                    style {
+                        maxHeight(300.px)
+                        overflowY("auto")
+                        backgroundColor(Color("#1A2530"))
+                        borderRadius(4.px)
+                        padding(12.px)
+                    }
+                }) {
+                    if (medicineOrderNotifications.isEmpty()) {
+                        P({
+                            style {
+                                color(Color("#7B9EB0"))
+                                fontSize(12.px)
+                            }
+                        }) {
+                            Text("Нет заказов")
+                        }
+                    } else {
+                        medicineOrderNotifications.reversed().forEach { notification ->
+                            Div({
+                                onClick {
+                                    coroutineScope.launch {
+                                        try {
+                                            val newStatus = when (notification.status) {
+                                                "pending" -> "delivering"
+                                                "delivering" -> "delivered"
+                                                "delivered" -> {
+                                                    apiClient.deleteMedicineOrder(notification.id)
+                                                    medicineOrderNotifications =
+                                                        apiClient.getMedicineOrderNotifications()
+                                                    return@launch
+                                                }
+
+                                                else -> "pending"
+                                            }
+
+                                            if (newStatus != null) {
+                                                if (apiClient.updateMedicineOrderStatus(notification.id, newStatus)) {
+                                                    medicineOrderNotifications =
+                                                        apiClient.getMedicineOrderNotifications()
+                                                } else {
+                                                    window.alert("Ошибка обновления статуса")
+                                                }
+                                            }
+                                        } catch (e: Exception) {
+                                            window.alert("Ошибка: ${e.message}")
+                                        }
+                                    }
+                                }
+                                style {
+                                    marginBottom(12.px)
+                                    padding(12.px)
+                                    backgroundColor(
+                                        Color("#2C3E50")
+                                    )
+                                    borderRadius(8.px)
+                                    border(1.px, LineStyle.Solid, Color("#34495E"))
+                                    cursor("pointer")
+                                }
+                            }) {
+                                Div({
+                                    style {
+                                        display(DisplayStyle.Flex)
+                                        justifyContent(JustifyContent.SpaceBetween)
+                                        marginBottom(8.px)
+                                    }
+                                }) {
+                                    Span({
+                                        style {
+                                            color(Color("#4A90E2"))
+                                            fontSize(12.px)
+                                            fontWeight("bold")
+                                        }
+                                    }) {
+                                        Text(notification.medicineName)
+                                    }
+                                    Span({
+                                        style {
+                                            color(Color("#7B9EB0"))
+                                            fontSize(10.px)
+                                            backgroundColor(
+                                                when (notification.status) {
+                                                    "pending" -> Color("#2C3E50")
+                                                    "delivering" -> Color("#3498DB")
+                                                    "delivered" -> Color("#27AE60")
+                                                    else -> Color("#2C3E50")
+                                                }
+                                            )
+                                        }
+                                    }) {
+                                        Text(Date(notification.timestamp).toLocaleString())
+                                    }
+                                }
+
+                                Div({
+                                    style {
+                                        color(Color("#FFFFFF"))
+                                        fontSize(11.px)
+                                        marginBottom(4.px)
+                                    }
+                                }) {
+                                    Text("Количество: ${notification.quantity} шт.")
+                                }
+
+                                Div({
+                                    style {
+                                        color(Color("#FFFFFF"))
+                                        fontSize(11.px)
+                                        marginBottom(4.px)
+                                    }
+                                }) {
+                                    Text("Сумма: ${notification.totalPrice} ₽")
+                                }
+
+                                Div({
+                                    style {
+                                        color(Color("#7B9EB0"))
+                                        fontSize(10.px)
+                                    }
+                                }) {
+                                    Text(
+                                        when {
+                                            notification.orderedByEnterprise != null ->
+                                                "Заказано от: ${notification.orderedByEnterprise}"
+
+                                            notification.orderedByPersonName != null ->
+                                                "Заказано: ${notification.orderedByPersonName}"
+
+                                            else -> "Заказано: Неизвестно"
+                                        }
+                                    )
+                                }
+
+                                Div({
+                                    style {
+                                        marginTop(8.px)
+                                        padding(4.px, 8.px)
+                                        backgroundColor(
+                                            when (notification.status) {
+                                                "pending" -> Color("#F39C12")
+                                                "delivered" -> Color("#27AE60")
+                                                "cancelled" -> Color("#E74C3C")
+                                                else -> Color("#7B9EB0")
+                                            }
+                                        )
+                                        borderRadius(4.px)
+                                        display(DisplayStyle.InlineBlock)
+                                    }
+                                }) {
+                                    Span({
+                                        style {
+                                            padding(4.px, 8.px)
+                                            borderRadius(4.px)
+                                            fontSize(11.px)
+                                            fontWeight("bold")
+                                            backgroundColor(
+                                                when (notification.status) {
+                                                    "pending" -> Color("#F39C12")
+                                                    "delivering" -> Color("#3498DB")
+                                                    "delivered" -> Color("#27AE60")
+                                                    else -> Color("#7B9EB0")
+                                                }
+                                            )
+                                            color(Color.white)
+                                            cursor("pointer")
+                                        }
+                                    }) {
+                                        Text(
+                                            when (notification.status) {
+                                                "pending" -> "Ожидает доставки"
+                                                "delivering" -> "Доставляется"
+                                                "delivered" -> "Доставлено"
+                                                else -> notification.status
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Div({
+                style {
+                    backgroundColor(Color("#34495E"))
+                    border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                    borderRadius(8.px)
+                    padding(20.px)
+                    marginBottom(16.px)
+                }
+            }) {
+                H3({
+                    style {
+                        marginTop(0.px)
+                        marginBottom(16.px)
+                        color(Color("#4A90E2"))
+                        fontSize(18.px)
+                        fontWeight("bold")
+                    }
+                }) {
+                    Text("💊 Управление лекарствами")
+                }
+
+                // Кнопка добавления
+                Button({
+                    style {
+                        backgroundColor(Color("#27AE60"))
+                        color(Color("#FFFFFF"))
+                        borderWidth(0.px)
+                        padding(8.px, 16.px)
+                        borderRadius(4.px)
+                        fontFamily("'Courier New', monospace")
+                        fontWeight("bold")
+                        cursor("pointer")
+                        fontSize(14.px)
+                        marginBottom(16.px)
+                    }
+                    onClick {
+                        editingMedicine = null
+                        medicineName = ""
+                        medicinePrice = ""
+                        showMedicineDialog = true
+                    }
+                }) {
+                    Text("+ Добавить лекарство")
+                }
+
+                // Список лекарств
+                Div({
+                    style {
+                        maxHeight(300.px)
+                        overflowY("auto")
+                        backgroundColor(Color("#1A2530"))
+                        borderRadius(4.px)
+                        padding(12.px)
+                    }
+                }) {
+                    if (medicines.isEmpty()) {
+                        P({
+                            style {
+                                color(Color("#7B9EB0"))
+                                fontSize(12.px)
+                            }
+                        }) {
+                            Text("Нет лекарств")
+                        }
+                    } else {
+                        medicines.forEach { medicine ->
+                            Div({
+                                style {
+                                    marginBottom(8.px)
+                                    padding(12.px)
+                                    backgroundColor(Color("#2C3E50"))
+                                    borderRadius(4.px)
+                                    display(DisplayStyle.Flex)
+                                    justifyContent(JustifyContent.SpaceBetween)
+                                    alignItems(AlignItems.Center)
+                                }
+                            }) {
+                                Div({
+                                    style {
+                                        flex(1)
+                                    }
+                                }) {
+                                    Div({
+                                        style {
+                                            color(Color("#FFFFFF"))
+                                            fontSize(14.px)
+                                            fontWeight("bold")
+                                            marginBottom(4.px)
+                                        }
+                                    }) {
+                                        Text(medicine.name)
+                                    }
+                                    Div({
+                                        style {
+                                            color(Color("#7B9EB0"))
+                                            fontSize(12.px)
+                                        }
+                                    }) {
+                                        Text("Цена: ${medicine.price} ₽")
+                                    }
+                                }
+                                Div({
+                                    style {
+                                        display(DisplayStyle.Flex)
+                                        gap(8.px)
+                                    }
+                                }) {
+                                    Button({
+                                        style {
+                                            backgroundColor(Color("#F39C12"))
+                                            color(Color("#FFFFFF"))
+                                            borderWidth(0.px)
+                                            padding(6.px, 12.px)
+                                            borderRadius(4.px)
+                                            fontFamily("'Courier New', monospace")
+                                            fontSize(12.px)
+                                            cursor("pointer")
+                                        }
+                                        onClick {
+                                            editingMedicine = medicine
+                                            medicineName = medicine.name
+                                            medicinePrice = medicine.price.toString()
+                                            showMedicineDialog = true
+                                        }
+                                    }) {
+                                        Text("Изменить")
+                                    }
+                                    Button({
+                                        style {
+                                            backgroundColor(Color("#E74C3C"))
+                                            color(Color("#FFFFFF"))
+                                            borderWidth(0.px)
+                                            padding(6.px, 12.px)
+                                            borderRadius(4.px)
+                                            fontFamily("'Courier New', monospace")
+                                            fontSize(12.px)
+                                            cursor("pointer")
+                                        }
+                                        onClick {
+                                            if (window.confirm("Удалить лекарство '${medicine.name}'?")) {
+                                                coroutineScope.launch {
+                                                    try {
+                                                        apiClient.deleteMedicine(medicine.id)
+                                                        medicines = apiClient.getAllMedicines()
+                                                    } catch (e: Exception) {
+                                                        window.alert("Ошибка удаления: ${e.message}")
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }) {
+                                        Text("Удалить")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (showMedicineDialog) {
+                Div({
+                    style {
+                        position(Position.Fixed)
+                        top(0.px)
+                        left(0.px)
+                        width(100.percent)
+                        height(100.percent)
+                        backgroundColor(Color("rgba(0, 0, 0, 0.8)"))
+                        display(DisplayStyle.Flex)
+                        alignItems(AlignItems.Center)
+                        justifyContent(JustifyContent.Center)
+                    }
+                    onClick { event ->
+//                        // Проверяем, был ли клик именно на фоне, а не на содержимом диалога
+//                        val target = event.asDynamic().target
+//                        val currentTarget = event.asDynamic().currentTarget
+//                        if (target == currentTarget) {
+//                            showMedicineDialog = false
+//                        }
+                    }
+                }) {
+                    Div({
+                        style {
+                            backgroundColor(Color("#34495E"))
+                            border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                            borderRadius(8.px)
+                            padding(30.px)
+                            maxWidth(400.px)
+                            width(90.percent)
+                        }
+                        onClick {
+                            // Пустой onClick предотвращает всплытие события
+                            // (в Compose for Web это работает как stopPropagation)
+                        }
+                    }) {
+                        H3({
+                            style {
+                                marginTop(0.px)
+                                marginBottom(20.px)
+                                color(Color("#4A90E2"))
+                                fontSize(18.px)
+                                fontWeight("bold")
+                            }
+                        }) {
+                            Text(if (editingMedicine != null) "Изменить лекарство" else "Добавить лекарство")
+                        }
+
+                        Label(attrs = {
+                            style {
+                                color(Color("#FFFFFF"))
+                                fontSize(14.px)
+                                fontWeight("bold")
+                                display(DisplayStyle.Block)
+                                marginBottom(8.px)
+                            }
+                        }) {
+                            Text("Название")
+                        }
+                        Input(InputType.Text, {
+                            style {
+                                width(100.percent)
+                                padding(12.px)
+                                marginBottom(16.px)
+                                backgroundColor(Color("#1A2530"))
+                                color(Color("#4A90E2"))
+                                border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                                borderRadius(4.px)
+                                fontFamily("'Courier New', monospace")
+                                fontSize(14.px)
+                            }
+                            value(medicineName)
+                            onInput { event ->
+                                medicineName = event.target.value
+                            }
+                            onClick {
+                                // Предотвращаем всплытие события
+                            }
+                        })
+
+                        Label(attrs = {
+                            style {
+                                color(Color("#FFFFFF"))
+                                fontSize(14.px)
+                                fontWeight("bold")
+                                display(DisplayStyle.Block)
+                                marginBottom(8.px)
+                            }
+                        }) {
+                            Text("Цена")
+                        }
+                        Input(InputType.Number, {
+                            style {
+                                width(100.percent)
+                                padding(12.px)
+                                marginBottom(20.px)
+                                backgroundColor(Color("#1A2530"))
+                                color(Color("#4A90E2"))
+                                border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                                borderRadius(4.px)
+                                fontFamily("'Courier New', monospace")
+                                fontSize(14.px)
+                            }
+                            attr("step", "0.01")
+                            value(medicinePrice)
+                            onInput { event ->
+                                medicinePrice = event.target.value
+                            }
+                            onClick {
+                                // Предотвращаем всплытие события
+                            }
+                        })
+
+                        Div({
+                            style {
+                                display(DisplayStyle.Flex)
+                                gap(12.px)
+                                justifyContent(JustifyContent.FlexEnd)
+                            }
+                        }) {
+                            Button({
+                                style {
+                                    backgroundColor(Color("#7B9EB0"))
+                                    color(Color("#FFFFFF"))
+                                    borderWidth(0.px)
+                                    padding(10.px, 20.px)
+                                    borderRadius(4.px)
+                                    fontFamily("'Courier New', monospace")
+                                    fontSize(14.px)
+                                    cursor("pointer")
+                                }
+                                onClick {
+                                    showMedicineDialog = false
+                                }
+                            }) {
+                                Text("Отмена")
+                            }
+                            Button({
+                                style {
+                                    backgroundColor(Color("#27AE60"))
+                                    color(Color("#FFFFFF"))
+                                    borderWidth(0.px)
+                                    padding(10.px, 20.px)
+                                    borderRadius(4.px)
+                                    fontFamily("'Courier New', monospace")
+                                    fontSize(14.px)
+                                    fontWeight("bold")
+                                    cursor("pointer")
+                                }
+                                onClick {
+                                    if (medicineName.isNotBlank() && medicinePrice.toDoubleOrNull() != null) {
+                                        coroutineScope.launch {
+                                            try {
+                                                if (editingMedicine != null) {
+                                                    val updated = editingMedicine!!.copy(
+                                                        name = medicineName,
+                                                        price = medicinePrice.toDouble()
+                                                    )
+                                                    apiClient.updateMedicine(updated)
+                                                } else {
+                                                    val newMedicine = Medicine(
+                                                        id = 0,
+                                                        name = medicineName,
+                                                        price = medicinePrice.toDouble()
+                                                    )
+                                                    apiClient.createMedicine(newMedicine)
+                                                }
+                                                medicines = apiClient.getAllMedicines()
+                                                showMedicineDialog = false
+                                                medicineName = ""
+                                                medicinePrice = ""
+                                                editingMedicine = null
+                                            } catch (e: Exception) {
+                                                window.alert("Ошибка: ${e.message}")
+                                            }
+                                        }
+                                    } else {
+                                        window.alert("Заполните все поля корректно")
+                                    }
+                                }
+                            }) {
+                                Text(if (editingMedicine != null) "Сохранить" else "Добавить")
+                            }
+                        }
                     }
                 }
             }

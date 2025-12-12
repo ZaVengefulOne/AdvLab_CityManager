@@ -111,24 +111,41 @@ class BankViewModel(
         }
     }
 
-    fun createBankAccount(personId: Int?, enterpriseName: String?, depositAmount: Double, creditAmount: Double) { // НОВОЕ
+    fun createBankAccount(
+        personId: Int?,
+        enterpriseName: String?,
+        creditAmount: Double,
+        personBalance: Double? = null
+    ) {
         viewModelScope.launch {
             try {
-                val account = bankInteractor.createBankAccount(personId, enterpriseName, depositAmount, creditAmount) // НОВОЕ
+                bankInteractor.createBankAccount(personId, enterpriseName, creditAmount, personBalance)
                 getBankAccounts()
             } catch (e: Exception) {
-                _errorMessage.value = e.message
-                println("Error creating bank account: ${e.message}")
+                e.printStackTrace()
             }
         }
     }
 
-    fun updateBankAccount(bankAccount: BankAccount) {
+    fun closeCredit(accountId: Int) {
         viewModelScope.launch {
             try {
-                val success = bankInteractor.updateBankAccount(bankAccount)
+                bankInteractor.closeCredit(accountId)
+                getBankAccounts()
+                getPersons()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun updateBankAccount(bankAccount: BankAccount, personBalance: Double? = null) {
+        viewModelScope.launch {
+            try {
+                val success = bankInteractor.updateBankAccount(bankAccount, personBalance)
                 if (success) {
                     getBankAccounts()
+                    getPersons()
                 }
             } catch (e: Exception) {
                 _errorMessage.value = e.message

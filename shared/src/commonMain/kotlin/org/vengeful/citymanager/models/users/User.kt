@@ -4,7 +4,6 @@ import kotlinx.serialization.Serializable
 import org.vengeful.citymanager.models.Rights
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
-import kotlin.time.Instant
 
 @Serializable
 data class User @OptIn(ExperimentalTime::class) constructor(
@@ -15,4 +14,5 @@ data class User @OptIn(ExperimentalTime::class) constructor(
     val isActive: Boolean = true,
     val createdAt: Long = Clock.System.now().toEpochMilliseconds(),
     val severiteClicks: Int = 0,
+    val personId: Int? = null
 )

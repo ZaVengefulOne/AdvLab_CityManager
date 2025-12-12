@@ -6,7 +6,7 @@ import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.ReferenceOption
-import org.vengeful.citymanager.models.MedicalRecord
+import org.vengeful.citymanager.models.medicine.MedicalRecord
 import org.vengeful.citymanager.personService.db.Persons
 
 object MedicalRecords : IntIdTable("medical_records") {

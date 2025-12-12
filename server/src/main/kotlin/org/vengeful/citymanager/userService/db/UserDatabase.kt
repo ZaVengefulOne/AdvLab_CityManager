@@ -52,5 +52,6 @@ class UserDao(id: EntityID<Int>) : IntEntity(id) {
         isActive = isActive,
         createdAt = createdAt,
         severiteClicks = severiteClicks,
+        personId = personId?.value
     )
 }

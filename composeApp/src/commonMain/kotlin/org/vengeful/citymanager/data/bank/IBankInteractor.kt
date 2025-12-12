@@ -6,7 +6,15 @@ interface IBankInteractor {
     suspend fun getAllBankAccounts(): List<BankAccount>
     suspend fun getBankAccountByPersonId(personId: Int): BankAccount?
     suspend fun getBankAccountById(id: Int): BankAccount?
-    suspend fun createBankAccount(personId: Int?, enterpriseName: String?, depositAmount: Double, creditAmount: Double): BankAccount
-    suspend fun updateBankAccount(bankAccount: BankAccount): Boolean
+    suspend fun getBankAccountByEnterpriseName(enterpriseName: String): BankAccount?
+    suspend fun createBankAccount(
+        personId: Int?,
+        enterpriseName: String?,
+        creditAmount: Double,
+        personBalance: Double? = null
+    ): BankAccount
+
+    suspend fun closeCredit(accountId: Int): BankAccount
+    suspend fun updateBankAccount(bankAccount: BankAccount, personBalance: Double? = null): Boolean
     suspend fun deleteBankAccount(id: Int): Boolean
 }

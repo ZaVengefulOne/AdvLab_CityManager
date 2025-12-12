@@ -9,10 +9,12 @@ interface IBankRepository {
     fun createBankAccount(
         personId: Int?,
         enterpriseName: String?,
-        depositAmount: Double,
-        creditAmount: Double
+        creditAmount: Double,
+        personBalance: Double? = null,
     ): BankAccount
 
-    fun updateBankAccount(bankAccount: BankAccount): BankAccount?
+    fun closeCredit(accountId: Int): BankAccount?
+    fun updateBankAccount(bankAccount: BankAccount, personBalance: Double? = null): BankAccount?
+    fun getBankAccountByEnterpriseName(enterpriseName: String): BankAccount?
     fun deleteBankAccount(id: Int): Boolean
 }

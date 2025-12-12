@@ -78,11 +78,16 @@ class BankInteractor(
     override suspend fun createBankAccount(
         personId: Int?,
         enterpriseName: String?,
-        depositAmount: Double,
-        creditAmount: Double
+        creditAmount: Double,
+        personBalance: Double?
     ): BankAccount {
         return try {
-            val request = CreateBankAccountRequest(personId,enterpriseName, depositAmount, creditAmount)
+            val request = CreateBankAccountRequest(
+                personId = personId,
+                enterpriseName = enterpriseName,
+                creditAmount = creditAmount,
+                personBalance = personBalance
+            )
             val response: HttpResponse = client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/bank/accounts") {
                 setHttpBuilder()
                 setBody(request)
@@ -90,20 +95,63 @@ class BankInteractor(
             if (response.status.isSuccess()) {
                 response.body<BankAccount>()
             } else {
-                throw Exception("HTTP error ${response.status} : ${response.status.description}")
+                val errorBody = try {
+                    response.body<String>()
+                } catch (e: Exception) {
+                    response.status.description
+                }
+                throw Exception("HTTP error ${response.status.value}: $errorBody")
             }
         } catch (e: Exception) {
             throw Exception("Failed to create bank account: ${e.message}")
         }
     }
 
-    override suspend fun updateBankAccount(bankAccount: BankAccount): Boolean {
+    override suspend fun closeCredit(accountId: Int): BankAccount {
+        return try {
+            val response: HttpResponse = client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/bank/accounts/$accountId/close-credit") {
+                setHttpBuilder()
+            }
+            if (response.status.isSuccess()) {
+                response.body<BankAccount>()
+            } else {
+                val errorBody = try {
+                    response.body<Map<String, String>>()["error"] ?: response.status.description
+                } catch (e: Exception) {
+                    response.status.description
+                }
+                throw Exception("HTTP error ${response.status.value}: $errorBody")
+            }
+        } catch (e: Exception) {
+            throw Exception("Failed to close credit: ${e.message}")
+        }
+    }
+
+    override suspend fun getBankAccountByEnterpriseName(enterpriseName: String): BankAccount? {
+        return try {
+            val response = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/bank/accounts/enterprise/$enterpriseName") {
+                setHttpBuilder()
+            }
+            if (response.status.isSuccess()) {
+                response.body<BankAccount>()
+            } else if (response.status.value == 404) {
+                null
+            } else {
+                throw Exception("HTTP error ${response.status} : ${response.status.description}")
+            }
+        } catch (e: Exception) {
+            throw Exception("Failed to fetch bank account: ${e.message}")
+        }
+    }
+
+    override suspend fun updateBankAccount(bankAccount: BankAccount, personBalance: Double?): Boolean {
         return try {
             val request = UpdateBankAccountRequest(
                 id = bankAccount.id,
                 personId = bankAccount.personId,
-                depositAmount = bankAccount.depositAmount,
-                creditAmount = bankAccount.creditAmount
+                enterpriseName = bankAccount.enterpriseName,
+                creditAmount = bankAccount.creditAmount,
+                personBalance = personBalance
             )
             val response: HttpResponse = client.put("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/bank/accounts/${bankAccount.id}") {
                 setHttpBuilder()
