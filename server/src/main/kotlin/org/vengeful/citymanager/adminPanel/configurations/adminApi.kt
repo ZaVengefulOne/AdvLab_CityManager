@@ -3,6 +3,7 @@ package org.vengeful.citymanager.adminPanel.configurations
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCallPipeline
 import io.ktor.server.application.call
+import io.ktor.server.request.header
 import io.ktor.server.request.httpMethod
 import io.ktor.server.request.receive
 import io.ktor.server.request.uri
@@ -27,6 +28,8 @@ import org.vengeful.citymanager.models.SendMessageRequest
 import org.vengeful.citymanager.models.medicine.MedicineOrderNotification
 import org.vengeful.citymanager.personService.IPersonRepository
 import org.vengeful.citymanager.personService.db.PersonRepository
+import org.vengeful.citymanager.userService.IUserRepository
+import org.vengeful.citymanager.userService.db.UserRepository
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -36,10 +39,25 @@ private val medicineOrderNotifications = mutableListOf<MedicineOrderNotification
 
 private val serverStartTime = System.currentTimeMillis()
 
+private val activeConnectionsTracker = java.util.concurrent.ConcurrentHashMap<String, Long>()
+private val CONNECTION_TIMEOUT_MS = 5 * 60 * 1000L // 5 минут
+
 private var adminConfig = AdministrationConfig(
     severiteRate = 42.75,
     controlLossThreshold = 75,
 )
+
+private fun registerActiveConnection(token: String?) {
+    token?.let {
+        activeConnectionsTracker[it] = System.currentTimeMillis()
+    }
+}
+
+private fun getActiveConnectionsCount(): Int {
+    val currentTime = System.currentTimeMillis()
+    activeConnectionsTracker.entries.removeAll { (currentTime - it.value) > CONNECTION_TIMEOUT_MS }
+    return activeConnectionsTracker.size
+}
 
 fun getMedicineOrderNotifications(count: Int = 50): List<MedicineOrderNotification> {
     return medicineOrderNotifications.takeLast(count)
@@ -49,14 +67,19 @@ private fun getRecentMessages(count: Int = 5): List<ChatMessage> {
     return chatMessages.takeLast(count)
 }
 
-fun Application.configureAdminApi(repository: IPersonRepository, bankRepository: IBankRepository) {
+fun Application.configureAdminApi(
+    repository: IPersonRepository,
+    bankRepository: IBankRepository,
+    userRepository: IUserRepository
+) {
     routing {
         route("/admin") {
             // 📊 Статистика сервера
             get("/stats") {
                 val stats = ServerStats(
                     personCount = getPersonCountFromDB(repository),
-                    activeConnections = 1,
+                    userCount = userRepository.getCount(),
+                    activeConnections = getActiveConnectionsCount(),
                     uptime = calculateUptime(),
                     memoryUsage = getMemoryUsage()
                 )
@@ -121,7 +144,7 @@ fun Application.configureAdminApi(repository: IPersonRepository, bankRepository:
                 call.respond(config)
             }
 
-            post("/config"){
+            post("/config") {
                 val newConfig = call.receive<AdministrationConfig>()
                 adminConfig = newConfig
                 call.respond(mapOf("status" to "success", "message" to "Конфиг обновлён!"))
@@ -255,6 +278,8 @@ fun Application.configureAdminApi(repository: IPersonRepository, bankRepository:
         }
 
         intercept(ApplicationCallPipeline.Call) {
+            val token = call.request.header("Authorization")?.removePrefix("Bearer ")
+            registerActiveConnection(token)
             if (!call.request.uri.startsWith("/admin/")) {
                 addLogEntry(
                     method = call.request.httpMethod.value,
@@ -320,6 +345,7 @@ private fun calculateUptime(): String {
     val secs = seconds % 60
     return String.format("%02d:%02d:%02d", hours, minutes, secs)
 }
+
 private fun getMemoryUsage(): String {
     val runtime = Runtime.getRuntime()
     val usedMemory = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024)

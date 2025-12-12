@@ -215,5 +215,7 @@ class UserRepository : IUserRepository {
         } != null
     }
 
-
+    override fun getCount(): Int = transaction {
+        UserDao.all().count().toInt()
+    }
 }

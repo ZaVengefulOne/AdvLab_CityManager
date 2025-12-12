@@ -92,5 +92,9 @@ fun Application.module() {
         emergencyShutdownConfig = emergencyShutdownConfig
         )
     configureDatabase(repository = personRepository)
-    configureAdminApi(repository = personRepository, bankRepository = bankRepository)
+    configureAdminApi(
+        repository = personRepository,
+        bankRepository = bankRepository,
+        userRepository = userRepository
+    )
 }

@@ -48,7 +48,7 @@ fun AdminApp() {
     var loginError by mutableStateOf<String?>(null)
     var isLoggingIn by mutableStateOf(false)
 
-    var serverStats by mutableStateOf(ServerStats(0, 0, "00:00:00", "0 MB"))
+    var serverStats by mutableStateOf(ServerStats(0, 0, 0, "00:00:00", "0 MB"))
     var requestLogs by mutableStateOf(emptyList<RequestLog>())
     var showBackupDialog by mutableStateOf(false)
     var backupData by mutableStateOf<String?>(null)
@@ -309,7 +309,7 @@ fun AdminApp() {
                     isLoggedIn = false
                     showLoginDialog = true
                     // Очистка данных при выходе
-                    serverStats = ServerStats(0, 0, "00:00:00", "0 MB")
+                    serverStats = ServerStats(0, 0, 0,"00:00:00", "0 MB")
                     requestLogs = emptyList()
                     backupData = null
                 }
@@ -356,25 +356,26 @@ fun AdminApp() {
                         gap(16.px)
                     }
                 }) {
-                    // Карточка статистики - записи
                     StatCard(
                         value = serverStats.personCount.toString(),
                         label = "записей в базе"
                     )
 
-                    // Карточка статистики - подключения
+                    StatCard(
+                        value = serverStats.userCount.toString(),
+                        label = "пользователей"
+                    )
+
                     StatCard(
                         value = serverStats.activeConnections.toString(),
                         label = "активных подключений"
                     )
 
-                    // Карточка статистики - время работы
                     StatCard(
                         value = serverStats.uptime,
                         label = "время работы"
                     )
 
-                    // Карточка статистики - память
                     StatCard(
                         value = serverStats.memoryUsage,
                         label = "использование памяти"
