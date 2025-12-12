@@ -18,7 +18,7 @@ import org.vengeful.citymanager.auth.JWTConfig
 import org.vengeful.citymanager.auth.SessionLockManager
 import org.vengeful.citymanager.bankService.db.BankRepository
 import org.vengeful.citymanager.configurations.configureDatabase
-import org.vengeful.citymanager.configurations.configureSerialization
+import org.vengeful.citymanager.configurations.configureRouting
 import org.vengeful.citymanager.models.Rights
 import org.vengeful.citymanager.personService.db.PersonRepository
 import org.vengeful.citymanager.userService.db.UserRepository
@@ -85,12 +85,12 @@ fun Application.module() {
     val userRepository = UserRepository()
     val bankRepository = BankRepository(personRepository)
 
-    configureSerialization(
+    configureRouting(
         personRepository = personRepository,
         userRepository = userRepository,
         bankRepository = bankRepository,
         emergencyShutdownConfig = emergencyShutdownConfig
         )
     configureDatabase(repository = personRepository)
-    configureAdminApi(repository = personRepository)
+    configureAdminApi(repository = personRepository, bankRepository = bankRepository)
 }

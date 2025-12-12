@@ -104,7 +104,7 @@ fun MedicineOrderCard(
 
             // Сумма
             VengText(
-                text = "Сумма: ${String.format("%.2f", order.totalPrice)} ₽",
+                text = "Сумма: ${String.format("%.2f", order.totalPrice)} ЛБ",
                 color = cardColors.text,
                 fontSize = 14.sp
             )

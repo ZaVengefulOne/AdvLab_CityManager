@@ -15,10 +15,14 @@ import io.ktor.server.routing.routing
 import org.vengeful.citymanager.adminPanel.AdminStats
 import org.vengeful.citymanager.adminPanel.RequestLog
 import org.vengeful.citymanager.adminPanel.ServerStats
+import org.vengeful.citymanager.bankService.IBankRepository
 import org.vengeful.citymanager.models.AdministrationConfig
 import org.vengeful.citymanager.models.CallStatus
 import org.vengeful.citymanager.models.ChatMessage
 import org.vengeful.citymanager.models.Enterprise
+import org.vengeful.citymanager.models.Rights
+import org.vengeful.citymanager.models.SalaryPaymentRequest
+import org.vengeful.citymanager.models.SalaryPaymentResponse
 import org.vengeful.citymanager.models.SendMessageRequest
 import org.vengeful.citymanager.models.medicine.MedicineOrderNotification
 import org.vengeful.citymanager.personService.IPersonRepository
@@ -29,6 +33,8 @@ import java.time.format.DateTimeFormatter
 private val requestLogs = mutableListOf<RequestLog>()
 private val chatMessages = mutableListOf<ChatMessage>()
 private val medicineOrderNotifications = mutableListOf<MedicineOrderNotification>()
+
+private val serverStartTime = System.currentTimeMillis()
 
 private var adminConfig = AdministrationConfig(
     severiteRate = 42.75,
@@ -43,7 +49,7 @@ private fun getRecentMessages(count: Int = 5): List<ChatMessage> {
     return chatMessages.takeLast(count)
 }
 
-fun Application.configureAdminApi(repository: IPersonRepository) {
+fun Application.configureAdminApi(repository: IPersonRepository, bankRepository: IBankRepository) {
     routing {
         route("/admin") {
             // 📊 Статистика сервера
@@ -153,6 +159,99 @@ fun Application.configureAdminApi(repository: IPersonRepository) {
 
                 call.respond(mapOf("status" to "success", "message" to "Message sent"))
             }
+
+            post("/salary/pay") {
+                try {
+                    val request = call.receive<SalaryPaymentRequest>()
+                    val salaryAmount = request.amount
+
+                    if (salaryAmount <= 0) {
+                        call.respond(
+                            io.ktor.http.HttpStatusCode.BadRequest,
+                            mapOf("error" to "Сумма должна быть положительной")
+                        )
+                        return@post
+                    }
+
+                    // Список прав, которым нужно выплатить зарплату
+                    val eligibleRights = listOf(
+                        Rights.Administration,
+                        Rights.Medic,
+                        Rights.Police,
+                    )
+
+                    // Получаем всех людей с нужными правами
+                    val eligiblePersons = repository.personsByRights(eligibleRights)
+
+                    // Получаем счет предприятия "Администрация"
+                    val adminEnterpriseAccount = bankRepository.getBankAccountByEnterpriseName("Администрация")
+
+                    if (adminEnterpriseAccount == null) {
+                        call.respond(
+                            io.ktor.http.HttpStatusCode.NotFound,
+                            mapOf("error" to "Счет предприятия 'Администрация' не найден")
+                        )
+                        return@post
+                    }
+
+                    // Подсчитываем общую сумму выплат (только для людей со счетами)
+                    val personsWithAccounts = eligiblePersons.filter { person ->
+                        bankRepository.getBankAccountByPersonId(person.id) != null
+                    }
+
+                    val totalAmount = salaryAmount * personsWithAccounts.size
+
+                    if (adminEnterpriseAccount.creditAmount < totalAmount) {
+                        call.respond(
+                            io.ktor.http.HttpStatusCode.BadRequest,
+                            mapOf("error" to "Недостаточно средств на счете предприятия. Доступно: ${adminEnterpriseAccount.creditAmount}, Требуется: $totalAmount")
+                        )
+                        return@post
+                    }
+
+                    var successCount = 0
+                    var failedCount = 0
+                    val errors = mutableListOf<String>()
+
+                    for (person in personsWithAccounts) {
+                        try {
+                            val success = repository.addToPersonBalance(person.id, salaryAmount)
+                            if (success) {
+                                successCount++
+                            } else {
+                                failedCount++
+                                errors.add("Не удалось выплатить зарплату ${person.firstName} ${person.lastName}")
+                            }
+                        } catch (e: Exception) {
+                            failedCount++
+                            errors.add("Ошибка при выплате ${person.firstName} ${person.lastName}: ${e.message}")
+                        }
+                    }
+
+                    // Вычитаем общую сумму со счета предприятия (обновляем creditAmount)
+                    val updatedEnterpriseAccount = adminEnterpriseAccount.copy(
+                        creditAmount = adminEnterpriseAccount.creditAmount - totalAmount
+                    )
+                    bankRepository.updateBankAccount(updatedEnterpriseAccount, null)
+
+                    call.respond(
+                        io.ktor.http.HttpStatusCode.OK,
+                        SalaryPaymentResponse(
+                            message = "Выплата зарплаты выполнена",
+                            successCount = successCount,
+                            failedCount = failedCount,
+                            totalAmount = totalAmount,
+                            errors = errors
+                        )
+                    )
+                } catch (e: Exception) {
+                    call.respond(
+                        io.ktor.http.HttpStatusCode.InternalServerError,
+                        mapOf("error" to "Ошибка при выплате зарплаты: ${e.message}")
+                    )
+                }
+            }
+
         }
 
         intercept(ApplicationCallPipeline.Call) {
@@ -212,11 +311,15 @@ private fun getPersonCountFromDB(repository: IPersonRepository): Int {
     return repository.getCount()
 }
 
+@Suppress("DefaultLocale")
 private fun calculateUptime(): String {
-    // Простая реализация - в реальном приложении считай с момента старта сервера
-    return "12:34:56"
+    val uptimeMillis = System.currentTimeMillis() - serverStartTime
+    val seconds = uptimeMillis / 1000
+    val hours = seconds / 3600
+    val minutes = (seconds % 3600) / 60
+    val secs = seconds % 60
+    return String.format("%02d:%02d:%02d", hours, minutes, secs)
 }
-
 private fun getMemoryUsage(): String {
     val runtime = Runtime.getRuntime()
     val usedMemory = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024)

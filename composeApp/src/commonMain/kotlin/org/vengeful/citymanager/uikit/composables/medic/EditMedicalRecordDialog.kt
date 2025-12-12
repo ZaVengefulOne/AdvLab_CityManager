@@ -116,8 +116,7 @@ fun EditMedicalRecordDialog(
                     )
                     .fillMaxHeight()
             ) {
-                // ИСПРАВЛЕНО: Скроллируемая область с weight и padding внизу
-                Column(
+                  Column(
                     modifier = Modifier
                         .weight(1f)
                         .verticalScroll(rememberScrollState())

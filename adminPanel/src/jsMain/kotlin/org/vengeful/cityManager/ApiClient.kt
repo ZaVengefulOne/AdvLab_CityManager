@@ -16,6 +16,7 @@ import kotlinx.serialization.json.put
 import org.vengeful.cityManager.models.RequestLog
 import org.vengeful.cityManager.models.ServerStats
 import org.vengeful.citymanager.models.AdministrationConfig
+import org.vengeful.citymanager.models.SalaryPaymentResponse
 import org.vengeful.citymanager.models.SendMessageRequest
 import org.vengeful.citymanager.models.backup.MasterBackup
 import org.vengeful.citymanager.models.medicine.Medicine
@@ -168,6 +169,18 @@ class ApiClient(
         }
         return handleResponse(response) {
             response.body<List<RequestLog>>()
+        }
+    }
+
+
+    suspend fun paySalary(amount: Double): SalaryPaymentResponse {
+        val response = client.post("$baseUrl/admin/salary/pay") {
+            contentType(ContentType.Application.Json)
+            addAuthHeader()
+            setBody(mapOf("amount" to amount))
+        }
+        return handleResponse(response) {
+            response.body<SalaryPaymentResponse>()
         }
     }
 

@@ -38,7 +38,6 @@ import org.vengeful.citymanager.medicService.MedicineRepository
 import org.vengeful.citymanager.models.BankAccount
 import org.vengeful.citymanager.models.CallRequest
 import org.vengeful.citymanager.models.CallStatus
-import org.vengeful.citymanager.models.ChatMessage
 import org.vengeful.citymanager.models.users.CreateMedicalRecordRequest
 import org.vengeful.citymanager.models.emergencyShutdown.EmergencyShutdownRequest
 import org.vengeful.citymanager.models.emergencyShutdown.EmergencyShutdownResponse
@@ -49,7 +48,6 @@ import org.vengeful.citymanager.models.emergencyShutdown.ErrorResponse
 import org.vengeful.citymanager.models.backup.MasterBackup
 import org.vengeful.citymanager.models.medicine.CreateMedicineOrderRequest
 import org.vengeful.citymanager.models.medicine.Medicine
-import org.vengeful.citymanager.models.medicine.MedicineOrder
 import org.vengeful.citymanager.models.medicine.MedicineOrderNotification
 import org.vengeful.citymanager.models.users.CreateBankAccountRequest
 import org.vengeful.citymanager.models.users.CurrentUserResponse
@@ -68,7 +66,7 @@ private val callStatuses = mutableMapOf(
     Enterprise.COURT to CallStatus(Enterprise.COURT, false)
 )
 
-fun Application.configureSerialization(
+fun Application.configureRouting(
     personRepository: IPersonRepository,
     userRepository: IUserRepository,
     bankRepository: IBankRepository,

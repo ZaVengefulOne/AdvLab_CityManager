@@ -19,6 +19,7 @@ import org.vengeful.citymanager.models.ChatMessage
 import org.vengeful.citymanager.models.backup.MasterBackup
 import org.vengeful.citymanager.models.medicine.Medicine
 import org.vengeful.citymanager.models.medicine.MedicineOrderNotification
+import kotlin.collections.emptyList
 import kotlin.js.Date
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
@@ -66,6 +67,10 @@ fun AdminApp() {
     var editingMedicine by mutableStateOf<Medicine?>(null)
     var medicineName by mutableStateOf("")
     var medicinePrice by mutableStateOf("")
+
+    var salaryAmount by mutableStateOf("20.0") // Размер зарплаты
+    var isPayingSalary by mutableStateOf(false)
+    var salaryPaymentResult by mutableStateOf<String?>(null)
 
     // Загрузка данных при старте (только если залогинен)
     if (isLoggedIn) {
@@ -968,7 +973,7 @@ fun AdminApp() {
                                         marginBottom(4.px)
                                     }
                                 }) {
-                                    Text("Сумма: ${notification.totalPrice} ₽")
+                                    Text("Сумма: ${notification.totalPrice} ЛБ")
                                 }
 
                                 Div({
@@ -1138,7 +1143,7 @@ fun AdminApp() {
                                             fontSize(12.px)
                                         }
                                     }) {
-                                        Text("Цена: ${medicine.price} ₽")
+                                        Text("Цена: ${medicine.price} ЛБ")
                                     }
                                 }
                                 Div({
@@ -1514,6 +1519,149 @@ fun AdminApp() {
                         }
                     }) {
                         Text(if (isConfigLoading) "⏳ Сохранение..." else "💾 Сохранить конфигурацию")
+                    }
+                }
+            }
+
+            Div({
+                style {
+                    backgroundColor(Color("#34495E"))
+                    border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                    borderRadius(8.px)
+                    padding(20.px)
+                    marginBottom(16.px)
+                }
+            }) {
+                H3({
+                    style {
+                        marginTop(0.px)
+                        marginBottom(16.px)
+                        fontSize(18.px)
+                    }
+                }) {
+                    Text("💰 ВЫПЛАТА ЗАРПЛАТЫ")
+                }
+
+                Div({
+                    style {
+                        display(DisplayStyle.Flex)
+                        flexDirection(FlexDirection.Column)
+                        gap(16.px)
+                    }
+                }) {
+                    // Поле ввода суммы зарплаты
+                    Div({
+                        style {
+                            display(DisplayStyle.Flex)
+                            flexDirection(FlexDirection.Column)
+                            gap(8.px)
+                        }
+                    }) {
+                        Label(attrs = {
+                            style {
+                                color(Color("#FFFFFF"))
+                                fontSize(14.px)
+                                fontWeight("bold")
+                            }
+                        }) {
+                            Text("Сумма зарплаты (ЛБ)")
+                        }
+                        Input(InputType.Number, {
+                            style {
+                                width(95.percent)
+                                padding(12.px)
+                                backgroundColor(Color("#1A2530"))
+                                color(Color("#4A90E2"))
+                                border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                                borderRadius(4.px)
+                                fontFamily("'Courier New', monospace")
+                                fontSize(14.px)
+                            }
+                            attr("step", "0.01")
+                            value(salaryAmount)
+                            onInput { event ->
+                                salaryAmount = event.target.value
+                            }
+                        })
+                    }
+
+                    // Сообщение о результате
+                    if (salaryPaymentResult != null) {
+                        Div({
+                            style {
+                                padding(12.px)
+                                backgroundColor(
+                                    if (salaryPaymentResult!!.contains("успешно") || salaryPaymentResult!!.contains("✅"))
+                                        Color("#27AE60")
+                                    else
+                                        Color("#E74C3C")
+                                )
+                                borderRadius(4.px)
+                                color(Color("#FFFFFF"))
+                                fontSize(14.px)
+                            }
+                        }) {
+                            Text(salaryPaymentResult ?: "")
+                        }
+                    }
+
+                    Button({
+                        style {
+                            backgroundColor(if (isPayingSalary) Color("#7F8C8D") else Color("#27AE60"))
+                            color(Color("#FFFFFF"))
+                            borderWidth(0.px)
+                            padding(12.px, 24.px)
+                            borderRadius(4.px)
+                            fontFamily("'Courier New', monospace")
+                            fontWeight("bold")
+                            cursor(if (isPayingSalary) "not-allowed" else "pointer")
+                            fontSize(14.px)
+                        }
+                        onClick {
+                            val amount = salaryAmount.toDoubleOrNull()
+                            if (amount == null || amount <= 0) {
+                                window.alert("Введите корректную сумму зарплаты")
+                                return@onClick
+                            }
+
+                            if (!window.confirm("Выплатить зарплату в размере $amount ЛБ?")) {
+                                return@onClick
+                            }
+
+                            coroutineScope.launch {
+                                isPayingSalary = true
+                                salaryPaymentResult = null
+                                try {
+                                    val result = apiClient.paySalary(amount)
+                                    val successCount = result.successCount
+                                    val failedCount = result.failedCount
+                                    val totalAmount = result.totalAmount
+                                    val errors = result.errors
+
+                                    var message = "✅ Выплата выполнена!\n"
+                                    message += "Успешно: $successCount человек\n"
+                                    message += "Ошибок: $failedCount\n"
+                                    message += "Общая сумма: $totalAmount ЛБ"
+
+                                    if (errors.isNotEmpty()) {
+                                        message += "\n\nОшибки:\n" + errors.joinToString("\n")
+                                    }
+
+                                    salaryPaymentResult = message
+                                    window.alert(message)
+
+                                    // Обновить статистику сервера
+                                    serverStats = apiClient.getServerStats()
+                                } catch (e: Exception) {
+                                    val errorMsg = "❌ Ошибка при выплате зарплаты: ${e.message}"
+                                    salaryPaymentResult = errorMsg
+                                    window.alert(errorMsg)
+                                }
+                                isPayingSalary = false
+                            }
+                        }
+                    }) {
+                        Text(if (isPayingSalary) "⏳ Выплата..." else "💰 Выплатить зарплату")
                     }
                 }
             }
