@@ -19,6 +19,7 @@ import org.vengeful.citymanager.models.ChatMessage
 import org.vengeful.citymanager.models.backup.MasterBackup
 import org.vengeful.citymanager.models.medicine.Medicine
 import org.vengeful.citymanager.models.medicine.MedicineOrderNotification
+import org.vengeful.citymanager.models.stocks.StockConfig
 import kotlin.collections.emptyList
 import kotlin.js.Date
 import kotlin.time.Clock
@@ -72,6 +73,12 @@ fun AdminApp() {
     var isPayingSalary by mutableStateOf(false)
     var salaryPaymentResult by mutableStateOf<String?>(null)
 
+    var stocks by mutableStateOf<List<StockConfig>>(emptyList())
+    var showStockDialog by mutableStateOf(false)
+    var editingStockIndex by mutableStateOf<Int?>(null)
+    var stockName by mutableStateOf("")
+    var stockPrice by mutableStateOf("")
+
     // Загрузка данных при старте (только если залогинен)
     if (isLoggedIn) {
         LaunchedEffect(Unit) {
@@ -83,6 +90,7 @@ fun AdminApp() {
                 severitRate = config.severiteRate.toString()
                 controlLossThreshold = config.controlLossThreshold.toString()
                 chatMessages = config.recentMessages
+                stocks = config.stocks
                 medicineOrderNotifications = apiClient.getMedicineOrderNotifications()
                 medicines = apiClient.getAllMedicines()
             } catch (e: Exception) {
@@ -1663,6 +1671,365 @@ fun AdminApp() {
                         }
                     }) {
                         Text(if (isPayingSalary) "⏳ Выплата..." else "💰 Выплатить зарплату")
+                    }
+                }
+            }
+            Div({
+                style {
+                    backgroundColor(Color("#34495E"))
+                    border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                    borderRadius(8.px)
+                    padding(20.px)
+                    marginBottom(16.px)
+                }
+            }) {
+                H3({
+                    style {
+                        marginTop(0.px)
+                        marginBottom(16.px)
+                        fontSize(18.px)
+                    }
+                }) {
+                    Text("📈 УПРАВЛЕНИЕ АКЦИЯМИ")
+                }
+
+                Div({
+                    style {
+                        display(DisplayStyle.Flex)
+                        flexDirection(FlexDirection.Column)
+                        gap(16.px)
+                    }
+                }) {
+                    // Кнопка добавления
+                    Button({
+                        style {
+                            backgroundColor(Color("#27AE60"))
+                            color(Color("#FFFFFF"))
+                            borderWidth(0.px)
+                            padding(8.px, 16.px)
+                            borderRadius(4.px)
+                            fontFamily("'Courier New', monospace")
+                            fontWeight("bold")
+                            cursor("pointer")
+                            fontSize(14.px)
+                        }
+                        onClick {
+                            editingStockIndex = null
+                            stockName = ""
+                            stockPrice = ""
+                            showStockDialog = true
+                        }
+                    }) {
+                        Text("+ Добавить акцию")
+                    }
+
+                    // Список акций
+                    Div({
+                        style {
+                            maxHeight(300.px)
+                            overflowY("auto")
+                            backgroundColor(Color("#1A2530"))
+                            borderRadius(4.px)
+                            padding(12.px)
+                        }
+                    }) {
+                        if (stocks.isEmpty()) {
+                            P({
+                                style {
+                                    color(Color("#7B9EB0"))
+                                    fontSize(12.px)
+                                }
+                            }) {
+                                Text("Нет акций")
+                            }
+                        } else {
+                            stocks.forEachIndexed { index, stock ->
+                                Div({
+                                    style {
+                                        marginBottom(8.px)
+                                        padding(12.px)
+                                        backgroundColor(Color("#2C3E50"))
+                                        borderRadius(4.px)
+                                        display(DisplayStyle.Flex)
+                                        justifyContent(JustifyContent.SpaceBetween)
+                                        alignItems(AlignItems.Center)
+                                    }
+                                }) {
+                                    Div({
+                                        style {
+                                            flex(1)
+                                        }
+                                    }) {
+                                        Div({
+                                            style {
+                                                color(Color("#FFFFFF"))
+                                                fontSize(14.px)
+                                                fontWeight("bold")
+                                                marginBottom(4.px)
+                                            }
+                                        }) {
+                                            Text(stock.name)
+                                        }
+                                        Div({
+                                            style {
+                                                color(Color("#7B9EB0"))
+                                                fontSize(12.px)
+                                            }
+                                        }) {
+                                            Text("Средняя цена: ${stock.averagePrice} ЛБ")
+                                        }
+                                    }
+                                    Div({
+                                        style {
+                                            display(DisplayStyle.Flex)
+                                            gap(8.px)
+                                        }
+                                    }) {
+                                        Button({
+                                            style {
+                                                backgroundColor(Color("#F39C12"))
+                                                color(Color("#FFFFFF"))
+                                                borderWidth(0.px)
+                                                padding(6.px, 12.px)
+                                                borderRadius(4.px)
+                                                fontFamily("'Courier New', monospace")
+                                                fontSize(12.px)
+                                                cursor("pointer")
+                                            }
+                                            onClick {
+                                                editingStockIndex = index
+                                                stockName = stock.name
+                                                stockPrice = stock.averagePrice.toString()
+                                                showStockDialog = true
+                                            }
+                                        }) {
+                                            Text("Изменить")
+                                        }
+                                        Button({
+                                            style {
+                                                backgroundColor(Color("#E74C3C"))
+                                                color(Color("#FFFFFF"))
+                                                borderWidth(0.px)
+                                                padding(6.px, 12.px)
+                                                borderRadius(4.px)
+                                                fontFamily("'Courier New', monospace")
+                                                fontSize(12.px)
+                                                cursor("pointer")
+                                            }
+                                            onClick {
+                                                if (window.confirm("Удалить акцию '${stock.name}'?")) {
+                                                    coroutineScope.launch {
+                                                        try {
+                                                            val updatedStocks = stocks.toMutableList()
+                                                            updatedStocks.removeAt(index)
+                                                            val config = AdministrationConfig(
+                                                                severiteRate = severitRate.toDoubleOrNull() ?: 42.75,
+                                                                controlLossThreshold = controlLossThreshold.toIntOrNull() ?: 75,
+                                                                stocks = updatedStocks
+                                                            )
+                                                            apiClient.updateConfig(config)
+                                                            stocks = updatedStocks
+                                                            window.alert("✅ Акция удалена!")
+                                                        } catch (e: Exception) {
+                                                            window.alert("❌ Ошибка: ${e.message}")
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }) {
+                                            Text("Удалить")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (showStockDialog) {
+                Div({
+                    style {
+                        position(Position.Fixed)
+                        top(0.px)
+                        left(0.px)
+                        width(100.percent)
+                        height(100.percent)
+                        backgroundColor(Color("rgba(0, 0, 0, 0.8)"))
+                        display(DisplayStyle.Flex)
+                        alignItems(AlignItems.Center)
+                        justifyContent(JustifyContent.Center)
+                    }
+                }) {
+                    Div({
+                        style {
+                            backgroundColor(Color("#34495E"))
+                            border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                            borderRadius(8.px)
+                            padding(30.px)
+                            maxWidth(400.px)
+                            width(90.percent)
+                        }
+                    }) {
+                        H3({
+                            style {
+                                marginTop(0.px)
+                                marginBottom(20.px)
+                                color(Color("#4A90E2"))
+                                fontSize(18.px)
+                                fontWeight("bold")
+                            }
+                        }) {
+                            Text(if (editingStockIndex != null) "Изменить акцию" else "Добавить акцию")
+                        }
+
+                        Label(attrs = {
+                            style {
+                                color(Color("#FFFFFF"))
+                                fontSize(14.px)
+                                fontWeight("bold")
+                                display(DisplayStyle.Block)
+                                marginBottom(8.px)
+                            }
+                        }) {
+                            Text("Название акции")
+                        }
+                        Input(InputType.Text, {
+                            style {
+                                width(100.percent)
+                                padding(12.px)
+                                marginBottom(16.px)
+                                backgroundColor(Color("#1A2530"))
+                                color(Color("#4A90E2"))
+                                border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                                borderRadius(4.px)
+                                fontFamily("'Courier New', monospace")
+                                fontSize(14.px)
+                            }
+                            value(stockName)
+                            onInput { event ->
+                                stockName = event.target.value
+                            }
+                        })
+
+                        Label(attrs = {
+                            style {
+                                color(Color("#FFFFFF"))
+                                fontSize(14.px)
+                                fontWeight("bold")
+                                display(DisplayStyle.Block)
+                                marginBottom(8.px)
+                            }
+                        }) {
+                            Text("Средняя цена")
+                        }
+                        Input(InputType.Number, {
+                            style {
+                                width(100.percent)
+                                padding(12.px)
+                                marginBottom(20.px)
+                                backgroundColor(Color("#1A2530"))
+                                color(Color("#4A90E2"))
+                                border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                                borderRadius(4.px)
+                                fontFamily("'Courier New', monospace")
+                                fontSize(14.px)
+                            }
+                            attr("step", "0.01")
+                            value(stockPrice)
+                            onInput { event ->
+                                stockPrice = event.target.value
+                            }
+                        })
+
+                        Div({
+                            style {
+                                display(DisplayStyle.Flex)
+                                gap(12.px)
+                                justifyContent(JustifyContent.FlexEnd)
+                            }
+                        }) {
+                            Button({
+                                style {
+                                    backgroundColor(Color("#7F8C8D"))
+                                    color(Color("#FFFFFF"))
+                                    borderWidth(0.px)
+                                    padding(10.px, 20.px)
+                                    borderRadius(4.px)
+                                    fontFamily("'Courier New', monospace")
+                                    fontWeight("bold")
+                                    cursor("pointer")
+                                    fontSize(14.px)
+                                }
+                                onClick {
+                                    showStockDialog = false
+                                    editingStockIndex = null
+                                    stockName = ""
+                                    stockPrice = ""
+                                }
+                            }) {
+                                Text("Отмена")
+                            }
+                            Button({
+                                style {
+                                    backgroundColor(Color("#27AE60"))
+                                    color(Color("#FFFFFF"))
+                                    borderWidth(0.px)
+                                    padding(10.px, 20.px)
+                                    borderRadius(4.px)
+                                    fontFamily("'Courier New', monospace")
+                                    fontWeight("bold")
+                                    cursor("pointer")
+                                    fontSize(14.px)
+                                }
+                                onClick {
+                                    if (stockName.isBlank() || stockPrice.isBlank()) {
+                                        window.alert("Заполните все поля")
+                                        return@onClick
+                                    }
+                                    val price = stockPrice.toDoubleOrNull()
+                                    if (price == null || price < 0) {
+                                        window.alert("Введите корректную цену")
+                                        return@onClick
+                                    }
+                                    coroutineScope.launch {
+                                        try {
+                                            isConfigLoading = true
+                                            val updatedStocks = stocks.toMutableList()
+                                            if (editingStockIndex != null) {
+                                                updatedStocks[editingStockIndex!!] = StockConfig(
+                                                    name = stockName,
+                                                    averagePrice = price
+                                                )
+                                            } else {
+                                                updatedStocks.add(StockConfig(
+                                                    name = stockName,
+                                                    averagePrice = price
+                                                ))
+                                            }
+                                            val config = AdministrationConfig(
+                                                severiteRate = severitRate.toDoubleOrNull() ?: 42.75,
+                                                controlLossThreshold = controlLossThreshold.toIntOrNull() ?: 75,
+                                                stocks = updatedStocks
+                                            )
+                                            apiClient.updateConfig(config)
+                                            stocks = updatedStocks
+                                            showStockDialog = false
+                                            editingStockIndex = null
+                                            stockName = ""
+                                            stockPrice = ""
+                                            window.alert("✅ Акция ${if (editingStockIndex != null) "изменена" else "добавлена"}!")
+                                        } catch (e: Exception) {
+                                            window.alert("❌ Ошибка: ${e.message}")
+                                        } finally {
+                                            isConfigLoading = false
+                                        }
+                                    }
+                                }
+                            }) {
+                                Text(if (editingStockIndex != null) "Сохранить" else "Добавить")
+                            }
+                        }
                     }
                 }
             }

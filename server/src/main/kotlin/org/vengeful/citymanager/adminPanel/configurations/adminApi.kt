@@ -28,6 +28,7 @@ import org.vengeful.citymanager.models.SendMessageRequest
 import org.vengeful.citymanager.models.medicine.MedicineOrderNotification
 import org.vengeful.citymanager.personService.IPersonRepository
 import org.vengeful.citymanager.personService.db.PersonRepository
+import org.vengeful.citymanager.stockSerivce.IStockRepository
 import org.vengeful.citymanager.userService.IUserRepository
 import org.vengeful.citymanager.userService.db.UserRepository
 import java.time.LocalDateTime
@@ -45,6 +46,7 @@ private val CONNECTION_TIMEOUT_MS = 5 * 60 * 1000L // 5 минут
 private var adminConfig = AdministrationConfig(
     severiteRate = 42.75,
     controlLossThreshold = 75,
+    stocks = emptyList(),
 )
 
 private fun registerActiveConnection(token: String?) {
@@ -70,8 +72,13 @@ private fun getRecentMessages(count: Int = 5): List<ChatMessage> {
 fun Application.configureAdminApi(
     repository: IPersonRepository,
     bankRepository: IBankRepository,
-    userRepository: IUserRepository
+    userRepository: IUserRepository,
+    stockRepository: IStockRepository,
 ) {
+
+    val stocksFromDb = stockRepository.getAllStocks()
+    adminConfig = adminConfig.copy(stocks = stocksFromDb)
+
     routing {
         route("/admin") {
             // 📊 Статистика сервера
@@ -140,13 +147,35 @@ fun Application.configureAdminApi(
 
             get("/config") {
                 val recentMessages = getRecentMessages(5)
-                val config = adminConfig.copy(recentMessages = recentMessages)
+                val stocksFromDb = stockRepository.getAllStocks()
+                val config = adminConfig.copy(
+                    recentMessages = recentMessages,
+                    stocks = stocksFromDb
+                )
                 call.respond(config)
             }
 
             post("/config") {
                 val newConfig = call.receive<AdministrationConfig>()
-                adminConfig = newConfig
+                adminConfig = newConfig.copy(recentMessages = adminConfig.recentMessages)
+                val currentStocksInDb = stockRepository.getAllStocks()
+                val currentStockNames = currentStocksInDb.map { it.name }.toSet()
+                val newStockNames = newConfig.stocks.map { it.name }.toSet()
+                currentStocksInDb.forEach { stock ->
+                    if (stock.name !in newStockNames) {
+                        stockRepository.deleteStock(stock.name)
+                    }
+                }
+                newConfig.stocks.forEach { stockConfig ->
+                    val existing = stockRepository.getStockByName(stockConfig.name)
+                    if (existing == null) {
+                        stockRepository.createStock(stockConfig)
+                    } else if (existing.averagePrice != stockConfig.averagePrice) {
+                        stockRepository.updateStock(stockConfig.name, stockConfig.averagePrice)
+                    }
+                }
+                val updatedStocks = stockRepository.getAllStocks()
+                adminConfig = adminConfig.copy(stocks = updatedStocks)
                 call.respond(mapOf("status" to "success", "message" to "Конфиг обновлён!"))
             }
 

@@ -15,6 +15,7 @@ import org.vengeful.citymanager.ROUTE_MEDIC
 import org.vengeful.citymanager.ROUTE_MEDIC_ORDERS
 import org.vengeful.citymanager.ROUTE_MY_BANK
 import org.vengeful.citymanager.ROUTE_POLICE
+import org.vengeful.citymanager.ROUTE_STOCKS
 import org.vengeful.citymanager.screens.administration.AdministrationScreen
 import org.vengeful.citymanager.screens.backup.BackupScreen
 import org.vengeful.citymanager.screens.bank.BankScreen
@@ -26,6 +27,7 @@ import org.vengeful.citymanager.screens.medic.MedicOrdersScreen
 import org.vengeful.citymanager.screens.medic.MedicScreen
 import org.vengeful.citymanager.screens.my_bank.MyBankScreen
 import org.vengeful.citymanager.screens.police.PoliceScreen
+import org.vengeful.citymanager.screens.stocks.StockScreen
 
 
 @Composable
@@ -68,6 +70,9 @@ fun Host() {
         }
         composable(route = ROUTE_MY_BANK) {
             MyBankScreen(navController = navController)
+        }
+        composable(route = ROUTE_STOCKS) {
+            StockScreen(navController = navController)
         }
     }
 }

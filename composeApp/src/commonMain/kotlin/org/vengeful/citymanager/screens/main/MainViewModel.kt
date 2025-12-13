@@ -13,6 +13,7 @@ import org.vengeful.citymanager.ROUTE_MEDIC
 import org.vengeful.citymanager.ROUTE_POLICE
 import org.vengeful.citymanager.ROUTE_CLICKER
 import org.vengeful.citymanager.ROUTE_MY_BANK
+import org.vengeful.citymanager.ROUTE_STOCKS
 import org.vengeful.citymanager.base.BaseViewModel
 import org.vengeful.citymanager.data.users.AuthManager
 import org.vengeful.citymanager.data.users.IUserInteractor
@@ -89,7 +90,7 @@ class MainViewModel(
         val isLogged = _isLogged.value
 
         if (!isLogged) {
-            return route == ROUTE_COMMON_LIBRARY
+            return route == ROUTE_COMMON_LIBRARY || route == ROUTE_STOCKS
         }
 
         if (userRights.contains(Rights.Joker)) {
@@ -99,11 +100,12 @@ class MainViewModel(
         return when (route) {
             ROUTE_ADMINISTRATION -> userRights.contains(Rights.Administration)
             ROUTE_COURT -> userRights.contains(Rights.Court)
-            ROUTE_COMMON_LIBRARY -> userRights.contains(Rights.Any)
             ROUTE_MEDIC -> userRights.contains(Rights.Medic)
             ROUTE_POLICE -> userRights.contains(Rights.Police)
             ROUTE_BANK -> userRights.contains(Rights.Bank)
             ROUTE_BACKUP -> userRights.contains(Rights.Joker)
+            ROUTE_COMMON_LIBRARY -> userRights.contains(Rights.Any)
+            ROUTE_STOCKS -> userRights.contains(Rights.Any)
             ROUTE_CLICKER -> userRights.contains(Rights.Any) && isLogged
             ROUTE_MY_BANK -> userRights.contains(Rights.Any) && isLogged
             else -> false

@@ -12,6 +12,7 @@ import org.vengeful.citymanager.personService.db.PersonRepository
 import org.vengeful.citymanager.personService.db.PersonRights
 import org.vengeful.citymanager.personService.db.Persons
 import org.vengeful.citymanager.personService.db.RightsTable
+import org.vengeful.citymanager.stockSerivce.db.Stocks
 import org.vengeful.citymanager.userService.db.UserRights
 import org.vengeful.citymanager.userService.db.Users
 
@@ -42,7 +43,8 @@ fun Application.configureDatabase(repository: PersonRepository) {
             BankAccounts,
             MedicalRecords,
             Medicines,
-            MedicineOrders
+            MedicineOrders,
+            Stocks
         )
         repository.initializeRights()
     }

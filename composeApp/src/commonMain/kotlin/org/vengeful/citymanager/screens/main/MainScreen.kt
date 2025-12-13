@@ -54,6 +54,7 @@ import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.MousePointerClick
 import com.composables.icons.lucide.Pen
 import com.composables.icons.lucide.PiggyBank
+import com.composables.icons.lucide.TrendingUp
 import com.composables.icons.lucide.UtilityPole
 import com.composables.icons.lucide.Wallet
 import org.jetbrains.compose.resources.painterResource
@@ -69,6 +70,7 @@ import org.vengeful.citymanager.ROUTE_MAIN
 import org.vengeful.citymanager.ROUTE_MEDIC
 import org.vengeful.citymanager.ROUTE_MY_BANK
 import org.vengeful.citymanager.ROUTE_POLICE
+import org.vengeful.citymanager.ROUTE_STOCKS
 import org.vengeful.citymanager.di.koinViewModel
 import org.vengeful.citymanager.data.users.states.LoginUiState
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
@@ -194,7 +196,7 @@ fun MainScreen(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f) // Занимает доступное пространство, но не больше
+                .weight(1f)
         ) {
             val screens = listOf(
                 ScreenData(
@@ -232,7 +234,12 @@ fun MainScreen(navController: NavController) {
                     route = ROUTE_POLICE,
                     icon = { Icon(Lucide.UtilityPole, null, tint = colorTint) },
                     text = stringResource(Res.string.police_name)
-                )
+                ),
+                ScreenData(
+                    route = ROUTE_STOCKS,
+                    icon = { Icon(Lucide.TrendingUp, null, tint = colorTint) },
+                    text = "Акции"
+                ),
             )
             val finalScreens = if (viewModel.hasAccessToScreen(ROUTE_MY_BANK)) {
                 screens + ScreenData(

@@ -17,6 +17,7 @@ const val ROUTE_CLICKER = "clicker"
 const val ROUTE_BANK = "bank"
 const val ROUTE_BACKUP = "backup"
 const val ROUTE_MY_BANK = "my_bank"
+const val ROUTE_STOCKS = "stocks"
 
 val BUILD_VARIANT = BuildVariant.DEBUG
 

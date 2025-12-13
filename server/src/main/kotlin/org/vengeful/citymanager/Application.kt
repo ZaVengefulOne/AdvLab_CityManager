@@ -21,6 +21,7 @@ import org.vengeful.citymanager.configurations.configureDatabase
 import org.vengeful.citymanager.configurations.configureRouting
 import org.vengeful.citymanager.models.Rights
 import org.vengeful.citymanager.personService.db.PersonRepository
+import org.vengeful.citymanager.stockSerivce.db.StockRepository
 import org.vengeful.citymanager.userService.db.UserRepository
 
 fun main(args: Array<String>): Unit = EngineMain.main(args)
@@ -84,6 +85,7 @@ fun Application.module() {
     val personRepository = PersonRepository()
     val userRepository = UserRepository()
     val bankRepository = BankRepository(personRepository)
+    val stockRepository = StockRepository()
 
     configureRouting(
         personRepository = personRepository,
@@ -95,6 +97,7 @@ fun Application.module() {
     configureAdminApi(
         repository = personRepository,
         bankRepository = bankRepository,
-        userRepository = userRepository
+        userRepository = userRepository,
+        stockRepository = stockRepository
     )
 }
