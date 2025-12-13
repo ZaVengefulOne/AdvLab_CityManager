@@ -14,5 +14,7 @@ data class User @OptIn(ExperimentalTime::class) constructor(
     val isActive: Boolean = true,
     val createdAt: Long = Clock.System.now().toEpochMilliseconds(),
     val severiteClicks: Int = 0,
-    val personId: Int? = null
+    val personId: Int? = null,
+    val hasSaveProgressUpgrade: Boolean = false,
+    val clickMultiplier: Int = 1
 )

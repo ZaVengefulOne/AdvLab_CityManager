@@ -19,8 +19,9 @@ object Users : IntIdTable("users") {
     val createdAt = long("created_at")
     val personId = reference("person_id", Persons.id, onDelete = ReferenceOption.SET_NULL).nullable()
     val severiteClicks = integer("severite_clicks").default(0)
+    val hasSaveProgressUpgrade = bool("has_save_progress_upgrade").default(false)
+    val clickMultiplier = integer("click_multiplier").default(1)
 }
-
 object UserRights : Table("user_rights") {
     val userId = reference("user_id", Users.id, onDelete = ReferenceOption.CASCADE)
     val rightId = reference("right_id", RightsTable.id, onDelete = ReferenceOption.CASCADE)
@@ -37,6 +38,8 @@ class UserDao(id: EntityID<Int>) : IntEntity(id) {
     var createdAt by Users.createdAt
     var personId by Users.personId
     var severiteClicks by Users.severiteClicks
+    var hasSaveProgressUpgrade by Users.hasSaveProgressUpgrade
+    var clickMultiplier by Users.clickMultiplier
 
     // Связь многие-ко-многим с правами
     val rights by RightDao via UserRights
@@ -52,6 +55,8 @@ class UserDao(id: EntityID<Int>) : IntEntity(id) {
         isActive = isActive,
         createdAt = createdAt,
         severiteClicks = severiteClicks,
-        personId = personId?.value
+        personId = personId?.value,
+        hasSaveProgressUpgrade = hasSaveProgressUpgrade,
+        clickMultiplier = clickMultiplier,
     )
 }

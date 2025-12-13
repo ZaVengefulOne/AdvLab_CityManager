@@ -430,6 +430,40 @@ class UserInteractor(private val authManager: AuthManager) : IUserInteractor {
         }
     }
 
+    override suspend fun purchaseSaveProgressUpgrade(userId: Int): Boolean {
+        return try {
+            val token = authManager.getToken() ?: return false
+            val response: HttpResponse = client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/users/$userId/purchase-save-progress-upgrade") {
+                contentType(ContentType.Application.Json)
+                setAuthHeader()
+            }
+            response.status.isSuccess()
+        } catch (e: Exception) {
+            println("Error purchasing upgrade: ${e::class.simpleName} - ${e.message}")
+            e.printStackTrace()
+            false
+        }
+    }
+
+    override suspend fun purchaseClickMultiplierUpgrade(userId: Int): Boolean {
+        return try {
+            val token = authManager.getToken()
+            if (token == null) {
+                return false
+            }
+
+            val response: HttpResponse = client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/users/$userId/purchase-click-multiplier-upgrade") {
+                contentType(ContentType.Application.Json)
+                setAuthHeader()
+            }
+            response.status.isSuccess()
+        } catch (e: Exception) {
+            println("Error purchasing click multiplier upgrade: ${e::class.simpleName} - ${e.message}")
+            e.printStackTrace()
+            false
+        }
+    }
+
     fun HttpRequestBuilder.setAuthHeader() {
         val token = authManager.getToken()
         println("setAuthHeader: token=${if (token != null) "present (${token.take(20)}...)" else "null"}")

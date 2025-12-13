@@ -315,6 +315,72 @@ fun Application.configureRouting(
                     }
                 }
 
+                post("/{id}/purchase-save-progress-upgrade") {
+                    try {
+                        val id = call.parameters["id"]?.toIntOrNull()
+                        if (id == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid user ID"))
+                            return@post
+                        }
+
+                        val currentUser = getCurrentUser(call, userRepository)
+                        if (currentUser == null) {
+                            call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "User not authenticated"))
+                            return@post
+                        }
+
+                        if (currentUser.id != id) {
+                            call.respond(HttpStatusCode.Forbidden, mapOf("error" to "Can only purchase upgrade for own account"))
+                            return@post
+                        }
+
+                        val success = userRepository.purchaseSaveProgressUpgrade(id)
+                        if (success) {
+                            call.respond(HttpStatusCode.OK, mapOf("message" to "Upgrade purchased successfully"))
+                        } else {
+                            call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Failed to purchase upgrade"))
+                        }
+                    } catch (e: Exception) {
+                        call.respond(
+                            HttpStatusCode.InternalServerError,
+                            mapOf("error" to "Failed to purchase upgrade: ${e.message}")
+                        )
+                    }
+                }
+
+                post("/{id}/purchase-click-multiplier-upgrade") {
+                    try {
+                        val id = call.parameters["id"]?.toIntOrNull()
+                        if (id == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid user ID"))
+                            return@post
+                        }
+
+                        val currentUser = getCurrentUser(call, userRepository)
+                        if (currentUser == null) {
+                            call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "User not authenticated"))
+                            return@post
+                        }
+
+                        if (currentUser.id != id) {
+                            call.respond(HttpStatusCode.Forbidden, mapOf("error" to "Can only purchase upgrade for own account"))
+                            return@post
+                        }
+
+                        val success = userRepository.purchaseClickMultiplierUpgrade(id)
+                        if (success) {
+                            call.respond(HttpStatusCode.OK, mapOf("message" to "Click multiplier upgraded successfully"))
+                        } else {
+                            call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Failed to upgrade click multiplier"))
+                        }
+                    } catch (e: Exception) {
+                        call.respond(
+                            HttpStatusCode.InternalServerError,
+                            mapOf("error" to "Failed to upgrade click multiplier: ${e.message}")
+                        )
+                    }
+                }
+
                 // PUT /users/{id} - обновить пользователя
                 put("/{id}") {
                     try {

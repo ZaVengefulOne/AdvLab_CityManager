@@ -17,6 +17,8 @@ interface IUserInteractor {
     suspend fun deleteUser(id: Int): Boolean
     suspend fun updateClicks(userId: Int, clicks: Int): Boolean
     suspend fun getCurrentUserClicks(): Int?
+    suspend fun purchaseSaveProgressUpgrade(userId: Int): Boolean
+    suspend fun purchaseClickMultiplierUpgrade(userId: Int): Boolean
 
     suspend fun getCurrentUserWithPersonId(): CurrentUserResponse?
     suspend fun adminRegister(username: String, password: String, personId: Int?, rights: List<Rights>): RegisterResult

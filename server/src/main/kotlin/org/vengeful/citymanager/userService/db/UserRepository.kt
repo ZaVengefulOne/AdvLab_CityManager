@@ -215,6 +215,18 @@ class UserRepository : IUserRepository {
         } != null
     }
 
+    override fun purchaseSaveProgressUpgrade(userId: Int): Boolean = transaction {
+        UserDao.findById(userId)?.apply {
+            this.hasSaveProgressUpgrade = true
+        } != null
+    }
+
+    override fun purchaseClickMultiplierUpgrade(userId: Int): Boolean = transaction {
+        UserDao.findById(userId)?.apply {
+            this.clickMultiplier += 1
+        } != null
+    }
+
     override fun getCount(): Int = transaction {
         UserDao.all().count().toInt()
     }

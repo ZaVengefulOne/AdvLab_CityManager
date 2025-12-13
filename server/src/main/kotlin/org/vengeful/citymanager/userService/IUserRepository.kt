@@ -22,5 +22,7 @@ interface IUserRepository {
     ): User
 
     fun updateUserClicks(userId: Int, severiteClicks: Int): Boolean
+    fun purchaseSaveProgressUpgrade(userId: Int): Boolean
+    fun purchaseClickMultiplierUpgrade(userId: Int): Boolean
     fun getCount(): Int
 }
