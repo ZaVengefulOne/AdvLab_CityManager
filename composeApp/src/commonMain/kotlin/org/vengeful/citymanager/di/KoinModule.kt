@@ -18,6 +18,8 @@ import org.vengeful.citymanager.data.backup.BackupInteractor
 import org.vengeful.citymanager.data.backup.IBackupInteractor
 import org.vengeful.citymanager.data.bank.BankInteractor
 import org.vengeful.citymanager.data.bank.IBankInteractor
+import org.vengeful.citymanager.data.library.ILibraryInteractor
+import org.vengeful.citymanager.data.library.LibraryInteractor
 import org.vengeful.citymanager.data.medic.IMedicInteractor
 import org.vengeful.citymanager.data.medic.MedicInteractor
 import org.vengeful.citymanager.data.persons.IPersonInteractor
@@ -29,6 +31,8 @@ import org.vengeful.citymanager.screens.administration.AdministrationViewModel
 import org.vengeful.citymanager.screens.backup.BackupViewModel
 import org.vengeful.citymanager.screens.bank.BankViewModel
 import org.vengeful.citymanager.screens.clicker.ClickerViewModel
+import org.vengeful.citymanager.screens.commonLibrary.ArticleViewModel
+import org.vengeful.citymanager.screens.commonLibrary.CommonLibraryViewModel
 import org.vengeful.citymanager.screens.main.MainViewModel
 import org.vengeful.citymanager.screens.medic.MedicViewModel
 import org.vengeful.citymanager.screens.my_bank.MyBankViewModel
@@ -46,6 +50,7 @@ val appModule = module {
     single<IBackupInteractor> { BackupInteractor(get()) }
     single<IAdministrationInteractor> { AdministrationInteractor(get()) }
     single<IMedicInteractor> { MedicInteractor(get()) }
+    single<ILibraryInteractor> { LibraryInteractor(get()) }
 
     factory { AdministrationViewModel(get(), get(), get(), get()) }
     factory { MainViewModel(get(), get()) }
@@ -56,6 +61,8 @@ val appModule = module {
     factory { MedicViewModel(get(), get(), get(), get(), get()) }
     factory { MyBankViewModel(get(), get(), get(), get()) }
     factory { StockViewModel(get()) }
+    factory { CommonLibraryViewModel(get()) }
+    factory { ArticleViewModel(get()) }
 }
 
 fun initKoin() = startKoin {

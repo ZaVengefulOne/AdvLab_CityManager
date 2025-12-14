@@ -1,26 +1,22 @@
 package org.vengeful.cityManager
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import kotlinx.browser.window
-import org.jetbrains.compose.web.css.*
-import org.jetbrains.compose.web.dom.*
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import org.jetbrains.compose.web.attributes.InputType
+import org.jetbrains.compose.web.css.*
+import org.jetbrains.compose.web.dom.*
 import org.vengeful.cityManager.models.RequestLog
 import org.vengeful.cityManager.models.ServerStats
 import org.vengeful.citymanager.models.AdministrationConfig
 import org.vengeful.citymanager.models.ChatMessage
 import org.vengeful.citymanager.models.backup.MasterBackup
+import org.vengeful.citymanager.models.library.Article
 import org.vengeful.citymanager.models.medicine.Medicine
 import org.vengeful.citymanager.models.medicine.MedicineOrderNotification
 import org.vengeful.citymanager.models.stocks.StockConfig
-import kotlin.collections.emptyList
 import kotlin.js.Date
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
@@ -79,6 +75,11 @@ fun AdminApp() {
     var stockName by mutableStateOf("")
     var stockPrice by mutableStateOf("")
 
+    var articles by remember { mutableStateOf<List<Article>>(emptyList()) }
+    var showArticleUploadDialog by remember { mutableStateOf(false) }
+    var articleTitle by remember { mutableStateOf("") }
+    var articleContent by remember { mutableStateOf("") }
+
     // Загрузка данных при старте (только если залогинен)
     if (isLoggedIn) {
         LaunchedEffect(Unit) {
@@ -93,6 +94,7 @@ fun AdminApp() {
                 stocks = config.stocks
                 medicineOrderNotifications = apiClient.getMedicineOrderNotifications()
                 medicines = apiClient.getAllMedicines()
+                articles = apiClient.getAllArticles()
             } catch (e: Exception) {
                 window.alert("Ошибка подключения к серверу: ${e.message}")
             }
@@ -317,7 +319,7 @@ fun AdminApp() {
                     isLoggedIn = false
                     showLoginDialog = true
                     // Очистка данных при выходе
-                    serverStats = ServerStats(0, 0, 0,"00:00:00", "0 MB")
+                    serverStats = ServerStats(0, 0, 0, "00:00:00", "0 MB")
                     requestLogs = emptyList()
                     backupData = null
                 }
@@ -1545,6 +1547,126 @@ fun AdminApp() {
                     style {
                         marginTop(0.px)
                         marginBottom(16.px)
+                        color(Color("#4A90E2"))
+                        fontSize(18.px)
+                        fontWeight("bold")
+                    }
+                }) {
+                    Text("📚 Управление статьями библиотеки")
+                }
+
+                Button({
+                    style {
+                        backgroundColor(Color("#27AE60"))
+                        color(Color("#FFFFFF"))
+                        borderWidth(0.px)
+                        padding(8.px, 16.px)
+                        borderRadius(4.px)
+                        fontFamily("'Courier New', monospace")
+                        fontWeight("bold")
+                        cursor("pointer")
+                        fontSize(14.px)
+                        marginBottom(16.px)
+                    }
+                    onClick {
+                        showArticleUploadDialog = true
+                    }
+                }) {
+                    Text("+ Добавить статью")
+                }
+
+                Div({
+                    style {
+                        maxHeight(300.px)
+                        overflowY("auto")
+                        backgroundColor(Color("#1A2530"))
+                        borderRadius(4.px)
+                        padding(12.px)
+                    }
+                }) {
+                    if (articles.isEmpty()) {
+                        P({
+                            style {
+                                color(Color("#7B9EB0"))
+                                fontSize(12.px)
+                            }
+                        }) {
+                            Text("Нет статей")
+                        }
+                    } else {
+                        articles.forEach { article ->
+                            Div({
+                                style {
+                                    marginBottom(8.px)
+                                    padding(12.px)
+                                    backgroundColor(Color("#2C3E50"))
+                                    borderRadius(4.px)
+                                    display(DisplayStyle.Flex)
+                                    justifyContent(JustifyContent.SpaceBetween)
+                                    alignItems(AlignItems.Center)
+                                }
+                            }) {
+                                Div({
+                                    style {
+                                        flex(1)
+                                    }
+                                }) {
+                                    Div({
+                                        style {
+                                            color(Color("#FFFFFF"))
+                                            fontSize(14.px)
+                                            fontWeight("bold")
+                                            marginBottom(4.px)
+                                        }
+                                    }) {
+                                        Text(article.title)
+                                    }
+                                }
+                                Button({
+                                    style {
+                                        backgroundColor(Color("#E74C3C"))
+                                        color(Color("#FFFFFF"))
+                                        borderWidth(0.px)
+                                        padding(6.px, 12.px)
+                                        borderRadius(4.px)
+                                        fontFamily("'Courier New', monospace")
+                                        fontSize(12.px)
+                                        cursor("pointer")
+                                    }
+                                    onClick {
+                                        if (window.confirm("Удалить статью '${article.title}'?")) {
+                                            coroutineScope.launch {
+                                                try {
+                                                    apiClient.deleteArticle(article.id)
+                                                    articles = apiClient.getAllArticles()
+                                                } catch (e: Exception) {
+                                                    window.alert("Ошибка удаления: ${e.message}")
+                                                }
+                                            }
+                                        }
+                                    }
+                                }) {
+                                    Text("Удалить")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Div({
+                style {
+                    backgroundColor(Color("#34495E"))
+                    border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                    borderRadius(8.px)
+                    padding(20.px)
+                    marginBottom(16.px)
+                }
+            }) {
+                H3({
+                    style {
+                        marginTop(0.px)
+                        marginBottom(16.px)
                         fontSize(18.px)
                     }
                 }) {
@@ -1824,7 +1946,8 @@ fun AdminApp() {
                                                             updatedStocks.removeAt(index)
                                                             val config = AdministrationConfig(
                                                                 severiteRate = severitRate.toDoubleOrNull() ?: 42.75,
-                                                                controlLossThreshold = controlLossThreshold.toIntOrNull() ?: 75,
+                                                                controlLossThreshold = controlLossThreshold.toIntOrNull()
+                                                                    ?: 75,
                                                                 stocks = updatedStocks
                                                             )
                                                             apiClient.updateConfig(config)
@@ -1846,6 +1969,198 @@ fun AdminApp() {
                     }
                 }
             }
+
+            if (showArticleUploadDialog) {
+                Div({
+                    style {
+                        position(Position.Fixed)
+                        top(0.px)
+                        left(0.px)
+                        width(100.percent)
+                        height(100.percent)
+                        backgroundColor(Color("rgba(0, 0, 0, 0.8)"))
+                        display(DisplayStyle.Flex)
+                        alignItems(AlignItems.Center)
+                        justifyContent(JustifyContent.Center)
+                    }
+                    onClick { event ->
+                        val target = event.asDynamic().target
+                        val currentTarget = event.asDynamic().currentTarget
+                        if (target == currentTarget) {
+                            showArticleUploadDialog = false
+                            articleTitle = ""
+                            articleContent = ""
+                        }
+                    }
+                }) {
+                    Div({
+                        style {
+                            backgroundColor(Color("#34495E"))
+                            border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                            borderRadius(8.px)
+                            padding(30.px)
+                            maxWidth(600.px)
+                            width(90.percent)
+                            maxHeight(90.percent)
+                            overflowY("auto")
+                        }
+                        onClick {
+                            // Предотвращаем закрытие при клике на содержимое
+                        }
+                    }) {
+                        H3({
+                            style {
+                                marginTop(0.px)
+                                marginBottom(20.px)
+                                color(Color("#4A90E2"))
+                                fontSize(18.px)
+                                fontWeight("bold")
+                            }
+                        }) {
+                            Text("Добавить статью")
+                        }
+
+                        Label(attrs = {
+                            style {
+                                color(Color("#FFFFFF"))
+                                fontSize(14.px)
+                                fontWeight("bold")
+                                display(DisplayStyle.Block)
+                                marginBottom(8.px)
+                            }
+                        }) {
+                            Text("Название статьи")
+                        }
+                        Input(InputType.Text, {
+                            style {
+                                width(100.percent)
+                                padding(12.px)
+                                marginBottom(16.px)
+                                backgroundColor(Color("#1A2530"))
+                                color(Color("#4A90E2"))
+                                border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                                borderRadius(4.px)
+                                fontFamily("'Courier New', monospace")
+                                fontSize(14.px)
+                            }
+                            value(articleTitle)
+                            onInput { event ->
+                                articleTitle = event.target.value
+                            }
+                            onClick { event ->
+                                event.stopPropagation()
+                            }
+                            onFocus { event ->
+                                event.stopPropagation()
+                            }
+                        })
+
+                        Label(attrs = {
+                            style {
+                                color(Color("#FFFFFF"))
+                                fontSize(14.px)
+                                fontWeight("bold")
+                                display(DisplayStyle.Block)
+                                marginBottom(8.px)
+                            }
+                        }) {
+                            Text("Текст статьи")
+                        }
+                        TextArea(value = articleContent, attrs = {
+                            style {
+                                width(100.percent)
+                                minHeight(300.px)
+                                padding(12.px)
+                                marginBottom(16.px)
+                                backgroundColor(Color("#1A2530"))
+                                color(Color("#4A90E2"))
+                                border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                                borderRadius(4.px)
+                                fontFamily("'Courier New', monospace")
+                                fontSize(14.px)
+                            }
+                            onInput { event ->
+                                articleContent = event.target.value
+                            }
+                            onClick { event ->
+                                event.stopPropagation()
+                            }
+                            onFocus { event ->
+                                event.stopPropagation()
+                            }
+                        })
+
+                        Div({
+                            style {
+                                display(DisplayStyle.Flex)
+                                gap(12.px)
+                                justifyContent(JustifyContent.FlexEnd)
+                            }
+                        }) {
+                            Button({
+                                style {
+                                    backgroundColor(Color("#7B9EB0"))
+                                    color(Color("#FFFFFF"))
+                                    borderWidth(0.px)
+                                    padding(8.px, 16.px)
+                                    borderRadius(4.px)
+                                    fontFamily("'Courier New', monospace")
+                                    fontSize(14.px)
+                                    cursor("pointer")
+                                }
+                                onClick {
+                                    showArticleUploadDialog = false
+                                    articleTitle = ""
+                                    articleContent = ""
+                                }
+                            }) {
+                                Text("Отмена")
+                            }
+
+                            Button({
+                                style {
+                                    backgroundColor(Color("#27AE60"))
+                                    color(Color("#FFFFFF"))
+                                    borderWidth(0.px)
+                                    padding(8.px, 16.px)
+                                    borderRadius(4.px)
+                                    fontFamily("'Courier New', monospace")
+                                    fontSize(14.px)
+                                    cursor("pointer")
+                                }
+                                onClick {
+                                    if (articleTitle.isBlank()) {
+                                        window.alert("❌ Пожалуйста, введите название статьи")
+                                        return@onClick
+                                    }
+
+                                    if (articleContent.isBlank()) {
+                                        window.alert("❌ Пожалуйста, введите текст статьи")
+                                        return@onClick
+                                    }
+
+                                    coroutineScope.launch {
+                                        try {
+                                            val article = apiClient.createArticle(articleTitle, articleContent)
+                                            articles = apiClient.getAllArticles()
+                                            showArticleUploadDialog = false
+                                            articleTitle = ""
+                                            articleContent = ""
+                                            window.alert("✅ Статья '${article.title}' успешно добавлена!")
+                                        } catch (e: Exception) {
+                                            window.alert("❌ Ошибка: ${e.message}")
+                                            e.printStackTrace()
+                                        }
+                                    }
+                                }
+                            }) {
+                                Text("Добавить")
+                            }
+                        }
+                    }
+                }
+            }
+
 
             if (showStockDialog) {
                 Div({
@@ -2002,10 +2317,12 @@ fun AdminApp() {
                                                     averagePrice = price
                                                 )
                                             } else {
-                                                updatedStocks.add(StockConfig(
-                                                    name = stockName,
-                                                    averagePrice = price
-                                                ))
+                                                updatedStocks.add(
+                                                    StockConfig(
+                                                        name = stockName,
+                                                        averagePrice = price
+                                                    )
+                                                )
                                             }
                                             val config = AdministrationConfig(
                                                 severiteRate = severitRate.toDoubleOrNull() ?: 42.75,

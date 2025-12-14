@@ -2,62 +2,37 @@ package org.vengeful.citymanager.configurations
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
-import io.ktor.http.HttpStatusCode
-import io.ktor.serialization.JsonConvertException
-import io.ktor.server.application.Application
-import io.ktor.server.application.ApplicationCall
-import io.ktor.server.auth.authenticate
-import io.ktor.server.auth.jwt.JWTPrincipal
-import io.ktor.server.auth.principal
-import io.ktor.server.request.receive
-import io.ktor.server.response.respond
-import io.ktor.server.response.respondText
-import io.ktor.server.routing.delete
-import io.ktor.server.routing.get
-import io.ktor.server.routing.post
-import io.ktor.server.routing.route
-import io.ktor.server.routing.routing
+import io.ktor.http.*
+import io.ktor.serialization.*
+import io.ktor.server.application.*
+import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
+import io.ktor.server.request.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
 import org.vengeful.citymanager.Greeting
-import org.vengeful.citymanager.models.users.LoginRequest
-import org.vengeful.citymanager.models.Person
-import org.vengeful.citymanager.models.Rights
-import org.vengeful.citymanager.models.users.AuthResponse
-import org.vengeful.citymanager.models.users.User
-import org.vengeful.citymanager.personService.IPersonRepository
-import java.util.Date
-import io.ktor.server.request.contentType
-import io.ktor.server.request.header
-import io.ktor.server.routing.put
 import org.vengeful.citymanager.auth.EmergencyShutdownConfig
 import org.vengeful.citymanager.auth.SessionLockManager
 import org.vengeful.citymanager.backupService.BackupService
 import org.vengeful.citymanager.bankService.IBankRepository
 import org.vengeful.citymanager.bankService.db.BankRepository
+import org.vengeful.citymanager.libraryService.ILibraryRepository
 import org.vengeful.citymanager.medicService.MedicalRepository
 import org.vengeful.citymanager.medicService.MedicineRepository
-import org.vengeful.citymanager.models.BankAccount
-import org.vengeful.citymanager.models.CallRequest
-import org.vengeful.citymanager.models.CallStatus
-import org.vengeful.citymanager.models.users.CreateMedicalRecordRequest
+import org.vengeful.citymanager.models.*
+import org.vengeful.citymanager.models.backup.MasterBackup
 import org.vengeful.citymanager.models.emergencyShutdown.EmergencyShutdownRequest
 import org.vengeful.citymanager.models.emergencyShutdown.EmergencyShutdownResponse
 import org.vengeful.citymanager.models.emergencyShutdown.EmergencyShutdownStatusResponse
-import org.vengeful.citymanager.models.Enterprise
-import org.vengeful.citymanager.models.users.UpdateMedicalRecordRequest
 import org.vengeful.citymanager.models.emergencyShutdown.ErrorResponse
-import org.vengeful.citymanager.models.backup.MasterBackup
+import org.vengeful.citymanager.models.library.CreateArticleRequest
 import org.vengeful.citymanager.models.medicine.CreateMedicineOrderRequest
 import org.vengeful.citymanager.models.medicine.Medicine
 import org.vengeful.citymanager.models.medicine.MedicineOrderNotification
-import org.vengeful.citymanager.models.users.CreateBankAccountRequest
-import org.vengeful.citymanager.models.users.CurrentUserResponse
-import org.vengeful.citymanager.models.users.RegisterRequest
-import org.vengeful.citymanager.models.users.RegisterResponse
-import org.vengeful.citymanager.models.users.TransferMoneyRequest
-import org.vengeful.citymanager.models.users.UpdateBankAccountRequest
-import org.vengeful.citymanager.models.users.UpdateClicksRequest
-import org.vengeful.citymanager.models.users.UpdateUserRequest
+import org.vengeful.citymanager.models.users.*
+import org.vengeful.citymanager.personService.IPersonRepository
 import org.vengeful.citymanager.userService.IUserRepository
+import java.util.*
 
 private val callStatuses = mutableMapOf(
     Enterprise.POLICE to CallStatus(Enterprise.POLICE, false),
@@ -70,6 +45,7 @@ fun Application.configureRouting(
     personRepository: IPersonRepository,
     userRepository: IUserRepository,
     bankRepository: IBankRepository,
+    libraryRepository: ILibraryRepository,
     emergencyShutdownConfig: EmergencyShutdownConfig
 ) {
 
@@ -109,8 +85,22 @@ fun Application.configureRouting(
         get("/") {
             call.respondText("Vengeful Server: ${Greeting().greet()}")
         }
-        get("/library") {
-            call.respondText(text = "Здесь будет библиотека г. Лабтауна. В разработке.")
+        route("/library") {
+            get("/articles") {
+                val articles = libraryRepository.getAllArticles()
+                call.respond(articles)
+            }
+
+            get("/articles/{id}") {
+                val id = call.parameters["id"]?.toIntOrNull()
+                    ?: throw IllegalArgumentException("Invalid article ID")
+                val article = libraryRepository.getArticleById(id)
+                if (article != null) {
+                    call.respond(article)
+                } else {
+                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Article not found"))
+                }
+            }
         }
 
         post("/adminReg") {
@@ -1250,6 +1240,38 @@ fun Application.configureRouting(
                             HttpStatusCode.InternalServerError,
                             mapOf("error" to e.message)
                         )
+                    }
+                }
+            }
+
+            route("/library") {
+                authenticate("auth-jwt") {
+                    post("/articles") {
+                        try {
+                            val request = call.receive<CreateArticleRequest>()
+
+                            if (request.content.isBlank()) {
+                                call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Content cannot be empty"))
+                                return@post
+                            }
+
+                            val title = request.title.take(500).ifBlank { "Без названия" }
+                            val article = libraryRepository.createArticle(title, request.content)
+                            call.respond(HttpStatusCode.Created, article)
+                        } catch (e: Exception) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+                        }
+                    }
+
+                    delete("/articles/{id}") {
+                        val id = call.parameters["id"]?.toIntOrNull()
+                            ?: throw IllegalArgumentException("Invalid article ID")
+                        val success = libraryRepository.deleteArticle(id)
+                        if (success) {
+                            call.respond(HttpStatusCode.OK, mapOf("status" to "success"))
+                        } else {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "Article not found"))
+                        }
                     }
                 }
             }

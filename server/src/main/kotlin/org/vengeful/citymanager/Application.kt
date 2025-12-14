@@ -19,6 +19,7 @@ import org.vengeful.citymanager.auth.SessionLockManager
 import org.vengeful.citymanager.bankService.db.BankRepository
 import org.vengeful.citymanager.configurations.configureDatabase
 import org.vengeful.citymanager.configurations.configureRouting
+import org.vengeful.citymanager.libraryService.db.LibraryRepository
 import org.vengeful.citymanager.models.Rights
 import org.vengeful.citymanager.personService.db.PersonRepository
 import org.vengeful.citymanager.stockSerivce.db.StockRepository
@@ -29,7 +30,6 @@ fun main(args: Array<String>): Unit = EngineMain.main(args)
 fun Application.module() {
     val jwtConfig = JWTConfig(this.environment.config)
     val emergencyShutdownConfig = EmergencyShutdownConfig(this.environment.config)
-
     install(ContentNegotiation) {
         json(Json {
             ignoreUnknownKeys = true
@@ -86,12 +86,14 @@ fun Application.module() {
     val userRepository = UserRepository()
     val bankRepository = BankRepository(personRepository)
     val stockRepository = StockRepository()
+    val libraryRepository = LibraryRepository()
 
     configureRouting(
         personRepository = personRepository,
         userRepository = userRepository,
         bankRepository = bankRepository,
-        emergencyShutdownConfig = emergencyShutdownConfig
+        emergencyShutdownConfig = emergencyShutdownConfig,
+        libraryRepository = libraryRepository,
         )
     configureDatabase(repository = personRepository)
     configureAdminApi(

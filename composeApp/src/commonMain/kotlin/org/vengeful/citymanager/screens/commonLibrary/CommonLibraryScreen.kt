@@ -1,25 +1,25 @@
 package org.vengeful.citymanager.screens.commonLibrary
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import citymanager.composeapp.generated.resources.Res
 import citymanager.composeapp.generated.resources.back
-import citymanager.composeapp.generated.resources.common_library_name
-import citymanager.composeapp.generated.resources.medic_name
-import citymanager.composeapp.generated.resources.police_name
 import org.jetbrains.compose.resources.stringResource
+import org.vengeful.citymanager.ROUTE_LIBRARY_ARTICLE
+import org.vengeful.citymanager.di.koinViewModel
 import org.vengeful.citymanager.uikit.ColorTheme
+import org.vengeful.citymanager.uikit.composables.library.ArticleCard
 import org.vengeful.citymanager.uikit.composables.veng.VengBackground
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
 import org.vengeful.citymanager.uikit.composables.veng.VengText
@@ -27,21 +27,56 @@ import org.vengeful.citymanager.utilities.LocalTheme
 
 @Composable
 fun CommonLibraryScreen(navController: NavController) {
-    var currentTheme by remember { mutableStateOf(LocalTheme) }
-    VengBackground(
-        theme = currentTheme,
-    ) {
+    val viewModel: CommonLibraryViewModel = koinViewModel()
+    val articles by viewModel.articles.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val currentTheme = remember { LocalTheme }
+
+    VengBackground(theme = currentTheme) {
         Column(
-            modifier = Modifier
-                .fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            VengText(text = "Здесь будет ${stringResource(resource = Res.string.common_library_name)}")
+            VengText(
+                text = "Библиотека",
+                modifier = Modifier.padding(16.dp)
+            )
+
+            if (isLoading && articles.isEmpty()) {
+                CircularProgressIndicator(modifier = Modifier.padding(32.dp))
+            } else if (articles.isEmpty()) {
+                VengText(
+                    text = "Статей пока нет",
+                    modifier = Modifier.padding(32.dp)
+                )
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 250.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(16.dp)
+                ) {
+                    items(articles) { article ->
+                        ArticleCard(
+                            article = article,
+                            theme = currentTheme,
+                            onCardClick = {
+                                navController.navigate("$ROUTE_LIBRARY_ARTICLE/${article.id}")
+                            }
+                        )
+                    }
+                }
+            }
+
             VengButton(
                 onClick = { navController.popBackStack() },
                 text = stringResource(Res.string.back),
-                theme = currentTheme
+                theme = currentTheme,
+                modifier = Modifier.padding(16.dp)
             )
         }
     }

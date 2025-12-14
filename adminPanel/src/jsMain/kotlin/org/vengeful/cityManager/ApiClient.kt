@@ -4,7 +4,11 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.client.request.forms.MultiPartFormDataContent
+import io.ktor.client.request.forms.formData
 import io.ktor.http.ContentType
+import io.ktor.http.Headers
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.*
@@ -13,12 +17,15 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import org.jetbrains.compose.web.attributes.InputType
 import org.vengeful.cityManager.models.RequestLog
 import org.vengeful.cityManager.models.ServerStats
 import org.vengeful.citymanager.models.AdministrationConfig
 import org.vengeful.citymanager.models.SalaryPaymentResponse
 import org.vengeful.citymanager.models.SendMessageRequest
 import org.vengeful.citymanager.models.backup.MasterBackup
+import org.vengeful.citymanager.models.library.Article
+import org.vengeful.citymanager.models.library.CreateArticleRequest
 import org.vengeful.citymanager.models.medicine.Medicine
 import org.vengeful.citymanager.models.medicine.MedicineOrderNotification
 import org.vengeful.citymanager.models.users.AuthResponse
@@ -232,6 +239,35 @@ class ApiClient(
             contentType(ContentType.Application.Json)
             addAuthHeader()
             setBody(SendMessageRequest(text, "admin"))
+        }
+        return handleResponse(response) {
+            response.status.value in 200..299
+        }
+    }
+
+    suspend fun getAllArticles(): List<Article> {
+        val response = client.get("$baseUrl/library/articles") {
+            addAuthHeader()
+        }
+        return handleResponse(response) {
+            response.body<List<Article>>()
+        }
+    }
+
+    suspend fun createArticle(title: String, content: String): Article {
+        val response = client.post("$baseUrl/library/articles") {
+            contentType(ContentType.Application.Json)
+            addAuthHeader()
+            setBody(CreateArticleRequest(title, content))
+        }
+        return handleResponse(response) {
+            response.body<Article>()
+        }
+    }
+
+    suspend fun deleteArticle(id: Int): Boolean {
+        val response = client.delete("$baseUrl/library/articles/$id") {
+            addAuthHeader()
         }
         return handleResponse(response) {
             response.status.value in 200..299
