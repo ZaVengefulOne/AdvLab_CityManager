@@ -48,6 +48,7 @@ import citymanager.composeapp.generated.resources.police_name
 import citymanager.composeapp.generated.resources.welcome_message
 import com.composables.icons.lucide.Download
 import com.composables.icons.lucide.FileQuestion
+import com.composables.icons.lucide.FlaskConical
 import com.composables.icons.lucide.Heart
 import com.composables.icons.lucide.Library
 import com.composables.icons.lucide.Lucide
@@ -71,6 +72,7 @@ import org.vengeful.citymanager.ROUTE_MAIN
 import org.vengeful.citymanager.ROUTE_MEDIC
 import org.vengeful.citymanager.ROUTE_MY_BANK
 import org.vengeful.citymanager.ROUTE_NEWS
+import org.vengeful.citymanager.ROUTE_NIIS
 import org.vengeful.citymanager.ROUTE_POLICE
 import org.vengeful.citymanager.ROUTE_STOCKS
 import org.vengeful.citymanager.di.koinViewModel
@@ -246,6 +248,11 @@ fun MainScreen(navController: NavController) {
                     route = ROUTE_STOCKS,
                     icon = { Icon(Lucide.TrendingUp, null, tint = colorTint) },
                     text = "Акции"
+                ),
+                ScreenData(
+                    route = ROUTE_NIIS,
+                    icon = { Icon(Lucide.FlaskConical, null, tint = colorTint) },
+                    text = "НИИС"
                 ),
             )
             val finalScreens = if (viewModel.hasAccessToScreen(ROUTE_MY_BANK)) {

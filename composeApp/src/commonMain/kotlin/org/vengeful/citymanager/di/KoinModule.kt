@@ -40,6 +40,7 @@ import org.vengeful.citymanager.screens.medic.MedicViewModel
 import org.vengeful.citymanager.screens.my_bank.MyBankViewModel
 import org.vengeful.citymanager.screens.news.NewsItemViewModel
 import org.vengeful.citymanager.screens.news.NewsViewModel
+import org.vengeful.citymanager.screens.niis.SeveritCleaningViewModel
 import org.vengeful.citymanager.screens.stocks.StockViewModel
 import org.vengeful.citymanager.screens.userManagement.UserManagementViewModel
 import kotlin.reflect.KClass
@@ -70,6 +71,7 @@ val appModule = module {
     factory { ArticleViewModel(get()) }
     factory { NewsViewModel(get()) }
     factory { NewsItemViewModel(get()) }
+    factory { SeveritCleaningViewModel() }
 }
 
 fun initKoin() = startKoin {

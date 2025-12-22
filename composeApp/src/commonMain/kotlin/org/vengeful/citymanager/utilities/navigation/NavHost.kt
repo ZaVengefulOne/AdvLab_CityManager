@@ -21,6 +21,8 @@ import org.vengeful.citymanager.ROUTE_MEDIC_ORDERS
 import org.vengeful.citymanager.ROUTE_MY_BANK
 import org.vengeful.citymanager.ROUTE_NEWS
 import org.vengeful.citymanager.ROUTE_NEWS_ITEM
+import org.vengeful.citymanager.ROUTE_NIIS
+import org.vengeful.citymanager.ROUTE_NIIS_CLEANING
 import org.vengeful.citymanager.ROUTE_POLICE
 import org.vengeful.citymanager.ROUTE_STOCKS
 import org.vengeful.citymanager.screens.administration.AdministrationScreen
@@ -36,6 +38,8 @@ import org.vengeful.citymanager.screens.medic.MedicScreen
 import org.vengeful.citymanager.screens.my_bank.MyBankScreen
 import org.vengeful.citymanager.screens.news.NewsItemScreen
 import org.vengeful.citymanager.screens.news.NewsScreen
+import org.vengeful.citymanager.screens.niis.NIISMainScreen
+import org.vengeful.citymanager.screens.niis.SeveriteCleaningScreen
 import org.vengeful.citymanager.screens.police.PoliceScreen
 import org.vengeful.citymanager.screens.stocks.StockScreen
 
@@ -99,6 +103,13 @@ fun Host() {
         }
         composable(route = ROUTE_NEWS) {
             NewsScreen(navController = navController)
+        }
+        composable(route = ROUTE_NIIS) {
+            NIISMainScreen(navController = navController)
+        }
+
+        composable(route = ROUTE_NIIS_CLEANING) {
+            SeveriteCleaningScreen(navController = navController)
         }
         composable(
             route = "$ROUTE_NEWS_ITEM/{newsId}",

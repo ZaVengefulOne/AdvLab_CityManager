@@ -21,6 +21,8 @@ const val ROUTE_MY_BANK = "my_bank"
 const val ROUTE_STOCKS = "stocks"
 const val ROUTE_NEWS = "news"
 const val ROUTE_NEWS_ITEM = "news_item"
+const val ROUTE_NIIS = "niis"
+const val ROUTE_NIIS_CLEANING = "niis_cleaning"
 
 val BUILD_VARIANT = BuildVariant.DEBUG
 

@@ -10,6 +10,7 @@ enum class Rights {
     Administration,
     Bank,
     Any,
+    Uni,
     Joker
 }
 
@@ -22,5 +23,6 @@ fun Rights.getDisplayName(): String {
         Rights.Medic -> "Больница"
         Rights.Bank -> "Банк"
         Rights.Any -> "Общий"
+        Rights.Uni -> "НИИС"
     }
 }
