@@ -13,6 +13,7 @@ import org.vengeful.citymanager.ROUTE_MEDIC
 import org.vengeful.citymanager.ROUTE_POLICE
 import org.vengeful.citymanager.ROUTE_CLICKER
 import org.vengeful.citymanager.ROUTE_MY_BANK
+import org.vengeful.citymanager.ROUTE_NEWS
 import org.vengeful.citymanager.ROUTE_STOCKS
 import org.vengeful.citymanager.base.BaseViewModel
 import org.vengeful.citymanager.data.users.AuthManager
@@ -90,7 +91,7 @@ class MainViewModel(
         val isLogged = _isLogged.value
 
         if (!isLogged) {
-            return route == ROUTE_COMMON_LIBRARY || route == ROUTE_STOCKS
+            return route == ROUTE_COMMON_LIBRARY || route == ROUTE_STOCKS || route == ROUTE_NEWS
         }
 
         if (userRights.contains(Rights.Joker)) {

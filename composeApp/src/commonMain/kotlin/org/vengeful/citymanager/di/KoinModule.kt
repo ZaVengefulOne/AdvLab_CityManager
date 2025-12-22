@@ -22,6 +22,8 @@ import org.vengeful.citymanager.data.library.ILibraryInteractor
 import org.vengeful.citymanager.data.library.LibraryInteractor
 import org.vengeful.citymanager.data.medic.IMedicInteractor
 import org.vengeful.citymanager.data.medic.MedicInteractor
+import org.vengeful.citymanager.data.news.INewsInteractor
+import org.vengeful.citymanager.data.news.NewsInteractor
 import org.vengeful.citymanager.data.persons.IPersonInteractor
 import org.vengeful.citymanager.data.persons.PersonInteractor
 import org.vengeful.citymanager.data.users.AuthManager
@@ -36,6 +38,8 @@ import org.vengeful.citymanager.screens.commonLibrary.CommonLibraryViewModel
 import org.vengeful.citymanager.screens.main.MainViewModel
 import org.vengeful.citymanager.screens.medic.MedicViewModel
 import org.vengeful.citymanager.screens.my_bank.MyBankViewModel
+import org.vengeful.citymanager.screens.news.NewsItemViewModel
+import org.vengeful.citymanager.screens.news.NewsViewModel
 import org.vengeful.citymanager.screens.stocks.StockViewModel
 import org.vengeful.citymanager.screens.userManagement.UserManagementViewModel
 import kotlin.reflect.KClass
@@ -51,6 +55,7 @@ val appModule = module {
     single<IAdministrationInteractor> { AdministrationInteractor(get()) }
     single<IMedicInteractor> { MedicInteractor(get()) }
     single<ILibraryInteractor> { LibraryInteractor(get()) }
+    single<INewsInteractor> { NewsInteractor(get()) }
 
     factory { AdministrationViewModel(get(), get(), get(), get()) }
     factory { MainViewModel(get(), get()) }
@@ -63,6 +68,8 @@ val appModule = module {
     factory { StockViewModel(get()) }
     factory { CommonLibraryViewModel(get()) }
     factory { ArticleViewModel(get()) }
+    factory { NewsViewModel(get()) }
+    factory { NewsItemViewModel(get()) }
 }
 
 fun initKoin() = startKoin {

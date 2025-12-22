@@ -7,6 +7,8 @@ import io.ktor.serialization.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
+import io.ktor.server.http.content.resources
+import io.ktor.server.http.content.static
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -30,8 +32,11 @@ import org.vengeful.citymanager.models.medicine.CreateMedicineOrderRequest
 import org.vengeful.citymanager.models.medicine.Medicine
 import org.vengeful.citymanager.models.medicine.MedicineOrderNotification
 import org.vengeful.citymanager.models.users.*
+import org.vengeful.citymanager.newsService.INewsRepository
+import org.vengeful.citymanager.newsService.NewsRepository
 import org.vengeful.citymanager.personService.IPersonRepository
 import org.vengeful.citymanager.userService.IUserRepository
+import java.io.File
 import java.util.*
 
 private val callStatuses = mutableMapOf(
@@ -46,6 +51,7 @@ fun Application.configureRouting(
     userRepository: IUserRepository,
     bankRepository: IBankRepository,
     libraryRepository: ILibraryRepository,
+    newsRepository: INewsRepository,
     emergencyShutdownConfig: EmergencyShutdownConfig
 ) {
 
@@ -103,10 +109,39 @@ fun Application.configureRouting(
             }
         }
 
+        route("/news") {
+            get("/items") {
+                val news = newsRepository.getAllNews()
+                call.respond(news)
+            }
+
+            get("/items/{id}") {
+                val id = call.parameters["id"]?.toIntOrNull()
+                    ?: throw IllegalArgumentException("Invalid news ID")
+                val news = newsRepository.getNewsById(id)
+                if (news != null) {
+                    call.respond(news)
+                } else {
+                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "News not found"))
+                }
+            }
+
+            get("/images/{filename}") {
+                val filename = call.parameters["filename"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+                val file = File("src/main/resources/news_images", filename)
+                if (file.exists() && file.isFile) {
+                    call.respondFile(file)
+                } else {
+                    call.respond(HttpStatusCode.NotFound, "Image not found")
+                }
+            }
+
+        }
+
+
         post("/adminReg") {
             try {
                 val registerRequest = call.receive<RegisterRequest>()
-
                 // Валидация входных данных
                 if (registerRequest.username.isBlank()) {
                     call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Username cannot be empty"))

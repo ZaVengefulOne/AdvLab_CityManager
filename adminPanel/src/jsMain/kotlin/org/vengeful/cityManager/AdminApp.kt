@@ -6,6 +6,8 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import org.jetbrains.compose.web.attributes.InputType
+import org.jetbrains.compose.web.attributes.accept
+import org.jetbrains.compose.web.attributes.name
 import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.dom.*
 import org.vengeful.cityManager.models.RequestLog
@@ -16,6 +18,8 @@ import org.vengeful.citymanager.models.backup.MasterBackup
 import org.vengeful.citymanager.models.library.Article
 import org.vengeful.citymanager.models.medicine.Medicine
 import org.vengeful.citymanager.models.medicine.MedicineOrderNotification
+import org.vengeful.citymanager.models.news.News
+import org.vengeful.citymanager.models.news.NewsSource
 import org.vengeful.citymanager.models.stocks.StockConfig
 import kotlin.js.Date
 import kotlin.time.Clock
@@ -80,6 +84,13 @@ fun AdminApp() {
     var articleTitle by remember { mutableStateOf("") }
     var articleContent by remember { mutableStateOf("") }
 
+    var news by remember { mutableStateOf<List<News>>(emptyList()) }
+    var showNewsUploadDialog by remember { mutableStateOf(false) }
+    var newsTitle by remember { mutableStateOf("") }
+    var newsSource by remember { mutableStateOf<NewsSource?>(null) }
+    var newsImageFile by remember { mutableStateOf<org.w3c.files.File?>(null) }
+    var newsImagePreview by remember { mutableStateOf<String?>(null) }
+
     // Загрузка данных при старте (только если залогинен)
     if (isLoggedIn) {
         LaunchedEffect(Unit) {
@@ -95,6 +106,7 @@ fun AdminApp() {
                 medicineOrderNotifications = apiClient.getMedicineOrderNotifications()
                 medicines = apiClient.getAllMedicines()
                 articles = apiClient.getAllArticles()
+                news = apiClient.getAllNews()
             } catch (e: Exception) {
                 window.alert("Ошибка подключения к серверу: ${e.message}")
             }
@@ -1667,6 +1679,143 @@ fun AdminApp() {
                     style {
                         marginTop(0.px)
                         marginBottom(16.px)
+                        color(Color("#4A90E2"))
+                        fontSize(18.px)
+                        fontWeight("bold")
+                    }
+                }) {
+                    Text("📰 Управление новостями")
+                }
+
+                Button({
+                    style {
+                        backgroundColor(Color("#27AE60"))
+                        color(Color("#FFFFFF"))
+                        borderWidth(0.px)
+                        padding(8.px, 16.px)
+                        borderRadius(4.px)
+                        fontFamily("'Courier New', monospace")
+                        fontWeight("bold")
+                        cursor("pointer")
+                        fontSize(14.px)
+                        marginBottom(16.px)
+                    }
+                    onClick {
+                        showNewsUploadDialog = true
+                        newsTitle = ""
+                        newsSource = null
+                        newsImageFile = null
+                        newsImagePreview = null
+                    }
+                }) {
+                    Text("+ Добавить новость")
+                }
+
+                Div({
+                    style {
+                        maxHeight(300.px)
+                        overflowY("auto")
+                        backgroundColor(Color("#1A2530"))
+                        borderRadius(4.px)
+                        padding(12.px)
+                    }
+                }) {
+                    if (news.isEmpty()) {
+                        P({
+                            style {
+                                color(Color("#7B9EB0"))
+                                fontSize(12.px)
+                            }
+                        }) {
+                            Text("Нет новостей")
+                        }
+                    } else {
+                        news.forEach { newsItem ->
+                            Div({
+                                style {
+                                    marginBottom(8.px)
+                                    padding(12.px)
+                                    backgroundColor(Color("#2C3E50"))
+                                    borderRadius(4.px)
+                                    display(DisplayStyle.Flex)
+                                    justifyContent(JustifyContent.SpaceBetween)
+                                    alignItems(AlignItems.Center)
+                                }
+                            }) {
+                                Div({
+                                    style {
+                                        flex(1)
+                                    }
+                                }) {
+                                    Div({
+                                        style {
+                                            color(Color("#FFFFFF"))
+                                            fontSize(14.px)
+                                            fontWeight("bold")
+                                            marginBottom(4.px)
+                                        }
+                                    }) {
+                                        Text(newsItem.title)
+                                    }
+                                    Div({
+                                        style {
+                                            color(Color("#7B9EB0"))
+                                            fontSize(12.px)
+                                        }
+                                    }) {
+                                        Text(
+                                            when (newsItem.source) {
+                                                NewsSource.PUBLISHING_HOUSE -> "Новость из Издательства"
+                                                NewsSource.EBONY_BAY -> "Новости Эбони-Бея"
+                                            }
+                                        )
+                                    }
+                                }
+                                Button({
+                                    style {
+                                        backgroundColor(Color("#E74C3C"))
+                                        color(Color("#FFFFFF"))
+                                        borderWidth(0.px)
+                                        padding(6.px, 12.px)
+                                        borderRadius(4.px)
+                                        fontFamily("'Courier New', monospace")
+                                        fontSize(12.px)
+                                        cursor("pointer")
+                                    }
+                                    onClick {
+                                        if (window.confirm("Удалить новость '${newsItem.title}'?")) {
+                                            coroutineScope.launch {
+                                                try {
+                                                    apiClient.deleteNews(newsItem.id)
+                                                    news = apiClient.getAllNews()
+                                                } catch (e: Exception) {
+                                                    window.alert("Ошибка удаления: ${e.message}")
+                                                }
+                                            }
+                                        }
+                                    }
+                                }) {
+                                    Text("Удалить")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Div({
+                style {
+                    backgroundColor(Color("#34495E"))
+                    border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                    borderRadius(8.px)
+                    padding(20.px)
+                    marginBottom(16.px)
+                }
+            }) {
+                H3({
+                    style {
+                        marginTop(0.px)
+                        marginBottom(16.px)
                         fontSize(18.px)
                     }
                 }) {
@@ -2152,6 +2301,347 @@ fun AdminApp() {
                                             e.printStackTrace()
                                         }
                                     }
+                                }
+                            }) {
+                                Text("Добавить")
+                            }
+                        }
+                    }
+                }
+            }
+
+
+            if (showNewsUploadDialog) {
+                Div({
+                    style {
+                        position(Position.Fixed)
+                        top(0.px)
+                        left(0.px)
+                        width(100.percent)
+                        height(100.percent)
+                        backgroundColor(Color("rgba(0, 0, 0, 0.8)"))
+                        display(DisplayStyle.Flex)
+                        alignItems(AlignItems.Center)
+                        justifyContent(JustifyContent.Center)
+                    }
+                    onClick { event ->
+                        val target = event.asDynamic().target
+                        val currentTarget = event.asDynamic().currentTarget
+                        if (target == currentTarget) {
+                            showNewsUploadDialog = false
+                            newsTitle = ""
+                            newsSource = null
+                            newsImageFile = null
+                            newsImagePreview = null
+                        }
+                    }
+                }) {
+                    Div({
+                        style {
+                            backgroundColor(Color("#34495E"))
+                            border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                            borderRadius(8.px)
+                            padding(30.px)
+                            maxWidth(600.px)
+                            width(90.percent)
+                            maxHeight(90.percent)
+                            overflowY("auto")
+                        }
+                        onClick { event ->
+                            event.stopPropagation()
+                        }
+                    }) {
+                        H3({
+                            style {
+                                marginTop(0.px)
+                                marginBottom(20.px)
+                                color(Color("#4A90E2"))
+                                fontSize(18.px)
+                                fontWeight("bold")
+                            }
+                        }) {
+                            Text("Добавить новость")
+                        }
+                        // Поле выбора источника
+                        Label(attrs = {
+                            style {
+                                color(Color("#FFFFFF"))
+                                fontSize(14.px)
+                                fontWeight("bold")
+                                display(DisplayStyle.Block)
+                                marginBottom(8.px)
+                            }
+                        }) {
+                            Text("Источник новости *")
+                        }
+                        Div({
+                            style {
+                                marginBottom(16.px)
+                            }
+                        }) {
+                            // Радио-кнопка "Новость из Издательства"
+                            Label(attrs = {
+                                style {
+                                    display(DisplayStyle.Flex)
+                                    alignItems(AlignItems.Center)
+                                    marginBottom(8.px)
+                                    cursor("pointer")
+                                }
+                            }) {
+                                Input(InputType.Radio, {
+                                    style {
+                                        marginRight(8.px)
+                                        cursor("pointer")
+                                    }
+                                    name("newsSource")
+                                    checked(newsSource == NewsSource.PUBLISHING_HOUSE)
+                                    onChange { event ->
+                                        newsSource = NewsSource.PUBLISHING_HOUSE
+                                    }
+                                    onClick { event ->
+                                        event.stopPropagation()
+                                    }
+                                })
+                                Span({
+                                    style {
+                                        color(Color("#FFFFFF"))
+                                        fontSize(14.px)
+                                    }
+                                }) {
+                                    Text("Новость из Издательства")
+                                }
+                            }
+                            // Радио-кнопка "Новости Эбони-Бея"
+                            Label(attrs = {
+                                style {
+                                    display(DisplayStyle.Flex)
+                                    alignItems(AlignItems.Center)
+                                    cursor("pointer")
+                                }
+                            }) {
+                                Input(InputType.Radio, {
+                                    style {
+                                        marginRight(8.px)
+                                        cursor("pointer")
+                                    }
+                                    name("newsSource")
+                                    checked(newsSource == NewsSource.EBONY_BAY)
+                                    onChange { event ->
+                                        newsSource = NewsSource.EBONY_BAY
+                                    }
+                                    onClick { event ->
+                                        event.stopPropagation()
+                                    }
+                                })
+                                Span({
+                                    style {
+                                        color(Color("#FFFFFF"))
+                                        fontSize(14.px)
+                                    }
+                                }) {
+                                    Text("Новости Эбони-Бея")
+                                }
+                            }
+                        }
+
+                        // Поле названия (опциональное)
+                        Label(attrs = {
+                            style {
+                                color(Color("#FFFFFF"))
+                                fontSize(14.px)
+                                fontWeight("bold")
+                                display(DisplayStyle.Block)
+                                marginBottom(8.px)
+                            }
+                        }) {
+                            Text("Название новости (необязательно)")
+                        }
+                        Span({
+                            style {
+                                color(Color("#7B9EB0"))
+                                fontSize(12.px)
+                                display(DisplayStyle.Block)
+                                marginBottom(8.px)
+                            }
+                        }) {
+                            Text("Если оставить пустым, будет использована текущая дата (DD/MM)")
+                        }
+                        Input(InputType.Text, {
+                            style {
+                                width(100.percent)
+                                padding(12.px)
+                                marginBottom(16.px)
+                                backgroundColor(Color("#1A2530"))
+                                color(Color("#4A90E2"))
+                                border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                                borderRadius(4.px)
+                                fontFamily("'Courier New', monospace")
+                                fontSize(14.px)
+                            }
+                            value(newsTitle)
+                            onInput { event ->
+                                newsTitle = event.target.value
+                            }
+                            onClick { event ->
+                                event.stopPropagation()
+                            }
+                            onFocus { event ->
+                                event.stopPropagation()
+                            }
+                        })
+
+                        // Поле загрузки изображения
+                        Label(attrs = {
+                            style {
+                                color(Color("#FFFFFF"))
+                                fontSize(14.px)
+                                fontWeight("bold")
+                                display(DisplayStyle.Block)
+                                marginBottom(8.px)
+                            }
+                        }) {
+                            Text("Изображение новости * (.png или .jpg)")
+                        }
+                        Input(InputType.File, {
+                            style {
+                                width(100.percent)
+                                padding(12.px)
+                                marginBottom(16.px)
+                                backgroundColor(Color("#1A2530"))
+                                color(Color("#4A90E2"))
+                                border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                                borderRadius(4.px)
+                                fontFamily("'Courier New', monospace")
+                                fontSize(14.px)
+                                cursor("pointer")
+                            }
+                            accept("image/png,image/jpeg,image/jpg")
+                            onChange { event ->
+                                val file = event.target.files?.item(0)
+                                if (file != null) {
+                                    val extension = file.name.substringAfterLast('.', "").lowercase()
+                                    if (extension in listOf("png", "jpg", "jpeg")) {
+                                        newsImageFile = file
+                                        // Создаём preview
+                                        val reader = org.w3c.files.FileReader()
+                                        reader.onload = { e ->
+                                            newsImagePreview = e.target.asDynamic().result as String
+                                        }
+                                        reader.readAsDataURL(file)
+                                    } else {
+                                        window.alert("❌ Пожалуйста, выберите файл формата PNG или JPG")
+                                        newsImageFile = null
+                                        newsImagePreview = null
+                                    }
+                                }
+                            }
+                            onClick { event ->
+                                event.stopPropagation()
+                            }
+                            onFocus { event ->
+                                event.stopPropagation()
+                            }
+                        })
+
+                        // Preview изображения
+                        if (newsImagePreview != null) {
+                            Img(src = newsImagePreview!!, attrs = {
+                                style {
+                                    width(100.percent)
+                                    maxHeight(300.px)
+                                    marginBottom(16.px)
+                                    borderRadius(4.px)
+                                    border(2.px, LineStyle.Solid, Color("#4A90E2"))
+                                }
+                            })
+                        }
+
+                        Div({
+                            style {
+                                display(DisplayStyle.Flex)
+                                gap(12.px)
+                                justifyContent(JustifyContent.FlexEnd)
+                            }
+                        }) {
+                            Button({
+                                style {
+                                    backgroundColor(Color("#7B9EB0"))
+                                    color(Color("#FFFFFF"))
+                                    borderWidth(0.px)
+                                    padding(8.px, 16.px)
+                                    borderRadius(4.px)
+                                    fontFamily("'Courier New', monospace")
+                                    fontSize(14.px)
+                                    cursor("pointer")
+                                }
+                                onClick {
+                                    showNewsUploadDialog = false
+                                    newsTitle = ""
+                                    newsSource = null
+                                    newsImageFile = null
+                                    newsImagePreview = null
+                                }
+                            }) {
+                                Text("Отмена")
+                            }
+
+                            Button({
+                                style {
+                                    backgroundColor(Color("#27AE60"))
+                                    color(Color("#FFFFFF"))
+                                    borderWidth(0.px)
+                                    padding(8.px, 16.px)
+                                    borderRadius(4.px)
+                                    fontFamily("'Courier New', monospace")
+                                    fontSize(14.px)
+                                    cursor("pointer")
+                                }
+                                onClick { event ->
+                                    event.stopPropagation()
+
+                                    console.log("Button clicked")
+
+                                    if (newsSource == null) {
+                                        window.alert("❌ Пожалуйста, выберите источник новости")
+                                        return@onClick
+                                    }
+
+                                    if (newsImageFile == null) {
+                                        window.alert("❌ Пожалуйста, выберите изображение")
+                                        return@onClick
+                                    }
+
+                                    console.log("Starting coroutine, source: ${newsSource}, file: ${newsImageFile?.name}")
+
+                                    coroutineScope.launch {
+                                        try {
+                                            console.log("Inside coroutine")
+                                            val finalTitle = if (newsTitle.isBlank()) null else newsTitle
+                                            console.log("Calling createNews with title: $finalTitle, source: ${newsSource!!.name}")
+
+                                            val createdNews = apiClient.createNews(
+                                                title = finalTitle,
+                                                source = newsSource!!,
+                                                imageFile = newsImageFile!!
+                                            )
+
+                                            console.log("News created successfully: ${createdNews.id}")
+
+                                            news = apiClient.getAllNews()
+                                            showNewsUploadDialog = false
+                                            newsTitle = ""
+                                            newsSource = null
+                                            newsImageFile = null
+                                            newsImagePreview = null
+                                            window.alert("✅ Новость '${createdNews.title}' успешно добавлена!")
+                                        } catch (e: Exception) {
+                                            console.error("Error in coroutine:", e)
+                                            window.alert("❌ Ошибка: ${e.message ?: e.toString()}")
+                                            e.printStackTrace()
+                                        }
+                                    }
+
+                                    console.log("After coroutine launch")
                                 }
                             }) {
                                 Text("Добавить")

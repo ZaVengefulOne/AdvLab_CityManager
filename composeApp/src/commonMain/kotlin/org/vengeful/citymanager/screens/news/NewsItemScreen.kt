@@ -1,51 +1,46 @@
-package org.vengeful.citymanager.screens.commonLibrary
-
+package org.vengeful.citymanager.screens.news
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import citymanager.composeapp.generated.resources.Res
 import citymanager.composeapp.generated.resources.back
 import org.jetbrains.compose.resources.stringResource
+import org.vengeful.citymanager.SERVER_PORT
+import org.vengeful.citymanager.data.persons.PersonInteractor.Companion.SERVER_ADDRESS
+import org.vengeful.citymanager.data.persons.PersonInteractor.Companion.SERVER_PREFIX
 import org.vengeful.citymanager.di.koinViewModel
-import org.vengeful.citymanager.uikit.ColorTheme
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
+import org.vengeful.citymanager.uikit.composables.news.AsyncNewsImage
 import org.vengeful.citymanager.uikit.composables.veng.VengBackground
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
 import org.vengeful.citymanager.uikit.composables.veng.VengText
 import org.vengeful.citymanager.utilities.LocalTheme
 
 @Composable
-fun ArticleScreen(
+fun NewsItemScreen(
     navController: NavController,
-    articleId: Int
+    newsId: Int
 ) {
-    val viewModel: ArticleViewModel = koinViewModel()
-    val article by viewModel.article.collectAsState()
+    val viewModel: NewsItemViewModel = koinViewModel()
+    val news by viewModel.news.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val currentTheme = remember { LocalTheme }
 
-    LaunchedEffect(articleId) {
-        viewModel.loadArticle(articleId)
+    LaunchedEffect(newsId) {
+        viewModel.loadNews(newsId)
     }
 
     val cardColors = remember(currentTheme) {
@@ -62,21 +57,6 @@ fun ArticleScreen(
                 .padding(horizontal = 24.dp),
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 24.dp, bottom = 16.dp),
-                horizontalArrangement = Arrangement.Start,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                VengButton(
-                    onClick = { navController.popBackStack() },
-                    text = stringResource(Res.string.back),
-                    theme = currentTheme,
-                    modifier = Modifier.size(64.dp)
-                )
-            }
-
             if (isLoading) {
                 Box(
                     modifier = Modifier
@@ -88,37 +68,65 @@ fun ArticleScreen(
                         color = colorScheme.borderLight
                     )
                 }
-            } else if (article != null) {
-                VengText(
-                    text = article!!.title,
+            } else if (news != null) {
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 24.dp),
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = colorScheme.borderLight,
-                    textAlign = TextAlign.Center,
-                    letterSpacing = 0.5.sp,
-                    lineHeight = 36.sp
-                )
+                        .padding(top = 24.dp, bottom = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    VengButton(
+                        onClick = { navController.popBackStack() },
+                        text = stringResource(Res.string.back),
+                        theme = currentTheme,
+                        modifier = Modifier.width(128.dp)
+                    )
 
+                    VengText(
+                        text = news!!.title,
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 16.dp),
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = colorScheme.borderLight,
+                        textAlign = TextAlign.Center,
+                        letterSpacing = 0.5.sp,
+                        lineHeight = 32.sp
+                    )
+
+                    // Невидимый элемент для симметрии
+                    Spacer(modifier = Modifier.width(128.dp))
+                }
+
+                // Декоративная линия по центру
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(8.dp)
                         .padding(vertical = 16.dp)
-                        .background(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(
-                                    Color.Cyan,
-                                    cardColors.borderLight
-                                        .copy(alpha = 0.7f),
-                                    Color.Black
+                        .align(Alignment.CenterHorizontally)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.6f)
+                            .height(4.dp)
+                            .align(Alignment.Center)
+                            .background(
+                                brush = Brush.horizontalGradient(
+                                    colors = listOf(
+                                        Color.Transparent,
+                                        Color.Cyan,
+                                        cardColors.borderLight.copy(alpha = 0.8f),
+                                        Color.Cyan,
+                                        Color.Transparent
+                                    )
                                 )
                             )
-                        )
-                )
+                    )
+                }
 
+                // Изображение новости
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -126,18 +134,12 @@ fun ArticleScreen(
                         .verticalScroll(rememberScrollState())
                         .padding(bottom = 24.dp)
                 ) {
-                    VengText(
-                        text = article!!.content,
+                    val imageUrl = "$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT${news!!.imageUrl}"
+                    AsyncNewsImage(
+                        imageUrl = imageUrl,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Normal,
-                        lineHeight = 28.sp,
-                        letterSpacing = 0.2.sp,
-                        maxLines = Int.MAX_VALUE,
-                        overflow = TextOverflow.Visible
+                            .padding(vertical = 16.dp)
                     )
                 }
             } else {
@@ -148,7 +150,7 @@ fun ArticleScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     VengText(
-                        text = "Статья не найдена",
+                        text = "Новость не найдена",
                         fontSize = 20.sp,
                         color = colorScheme.borderLight,
                         textAlign = TextAlign.Center

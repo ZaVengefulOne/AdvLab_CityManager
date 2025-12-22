@@ -52,6 +52,7 @@ import com.composables.icons.lucide.Heart
 import com.composables.icons.lucide.Library
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.MousePointerClick
+import com.composables.icons.lucide.Newspaper
 import com.composables.icons.lucide.Pen
 import com.composables.icons.lucide.PiggyBank
 import com.composables.icons.lucide.TrendingUp
@@ -69,6 +70,7 @@ import org.vengeful.citymanager.ROUTE_COURT
 import org.vengeful.citymanager.ROUTE_MAIN
 import org.vengeful.citymanager.ROUTE_MEDIC
 import org.vengeful.citymanager.ROUTE_MY_BANK
+import org.vengeful.citymanager.ROUTE_NEWS
 import org.vengeful.citymanager.ROUTE_POLICE
 import org.vengeful.citymanager.ROUTE_STOCKS
 import org.vengeful.citymanager.di.koinViewModel
@@ -213,6 +215,11 @@ fun MainScreen(navController: NavController) {
                     route = ROUTE_COMMON_LIBRARY,
                     icon = { Icon(Lucide.Library, null, tint = colorTint) },
                     text = stringResource(Res.string.common_library_name)
+                ),
+                ScreenData(
+                    route = ROUTE_NEWS,
+                    icon = { Icon(Lucide.Newspaper, null, tint = colorTint) },
+                    text = "Новости"
                 ),
                 ScreenData(
                     route = ROUTE_CLICKER,

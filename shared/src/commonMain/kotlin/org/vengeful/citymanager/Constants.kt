@@ -19,6 +19,8 @@ const val ROUTE_BANK = "bank"
 const val ROUTE_BACKUP = "backup"
 const val ROUTE_MY_BANK = "my_bank"
 const val ROUTE_STOCKS = "stocks"
+const val ROUTE_NEWS = "news"
+const val ROUTE_NEWS_ITEM = "news_item"
 
 val BUILD_VARIANT = BuildVariant.DEBUG
 

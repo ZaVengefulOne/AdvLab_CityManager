@@ -12,6 +12,7 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -28,8 +29,12 @@ import org.vengeful.citymanager.models.library.Article
 import org.vengeful.citymanager.models.library.CreateArticleRequest
 import org.vengeful.citymanager.models.medicine.Medicine
 import org.vengeful.citymanager.models.medicine.MedicineOrderNotification
+import org.vengeful.citymanager.models.news.News
+import org.vengeful.citymanager.models.news.NewsSource
 import org.vengeful.citymanager.models.users.AuthResponse
 import org.vengeful.citymanager.models.users.LoginRequest
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 // Модели данных
 
@@ -267,6 +272,87 @@ class ApiClient(
 
     suspend fun deleteArticle(id: Int): Boolean {
         val response = client.delete("$baseUrl/library/articles/$id") {
+            addAuthHeader()
+        }
+        return handleResponse(response) {
+            response.status.value in 200..299
+        }
+    }
+
+    suspend fun getAllNews(): List<News> {
+        val response = client.get("$baseUrl/news/items") {
+            addAuthHeader()
+        }
+        return handleResponse(response) {
+            response.body<List<News>>()
+        }
+    }
+
+    suspend fun createNews(
+        title: String?,
+        source: NewsSource,
+        imageFile: org.w3c.files.File
+    ): News {
+        console.log("createNews called with file: ${imageFile.name}, size: ${imageFile.size}")
+
+        // Читаем файл как ByteArray
+        val fileBytes = suspendCancellableCoroutine<ByteArray> { continuation ->
+            console.log("Starting file read")
+            val reader = org.w3c.files.FileReader()
+            reader.onload = { e ->
+                try {
+                    console.log("File read success")
+                    val arrayBuffer = e.target.asDynamic().result
+
+                    val createUint8Array = js("(function(buffer) { return new Uint8Array(buffer); })")
+                    val uint8Array = createUint8Array(arrayBuffer).unsafeCast<dynamic>()
+                    val length = uint8Array.length.unsafeCast<Int>()
+                    console.log("File size: $length bytes")
+
+                    val bytes = ByteArray(length)
+                    for (i in 0 until length) {
+                        bytes[i] = uint8Array[i].unsafeCast<Byte>()
+                    }
+                    console.log("ByteArray created, resuming continuation")
+                    continuation.resume(bytes)
+                } catch (e: Throwable) {console.error("Error in onload:", e)
+                    continuation.resumeWithException(e)
+                }
+            }
+            reader.onerror = { errorEvent ->
+                console.error("FileReader error:", errorEvent)
+                continuation.resumeWithException(Exception("Failed to read file"))
+            }
+            reader.readAsArrayBuffer(imageFile)
+            console.log("readAsArrayBuffer called")
+        }
+
+        console.log("File bytes read: ${fileBytes.size} bytes")
+        val fileExtension = imageFile.name.substringAfterLast('.', "").lowercase()
+
+        console.log("Sending request to server")
+        val response = client.post("$baseUrl/admin/news/items") {
+            addAuthHeader()
+            setBody(MultiPartFormDataContent(
+                formData {
+                    title?.let { append("title", it) }
+                    append("source", source.name)
+                    append("image", fileBytes, Headers.build {
+                        append(HttpHeaders.ContentType, "image/$fileExtension")
+                        append(HttpHeaders.ContentDisposition, "filename=${imageFile.name}")
+                    })
+                }
+            ))
+        }
+        console.log("Response received: ${response.status}")
+        return handleResponse(response) {
+            response.body<News>()
+        }
+    }
+
+
+    suspend fun deleteNews(id: Int): Boolean {
+        val response = client.delete("$baseUrl/admin/news/items/$id") {
             addAuthHeader()
         }
         return handleResponse(response) {
