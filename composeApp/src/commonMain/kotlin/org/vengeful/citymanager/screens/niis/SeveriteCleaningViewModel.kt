@@ -6,12 +6,24 @@ import kotlinx.coroutines.flow.asStateFlow
 import org.vengeful.citymanager.base.BaseViewModel
 import kotlin.random.Random
 
+enum class CleaningMode {
+    SIMPLE,      // 3 простых элемента (префикс "100")
+    MEDIUM,      // 5 элементов, один сложный (префикс "110")
+    FULL         // 7 элементов, все доступные (префикс "200")
+}
+
 class SeveritCleaningViewModel : BaseViewModel() {
+
+    private val _cleaningMode = MutableStateFlow<CleaningMode>(CleaningMode.FULL)
+    val cleaningMode: StateFlow<CleaningMode> = _cleaningMode.asStateFlow()
+
+    private val _activeIndices = MutableStateFlow<List<Int>>(emptyList())
+    val activeIndices: StateFlow<List<Int>> = _activeIndices.asStateFlow()
 
     private val _targetSequence = MutableStateFlow<List<Int>>(emptyList())
     val targetSequence: StateFlow<List<Int>> = _targetSequence.asStateFlow()
 
-    private val _currentValues = MutableStateFlow(List(7) { 0 })
+    private val _currentValues = MutableStateFlow<List<Int>>(emptyList())
     val currentValues: StateFlow<List<Int>> = _currentValues.asStateFlow()
 
     private val _guessedIndices = MutableStateFlow<Set<Int>>(emptySet())
@@ -20,25 +32,48 @@ class SeveritCleaningViewModel : BaseViewModel() {
     private val _showSuccessDialog = MutableStateFlow(false)
     val showSuccessDialog: StateFlow<Boolean> = _showSuccessDialog.asStateFlow()
 
-    init {
+    fun initializeMode(sampleNumber: String) {
+        val mode = when {
+            sampleNumber.startsWith("100") -> CleaningMode.SIMPLE
+            sampleNumber.startsWith("110") -> CleaningMode.MEDIUM
+            sampleNumber.startsWith("200") -> CleaningMode.FULL
+            else -> CleaningMode.FULL // По умолчанию полный режим
+        }
+        
+        _cleaningMode.value = mode
+        
+        // Определяем активные индексы в зависимости от режима
+        _activeIndices.value = when (mode) {
+            CleaningMode.SIMPLE -> listOf(0, 3, 5) // 3 простых: Slider, Dial, Wheel
+            CleaningMode.MEDIUM -> listOf(0, 1, 3, 5, 6) // 5 элементов, один сложный (DialLock)
+            CleaningMode.FULL -> listOf(0, 1, 2, 3, 4, 5, 6) // Все 7 элементов
+        }
+        
         generateSequence()
     }
 
     fun generateSequence() {
-        _targetSequence.value = List(7) { index ->
-            when (index) {
+        val activeIndices = _activeIndices.value
+        val sequence = MutableList(7) { 0 }
+        
+        activeIndices.forEach { index ->
+            sequence[index] = when (index) {
                 1 -> Random.nextInt(0, 1000) // Комбинационный замок: 0-999
-                2 -> Random.nextInt(1, 8) * 125 // Головоломка с сегментами: кратно 125, исключая 0 и 1000 (125, 250, 375, 500, 625, 750, 875)
+                2 -> Random.nextInt(1, 8) * 125 // Головоломка с сегментами: кратно 125, исключая 0 и 1000
                 4 -> Random.nextInt(0, 26) * 4 // Головоломка с переключателями: кратно 4 (0, 4, 8, ..., 100)
                 else -> Random.nextInt(0, 101) // Остальные: 0-100
             }
         }
+        
+        _targetSequence.value = sequence
         _currentValues.value = List(7) { 0 }
         _guessedIndices.value = emptySet()
         _showSuccessDialog.value = false
     }
 
     fun updateValue(index: Int, value: Int) {
+        if (!_activeIndices.value.contains(index)) return
+        
         val newValues = _currentValues.value.toMutableList()
         // Для комбинационного замка (индекс 1) разрешаем значения 0-999, для головоломки с сегментами (индекс 2) 0-1000, для остальных 0-100
         newValues[index] = when (index) {
@@ -61,7 +96,8 @@ class SeveritCleaningViewModel : BaseViewModel() {
             newGuessed.add(index)
             _guessedIndices.value = newGuessed
 
-            if (newGuessed.size == 7) {
+            // Проверяем, угаданы ли все активные элементы
+            if (newGuessed.size == _activeIndices.value.size) {
                 _showSuccessDialog.value = true
             }
         } else if (target != current && _guessedIndices.value.contains(index)) {
@@ -84,7 +120,6 @@ class SeveritCleaningViewModel : BaseViewModel() {
             maxMinDifference = maxOf(hundreds, tens, ones) - minOf(hundreds, tens, ones)
         )
     }
-
 
     fun dismissSuccessDialog() {
         _showSuccessDialog.value = false

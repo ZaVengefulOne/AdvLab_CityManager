@@ -3,7 +3,7 @@ package org.vengeful.citymanager.screens.niis
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -27,10 +27,15 @@ import org.vengeful.citymanager.uikit.composables.veng.VengText
 import org.vengeful.citymanager.utilities.LocalTheme
 
 @Composable
-fun SeveriteCleaningScreen(navController: NavController) {
+fun SeveriteCleaningScreen(
+    navController: NavController,
+    sampleNumber: String
+) {
     val viewModel: SeveritCleaningViewModel = koinViewModel()
     val currentTheme = LocalTheme
 
+    val cleaningMode by viewModel.cleaningMode.collectAsState()
+    val activeIndices by viewModel.activeIndices.collectAsState()
     val currentValues by viewModel.currentValues.collectAsState()
     val guessedIndices by viewModel.guessedIndices.collectAsState()
     val showSuccessDialog by viewModel.showSuccessDialog.collectAsState()
@@ -41,9 +46,8 @@ fun SeveriteCleaningScreen(navController: NavController) {
         viewModel.getDialLockHints()
     }
 
-
-    LaunchedEffect(Unit) {
-        viewModel.generateSequence()
+    LaunchedEffect(sampleNumber) {
+        viewModel.initializeMode(sampleNumber)
     }
 
     VengBackground(theme = currentTheme) {
@@ -83,14 +87,15 @@ fun SeveriteCleaningScreen(navController: NavController) {
                     )
                     SegmentedProgressBar(
                         progress = guessedIndices.size,
+                        totalSegments = activeIndices.size,
                         modifier = Modifier.fillMaxWidth(),
                         theme = currentTheme
                     )
                 }
             }
 
-            // Интерактивные элементы в сетке
-            val elements = listOf(
+            // Все возможные элементы
+            val allElements = listOf(
                 ElementData(0, "Регулятор давления") { value, onChange ->
                     SteampunkSlider(
                         value = value,
@@ -152,6 +157,9 @@ fun SeveriteCleaningScreen(navController: NavController) {
                 }
             )
 
+            // Фильтруем элементы по активным индексам
+            val activeElements = allElements.filter { it.index in activeIndices }
+
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 modifier = Modifier.weight(1f),
@@ -159,7 +167,7 @@ fun SeveriteCleaningScreen(navController: NavController) {
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(vertical = 4.dp)
             ) {
-                itemsIndexed(elements) { index, element ->
+                items(activeElements) { element ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.Center,
@@ -170,11 +178,11 @@ fun SeveriteCleaningScreen(navController: NavController) {
                             contentAlignment = Alignment.Center
                         ) {
                             element.content(
-                                currentValues[index],
-                                { viewModel.updateValue(index, it) }
+                                currentValues[element.index],
+                                { viewModel.updateValue(element.index, it) }
                             )
                         }
-                        SuccessIndicator(isActive = guessedIndices.contains(index))
+                        SuccessIndicator(isActive = guessedIndices.contains(element.index))
                     }
                 }
             }

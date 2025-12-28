@@ -108,8 +108,17 @@ fun Host() {
             NIISMainScreen(navController = navController)
         }
 
-        composable(route = ROUTE_NIIS_CLEANING) {
-            SeveriteCleaningScreen(navController = navController)
+        composable(
+            route = "$ROUTE_NIIS_CLEANING/{sampleNumber}",
+            arguments = listOf(navArgument("sampleNumber") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val sampleNumber = backStackEntry.arguments?.read{
+                getString("sampleNumber")
+            } ?: ""
+            SeveriteCleaningScreen(
+                navController = navController,
+                sampleNumber = sampleNumber
+            )
         }
         composable(
             route = "$ROUTE_NEWS_ITEM/{newsId}",
