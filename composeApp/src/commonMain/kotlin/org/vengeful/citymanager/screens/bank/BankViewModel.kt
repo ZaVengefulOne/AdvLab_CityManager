@@ -47,7 +47,6 @@ class BankViewModel(
         statusCheckJob?.cancel()
         statusCheckJob = viewModelScope.launch {
             while (true) {
-//                delay(15000)
                 delay(3000)
                 try {
                     val status = administrationInteractor.getCallStatus(Enterprise.BANK)

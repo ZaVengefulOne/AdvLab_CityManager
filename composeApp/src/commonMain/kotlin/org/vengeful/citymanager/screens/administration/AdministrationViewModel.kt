@@ -342,7 +342,7 @@ class AdministrationViewModel(
                 backupInteractor.downloadGameBackup(format)
             } catch (e: Exception) {
                 _errorMessage.value = "Ошибка: ${e.message}"
-            } 
+            }
         }
     }
 
@@ -395,10 +395,7 @@ class AdministrationViewModel(
         viewModelScope.launch {
             try {
                 val result = severiteInteractor.sellSeverite(severiteIds)
-                // Обновляем список северита после продажи
                 loadSeverites()
-                // Обновляем банковские счета (деньги уже добавлены на сервере)
-                // Можно добавить обновление банковских счетов здесь, если нужно
             } catch (e: Exception) {
                 _errorMessage.value = "Ошибка продажи северита: ${e.message}"
                 println("Failed to sell severite: ${e.message}")
@@ -408,8 +405,8 @@ class AdministrationViewModel(
     }
 
     companion object {
-        const val UPDATE_INTERVAL_MS = 2000L // 2 секунды
-        const val CONFIG_UPDATE_INTERVAL_MS = 15000L // 15 секунд
+        const val UPDATE_INTERVAL_MS = 300000L // 5 минут
+        const val CONFIG_UPDATE_INTERVAL_MS = 1200000L // 20 минут
 
         const val FLUCTUATION_MIN = -5
         const val FLUCTUATION_MAX = 5

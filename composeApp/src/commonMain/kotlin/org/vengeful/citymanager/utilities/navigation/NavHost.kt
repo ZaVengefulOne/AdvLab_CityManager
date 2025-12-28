@@ -1,7 +1,6 @@
 package org.vengeful.citymanager.utilities.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -43,7 +42,7 @@ import org.vengeful.citymanager.screens.niis.NIISMainScreen
 import org.vengeful.citymanager.screens.niis.SeveriteCleaningScreen
 import org.vengeful.citymanager.screens.police.PoliceScreen
 import org.vengeful.citymanager.screens.stocks.StockScreen
-import org.vengeful.citymanager.screens.usersAndPersons.UsersAndPersonsScreen
+import org.vengeful.citymanager.screens.administration.userManagement.UsersAndPersonsScreen
 
 
 @Composable
