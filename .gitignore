@@ -25,3 +25,5 @@ build/reports/detekt/
 .env.*.local
 *.env
 server/src/main/resources/application.conf
+/src/main/resources/news_images/8e678d4a-c519-4014-9c79-6615bc8e2c71.png
+/src/main/resources/news_images/62e4e97c-4b41-4d10-926e-db309c17c082.png

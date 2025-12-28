@@ -11,12 +11,10 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
-import org.vengeful.citymanager.SERVER_PORT
+import org.vengeful.citymanager.SERVER_BASE_URL
 import org.vengeful.citymanager.data.USER_AGENT
 import org.vengeful.citymanager.data.USER_AGENT_TAG
 import org.vengeful.citymanager.data.client
-import org.vengeful.citymanager.data.persons.PersonInteractor.Companion.SERVER_ADDRESS
-import org.vengeful.citymanager.data.persons.PersonInteractor.Companion.SERVER_PREFIX
 import org.vengeful.citymanager.data.users.AuthManager
 import org.vengeful.citymanager.models.library.Article
 
@@ -26,7 +24,7 @@ class LibraryInteractor(
 
     override suspend fun getAllArticles(): List<Article> {
         return try {
-            val response = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/library/articles") {
+            val response = client.get("$SERVER_BASE_URL/library/articles") {
                 setHttpBuilder(withAuth = false)
             }
             if (response.status.isSuccess()) {
@@ -41,7 +39,7 @@ class LibraryInteractor(
 
     override suspend fun getArticleById(id: Int): Article? {
         return try {
-            val response = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/library/articles/$id") {
+            val response = client.get("$SERVER_BASE_URL/library/articles/$id") {
                 setHttpBuilder(withAuth = false)
             }
             if (response.status.isSuccess()) {

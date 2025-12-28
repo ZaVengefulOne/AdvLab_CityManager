@@ -4,6 +4,7 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
+import org.vengeful.citymanager.SERVER_BASE_URL
 import org.vengeful.citymanager.data.client
 import org.vengeful.citymanager.data.users.AuthManager
 
@@ -11,7 +12,7 @@ class BackupInteractor(
     private val authManager: AuthManager
 ) : IBackupInteractor {
 
-    private val baseUrl = "http://localhost:8080"
+    private val baseUrl = SERVER_BASE_URL
 
     override suspend fun downloadGameBackup(format: String) {
         val token = authManager.getToken() ?: throw Exception("Не авторизован")

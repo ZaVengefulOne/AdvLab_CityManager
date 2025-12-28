@@ -25,13 +25,13 @@ fun SuccessIndicator(
         animationSpec = tween(300),
         label = "indicator_scale"
     )
-    
+
     val alpha by animateFloatAsState(
         targetValue = if (isActive) 1f else 0.3f,
         animationSpec = tween(300),
         label = "indicator_alpha"
     )
-    
+
     Box(
         modifier = modifier
             .size(20.dp)

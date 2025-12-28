@@ -21,7 +21,7 @@ fun SegmentedProgressBar(
     theme: ColorTheme = ColorTheme.GOLDEN
 ) {
     val colorScheme = SeveritepunkThemes.getColorScheme(theme)
-    
+
     Row(
         modifier = modifier
             .fillMaxWidth()

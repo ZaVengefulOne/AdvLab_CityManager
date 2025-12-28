@@ -35,7 +35,7 @@ fun SteampunkSliderPuzzle(
 ) {
     val colorScheme = SeveritepunkThemes.getColorScheme(theme)
     val sliderCount = 3
-    
+
     // Инициализируем слайдеры на основе текущего значения
     var sliders by remember(value) {
         // Распределяем значение между слайдерами
@@ -47,14 +47,14 @@ fun SteampunkSliderPuzzle(
             }
         )
     }
-    
+
     fun updateSliders(index: Int, newValue: Int) {
         val newSliders = sliders.toMutableList()
         val oldValue = newSliders[index]
         val delta = newValue - oldValue
-        
+
         newSliders[index] = newValue.coerceIn(0, 100)
-        
+
         // Влияние на соседние слайдеры (противоположное направление)
         if (index > 0) {
             val neighborValue = newSliders[index - 1] - delta / 2
@@ -64,9 +64,9 @@ fun SteampunkSliderPuzzle(
             val neighborValue = newSliders[index + 1] - delta / 2
             newSliders[index + 1] = neighborValue.coerceIn(0, 100)
         }
-        
+
         sliders = newSliders
-        
+
         // Вычисляем итоговое значение как среднее арифметическое
         val totalValue = sliders.sum()
         val calculatedValue = (totalValue / sliderCount.toFloat()).toInt().coerceIn(0, 100)
@@ -145,7 +145,7 @@ fun SteampunkSliderPuzzle(
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.width(20.dp)
                         )
-                        
+
                         Slider(
                             value = sliderValue.toFloat(),
                             onValueChange = { updateSliders(index, it.toInt()) },
@@ -157,7 +157,7 @@ fun SteampunkSliderPuzzle(
                                 inactiveTrackColor = colorScheme.borderDark.copy(alpha = 0.5f)
                             )
                         )
-                        
+
                         VengText(
                             text = "$sliderValue",
                             color = colorScheme.borderLight,

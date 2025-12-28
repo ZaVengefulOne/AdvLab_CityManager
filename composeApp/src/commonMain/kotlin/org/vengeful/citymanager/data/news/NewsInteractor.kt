@@ -7,12 +7,10 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
-import org.vengeful.citymanager.SERVER_PORT
+import org.vengeful.citymanager.SERVER_BASE_URL
 import org.vengeful.citymanager.data.USER_AGENT
 import org.vengeful.citymanager.data.USER_AGENT_TAG
 import org.vengeful.citymanager.data.client
-import org.vengeful.citymanager.data.persons.PersonInteractor.Companion.SERVER_ADDRESS
-import org.vengeful.citymanager.data.persons.PersonInteractor.Companion.SERVER_PREFIX
 import org.vengeful.citymanager.data.users.AuthManager
 import org.vengeful.citymanager.models.news.News
 
@@ -22,7 +20,7 @@ class NewsInteractor(
 
     override suspend fun getAllNews(): List<News> {
         return try {
-            val response = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/news/items") {
+            val response = client.get("$SERVER_BASE_URL/news/items") {
                 setHttpBuilder(withAuth = false)
             }
             if (response.status.isSuccess()) {
@@ -37,7 +35,7 @@ class NewsInteractor(
 
     override suspend fun getNewsById(id: Int): News? {
         return try {
-            val response = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/news/items/$id") {
+            val response = client.get("$SERVER_BASE_URL/news/items/$id") {
                 setHttpBuilder(withAuth = false)
             }
             if (response.status.isSuccess()) {

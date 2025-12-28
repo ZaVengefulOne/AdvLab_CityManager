@@ -18,9 +18,7 @@ import androidx.navigation.NavController
 import citymanager.composeapp.generated.resources.Res
 import citymanager.composeapp.generated.resources.back
 import org.jetbrains.compose.resources.stringResource
-import org.vengeful.citymanager.SERVER_PORT
-import org.vengeful.citymanager.data.persons.PersonInteractor.Companion.SERVER_ADDRESS
-import org.vengeful.citymanager.data.persons.PersonInteractor.Companion.SERVER_PREFIX
+import org.vengeful.citymanager.SERVER_BASE_URL
 import org.vengeful.citymanager.di.koinViewModel
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
 import org.vengeful.citymanager.uikit.composables.news.AsyncNewsImage
@@ -134,7 +132,7 @@ fun NewsItemScreen(
                         .verticalScroll(rememberScrollState())
                         .padding(bottom = 24.dp)
                 ) {
-                    val imageUrl = "$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT${news!!.imageUrl}"
+                    val imageUrl = "$SERVER_BASE_URL${news!!.imageUrl}"
                     AsyncNewsImage(
                         imageUrl = imageUrl,
                         modifier = Modifier

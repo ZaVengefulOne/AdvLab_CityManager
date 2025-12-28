@@ -13,12 +13,10 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
-import org.vengeful.citymanager.SERVER_PORT
+import org.vengeful.citymanager.SERVER_BASE_URL
 import org.vengeful.citymanager.data.USER_AGENT
 import org.vengeful.citymanager.data.USER_AGENT_TAG
 import org.vengeful.citymanager.data.client
-import org.vengeful.citymanager.data.persons.PersonInteractor.Companion.SERVER_ADDRESS
-import org.vengeful.citymanager.data.persons.PersonInteractor.Companion.SERVER_PREFIX
 import org.vengeful.citymanager.data.users.AuthManager
 import org.vengeful.citymanager.models.users.CreateMedicalRecordRequest
 import org.vengeful.citymanager.models.medicine.MedicalRecord
@@ -35,7 +33,7 @@ class MedicInteractor(
 
 
     override suspend fun createMedicalRecord(record: MedicalRecord, healthStatus: String): MedicalRecord {
-        val response = client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/medic/medical-records") {
+        val response = client.post("$SERVER_BASE_URL/medic/medical-records") {
             setHttpBuilder()
             setBody(CreateMedicalRecordRequest(record = record, healthStatus = healthStatus))
         }
@@ -48,7 +46,7 @@ class MedicInteractor(
     }
 
     override suspend fun getPatientsWithRecords(): List<Person> {
-        val response = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/medic/patients") {
+        val response = client.get("$SERVER_BASE_URL/medic/patients") {
             setHttpBuilder()
         }
 
@@ -60,7 +58,7 @@ class MedicInteractor(
     }
 
     override suspend fun getMedicalRecordsByPersonId(personId: Int): List<MedicalRecord> {
-        val response = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/medic/medical-records/$personId") {
+        val response = client.get("$SERVER_BASE_URL/medic/medical-records/$personId") {
             setHttpBuilder()
         }
 
@@ -72,7 +70,7 @@ class MedicInteractor(
     }
 
     override suspend fun getMedicalRecordById(recordId: Int): MedicalRecord? {
-        val response = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/medic/medical-records/byId/$recordId") {
+        val response = client.get("$SERVER_BASE_URL/medic/medical-records/byId/$recordId") {
             setHttpBuilder()
         }
 
@@ -90,7 +88,7 @@ class MedicInteractor(
     }
 
     override suspend fun updateMedicalRecord(recordId: Int, record: MedicalRecord, healthStatus: String): MedicalRecord {
-        val response = client.put("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/medic/medical-records/$recordId") {
+        val response = client.put("$SERVER_BASE_URL/medic/medical-records/$recordId") {
             setHttpBuilder()
             setBody(UpdateMedicalRecordRequest(record = record, healthStatus = healthStatus))
         }
@@ -103,7 +101,7 @@ class MedicInteractor(
     }
 
     override suspend fun getAllMedicines(): List<Medicine> {
-        val response = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/medic/medicines") {
+        val response = client.get("$SERVER_BASE_URL/medic/medicines") {
             setHttpBuilder()
         }
 
@@ -115,7 +113,7 @@ class MedicInteractor(
     }
 
     override suspend fun getMedicineById(id: Int): Medicine? {
-        val response = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/medic/medicines/$id") {
+        val response = client.get("$SERVER_BASE_URL/medic/medicines/$id") {
             setHttpBuilder()
         }
 
@@ -129,7 +127,7 @@ class MedicInteractor(
     }
 
     override suspend fun createMedicine(medicine: Medicine): Medicine {
-        val response = client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/medic/medicines") {
+        val response = client.post("$SERVER_BASE_URL/medic/medicines") {
             setHttpBuilder()
             setBody(medicine)
         }
@@ -142,7 +140,7 @@ class MedicInteractor(
     }
 
     override suspend fun updateMedicine(medicine: Medicine): Medicine {
-        val response = client.put("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/medic/medicines/${medicine.id}") {
+        val response = client.put("$SERVER_BASE_URL/medic/medicines/${medicine.id}") {
             setHttpBuilder()
             setBody(medicine)
         }
@@ -155,7 +153,7 @@ class MedicInteractor(
     }
 
     override suspend fun deleteMedicine(id: Int): Boolean {
-        val response = client.delete("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/medic/medicines/$id") {
+        val response = client.delete("$SERVER_BASE_URL/medic/medicines/$id") {
             setHttpBuilder()
         }
 
@@ -163,7 +161,7 @@ class MedicInteractor(
     }
 
     override suspend fun deleteMedicalRecord(recordId: Int): Boolean {
-        val response = client.delete("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/medic/medical-records/$recordId") {
+        val response = client.delete("$SERVER_BASE_URL/medic/medical-records/$recordId") {
             setHttpBuilder()
         }
 
@@ -171,7 +169,7 @@ class MedicInteractor(
     }
 
     override suspend fun orderMedicine(medicineId: Int, quantity: Int, accountId: Int): MedicineOrder {
-        val response = client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/medic/order-medicine") {
+        val response = client.post("$SERVER_BASE_URL/medic/order-medicine") {
             setHttpBuilder()
             setBody(CreateMedicineOrderRequest(medicineId = medicineId, quantity = quantity, accountId = accountId))
         }
@@ -189,7 +187,7 @@ class MedicInteractor(
     }
 
     override suspend fun getMedicineOrders(): List<MedicineOrderNotification> {
-        val response = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/medic/orders") {
+        val response = client.get("$SERVER_BASE_URL/medic/orders") {
             setHttpBuilder()
         }
 

@@ -57,7 +57,19 @@ class ApiClient(
     }
 
     // Базовый URL твоего Ktor сервера
-    private val baseUrl = "http://localhost:8080"
+    // Автоматическое определение через window.location для продакшена
+    private val baseUrl: String = run {
+        val jsBaseUrl = js("""
+            (function() {
+                if (typeof window !== 'undefined' && window.location) {
+                    return window.location.origin;
+                }
+                return null;
+            })()
+        """).unsafeCast<String?>()
+        
+        jsBaseUrl ?: "http://localhost:8080" // fallback для разработки
+    }
 
 
     private fun HttpRequestBuilder.addAuthHeader() {

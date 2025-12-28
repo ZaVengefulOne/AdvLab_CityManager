@@ -14,6 +14,14 @@ application {
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
 }
 
+tasks.shadowJar {
+    archiveBaseName.set("citymanager-server")
+    archiveClassifier.set("")
+    manifest {
+        attributes("Main-Class" to "io.ktor.server.netty.EngineMain")
+    }
+}
+
 dependencies {
     val ktorVersion = "3.3.0"
 

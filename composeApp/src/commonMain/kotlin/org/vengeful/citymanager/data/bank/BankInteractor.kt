@@ -13,7 +13,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
-import org.vengeful.citymanager.SERVER_PORT
+import org.vengeful.citymanager.SERVER_BASE_URL
 import org.vengeful.citymanager.data.USER_AGENT
 import org.vengeful.citymanager.data.USER_AGENT_TAG
 import org.vengeful.citymanager.data.client
@@ -28,7 +28,7 @@ class BankInteractor(
 
     override suspend fun getAllBankAccounts(): List<BankAccount> {
         return try {
-            val response = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/bank/accounts") {
+            val response = client.get("$SERVER_BASE_URL/bank/accounts") {
                 setHttpBuilder()
             }
             if (response.status.isSuccess()) {
@@ -43,7 +43,7 @@ class BankInteractor(
 
     override suspend fun getBankAccountByPersonId(personId: Int): BankAccount? {
         return try {
-            val response = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/bank/accounts/person/$personId") {
+            val response = client.get("$SERVER_BASE_URL/bank/accounts/person/$personId") {
                 setHttpBuilder()
             }
             if (response.status.isSuccess()) {
@@ -60,7 +60,7 @@ class BankInteractor(
 
     override suspend fun getBankAccountById(id: Int): BankAccount? {
         return try {
-            val response = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/bank/accounts/$id") {
+            val response = client.get("$SERVER_BASE_URL/bank/accounts/$id") {
                 setHttpBuilder()
             }
             if (response.status.isSuccess()) {
@@ -88,7 +88,7 @@ class BankInteractor(
                 creditAmount = creditAmount,
                 personBalance = personBalance
             )
-            val response: HttpResponse = client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/bank/accounts") {
+            val response: HttpResponse = client.post("$SERVER_BASE_URL/bank/accounts") {
                 setHttpBuilder()
                 setBody(request)
             }
@@ -109,7 +109,7 @@ class BankInteractor(
 
     override suspend fun closeCredit(accountId: Int): BankAccount {
         return try {
-            val response: HttpResponse = client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/bank/accounts/$accountId/close-credit") {
+            val response: HttpResponse = client.post("$SERVER_BASE_URL/bank/accounts/$accountId/close-credit") {
                 setHttpBuilder()
             }
             if (response.status.isSuccess()) {
@@ -129,7 +129,7 @@ class BankInteractor(
 
     override suspend fun getBankAccountByEnterpriseName(enterpriseName: String): BankAccount? {
         return try {
-            val response = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/bank/accounts/enterprise/$enterpriseName") {
+            val response = client.get("$SERVER_BASE_URL/bank/accounts/enterprise/$enterpriseName") {
                 setHttpBuilder()
             }
             if (response.status.isSuccess()) {
@@ -153,7 +153,7 @@ class BankInteractor(
                 creditAmount = bankAccount.creditAmount,
                 personBalance = personBalance
             )
-            val response: HttpResponse = client.put("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/bank/accounts/${bankAccount.id}") {
+            val response: HttpResponse = client.put("$SERVER_BASE_URL/bank/accounts/${bankAccount.id}") {
                 setHttpBuilder()
                 setBody(request)
             }
@@ -165,7 +165,7 @@ class BankInteractor(
 
     override suspend fun deleteBankAccount(id: Int): Boolean {
         return try {
-            val response: HttpResponse = client.delete("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/bank/accounts/$id") {
+            val response: HttpResponse = client.delete("$SERVER_BASE_URL/bank/accounts/$id") {
                 setHttpBuilder()
             }
             response.status.isSuccess()
@@ -187,8 +187,4 @@ class BankInteractor(
         }
     }
 
-    companion object {
-        const val SERVER_PREFIX = "http://"
-        const val SERVER_ADDRESS = "localhost"
-    }
 }

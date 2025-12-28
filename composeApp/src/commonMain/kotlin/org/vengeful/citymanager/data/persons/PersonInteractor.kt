@@ -12,11 +12,17 @@ import io.ktor.http.*
 import io.ktor.http.HttpHeaders
 import org.vengeful.citymanager.BUILD_VARIANT
 import org.vengeful.citymanager.BuildVariant
+import org.vengeful.citymanager.Platform
+import org.vengeful.citymanager.SERVER_BASE_URL
+import org.vengeful.citymanager.SERVER_ADDRESS_DEBUG
+import org.vengeful.citymanager.SERVER_PROTOCOL
+import org.vengeful.citymanager.SERVER_HOST
 import org.vengeful.citymanager.SERVER_PORT
 import org.vengeful.citymanager.data.USER_AGENT
 import org.vengeful.citymanager.data.USER_AGENT_TAG
 import org.vengeful.citymanager.data.client
 import org.vengeful.citymanager.data.users.AuthManager
+import org.vengeful.citymanager.getPlatform
 import org.vengeful.citymanager.models.Person
 import org.vengeful.citymanager.models.Rights
 
@@ -24,11 +30,18 @@ class PersonInteractor(
     private val authManager: AuthManager
 ) : IPersonInteractor {
 
+    private fun getBaseUrl(): String {
+        if (BUILD_VARIANT == BuildVariant.ANDROID) {
+            return "$SERVER_PROTOCOL://$SERVER_ADDRESS_DEBUG:$SERVER_PORT"
+        }
+        return SERVER_BASE_URL
+    }
+
     override suspend fun getPersons(): List<Person> {
         return try {
             val token = authManager.getToken()
             println("DEBUG: Token in getPersons: ${if (token != null) "present (${token.take(20)}...)" else "null"}")
-            val response = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/persons") {
+            val response = client.get("${getBaseUrl()}/persons") {
                 setHttpBuilder(withAuth = token != null) // Добавляем токен только если он есть
             }
             if (response.status.isSuccess()) {
@@ -44,7 +57,7 @@ class PersonInteractor(
     override suspend fun getPersonById(id: Int): Person? {
         return try {
             val response =
-                client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/persons/byId/${id}") { setHttpBuilder() }
+                client.get("${getBaseUrl()}/persons/byId/${id}") { setHttpBuilder() }
             if (response.status.isSuccess()) {
                 response.body<Person>()
             } else {
@@ -61,7 +74,7 @@ class PersonInteractor(
     ): Person? {
         return try {
             val response =
-                client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/persons/byName/${name}_${lastName}") { setHttpBuilder() }
+                client.get("${getBaseUrl()}/persons/byName/${name}_${lastName}") { setHttpBuilder() }
             if (response.status.isSuccess()) {
                 response.body<Person>()
             } else {
@@ -74,7 +87,7 @@ class PersonInteractor(
 
     override suspend fun getPersonsByRights(rights: List<Rights>): List<Person> {
         val rightsParam = rights.joinToString(",") { it.name }
-        return client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/persons/byRights") {
+        return client.get("${getBaseUrl()}/persons/byRights") {
             setHttpBuilder()
             parameter("rights", rightsParam)
         }.body()
@@ -82,7 +95,7 @@ class PersonInteractor(
 
     override suspend fun addPerson(person: Person) {
         try {
-            client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/persons") {
+            client.post("${getBaseUrl()}/persons") {
                 setHttpBuilder()
                 setBody(person)
             }
@@ -93,7 +106,7 @@ class PersonInteractor(
 
     override suspend fun updatePerson(person: Person) {
         return try {
-            val response = client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/persons/update") {
+            val response = client.post("${getBaseUrl()}/persons/update") {
                 setHttpBuilder()
                 setBody(person)
             }
@@ -109,7 +122,7 @@ class PersonInteractor(
 
     override suspend fun deletePerson(id: Int) {
         try {
-            client.delete("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/persons/${id}") {
+            client.delete("${getBaseUrl()}/persons/${id}") {
                 setHttpBuilder()
             }
         } catch (e: Exception) {
@@ -120,7 +133,7 @@ class PersonInteractor(
     override suspend fun getPersonsByRights(rights: Rights): List<Person> {
         return try {
             val response =
-                client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/persons/byRights/$rights") { setHttpBuilder() }
+                client.get("${getBaseUrl()}/persons/byRights/$rights") { setHttpBuilder() }
             if (response.status.isSuccess()) {
                 response.body<List<Person>>()
             } else {
@@ -133,8 +146,7 @@ class PersonInteractor(
 
     override suspend fun getAdminPersons(): List<Person> {
         return try {
-            val serverAddress = if (BUILD_VARIANT == BuildVariant.DEBUG) SERVER_ADDRESS_DEBUG else SERVER_ADDRESS
-            val url = "$SERVER_PREFIX$serverAddress:$SERVER_PORT/adminPersons"
+            val url = "${getBaseUrl()}/adminPersons"
             val response = client.get(url) {
                 contentType(ContentType.Application.Json)
                 header(USER_AGENT_TAG, USER_AGENT)
@@ -175,7 +187,7 @@ class PersonInteractor(
                 toPersonId = toPersonId,
                 amount = amount
             )
-            val response = client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/persons/transfer") {
+            val response = client.post("${getBaseUrl()}/persons/transfer") {
                 setHttpBuilder()
                 setBody(request)
             }
@@ -195,9 +207,6 @@ class PersonInteractor(
     }
 
     companion object {
-        const val SERVER_PREFIX = "http://"
-        const val SERVER_ADDRESS = "localhost"
-        const val SERVER_ADDRESS_DEBUG = "10.0.2.2"
         const val ERROR_TEXT = "Server Error!"
     }
 }

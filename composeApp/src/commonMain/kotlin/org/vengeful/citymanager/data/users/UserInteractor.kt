@@ -15,13 +15,13 @@ import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import org.vengeful.citymanager.BUILD_VARIANT
 import org.vengeful.citymanager.BuildVariant
+import org.vengeful.citymanager.SERVER_BASE_URL
+import org.vengeful.citymanager.SERVER_ADDRESS_DEBUG
+import org.vengeful.citymanager.SERVER_PROTOCOL
 import org.vengeful.citymanager.SERVER_PORT
-import org.vengeful.citymanager.data.persons.PersonInteractor.Companion.SERVER_ADDRESS
-import org.vengeful.citymanager.data.persons.PersonInteractor.Companion.SERVER_PREFIX
 import org.vengeful.citymanager.data.USER_AGENT
 import org.vengeful.citymanager.data.USER_AGENT_TAG
 import org.vengeful.citymanager.data.client
-import org.vengeful.citymanager.data.persons.PersonInteractor.Companion.SERVER_ADDRESS_DEBUG
 import org.vengeful.citymanager.data.users.models.LoginResult
 import org.vengeful.citymanager.data.users.models.RegisterResult
 import org.vengeful.citymanager.models.Rights
@@ -36,10 +36,17 @@ import org.vengeful.citymanager.models.users.User
 
 class UserInteractor(private val authManager: AuthManager) : IUserInteractor {
 
+    private fun getBaseUrl(): String {
+        if (BUILD_VARIANT == BuildVariant.ANDROID) {
+            return "$SERVER_PROTOCOL://$SERVER_ADDRESS_DEBUG:$SERVER_PORT"
+        }
+        return SERVER_BASE_URL
+    }
+
     override suspend fun login(username: String, password: String): LoginResult {
         return try {
             val loginRequest = LoginRequest(username, password)
-            val response: HttpResponse = client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/auth/login") {
+            val response: HttpResponse = client.post("${getBaseUrl()}/auth/login") {
                 contentType(ContentType.Application.Json)
                 setBody(loginRequest)
                 setAuthHeader()
@@ -118,7 +125,7 @@ class UserInteractor(private val authManager: AuthManager) : IUserInteractor {
             }
             println("updateClicks: userId=$userId, clicks=$clicks, token present=${token.isNotEmpty()}")
 
-            val response: HttpResponse = client.put("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/users/$userId/clicks") {
+            val response: HttpResponse = client.put("${getBaseUrl()}/users/$userId/clicks") {
                 contentType(ContentType.Application.Json)
                 setAuthHeader()
                 setBody(UpdateClicksRequest(clicks))
@@ -154,9 +161,8 @@ class UserInteractor(private val authManager: AuthManager) : IUserInteractor {
         rights: List<Rights>
     ): RegisterResult {
         return try {
-            val serverAddress = if (BUILD_VARIANT == BuildVariant.DEBUG) SERVER_ADDRESS_DEBUG else SERVER_ADDRESS
             val registerRequest = RegisterRequest(username, password, personId, rights)
-            val response: HttpResponse = client.post("$SERVER_PREFIX$serverAddress:$SERVER_PORT/adminReg") {
+            val response: HttpResponse = client.post("${getBaseUrl()}/adminReg") {
                 contentType(ContentType.Application.Json)
                 setBody(registerRequest)
                 // Не добавляем токен авторизации
@@ -202,7 +208,7 @@ class UserInteractor(private val authManager: AuthManager) : IUserInteractor {
     ): RegisterResult {
         return try {
             val registerRequest = RegisterRequest(username, password, personId, rights)
-            val response: HttpResponse = client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/auth/register") {
+            val response: HttpResponse = client.post("${getBaseUrl()}/auth/register") {
                 contentType(ContentType.Application.Json)
                 setBody(registerRequest)
             }
@@ -237,7 +243,7 @@ class UserInteractor(private val authManager: AuthManager) : IUserInteractor {
 
     override suspend fun getAllUsers(): List<User> {
         return try {
-            val response: HttpResponse = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/users") {
+            val response: HttpResponse = client.get("${getBaseUrl()}/users") {
                 contentType(ContentType.Application.Json)
                 setHttpBuilder()
             }
@@ -291,7 +297,7 @@ class UserInteractor(private val authManager: AuthManager) : IUserInteractor {
                 personId = personId // ID связанного Person
             )
 
-            val response: HttpResponse = client.put("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/users/${user.id}") {
+            val response: HttpResponse = client.put("${getBaseUrl()}/users/${user.id}") {
                 contentType(ContentType.Application.Json)
                 setBody(updateRequest)
                 setHttpBuilder()
@@ -352,7 +358,7 @@ class UserInteractor(private val authManager: AuthManager) : IUserInteractor {
      */
     override suspend fun deleteUser(id: Int): Boolean {
         return try {
-            val response: HttpResponse = client.delete("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/users/$id") {
+            val response: HttpResponse = client.delete("${getBaseUrl()}/users/$id") {
                 contentType(ContentType.Application.Json)
                 setHttpBuilder()
             }
@@ -405,7 +411,7 @@ class UserInteractor(private val authManager: AuthManager) : IUserInteractor {
 
     override suspend fun getCurrentUserWithPersonId(): CurrentUserResponse? {
         return try {
-            val response: HttpResponse = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/users/me") {
+            val response: HttpResponse = client.get("${getBaseUrl()}/users/me") {
                 setHttpBuilder()
                 val requestToken = authManager.getToken()
             }
@@ -433,7 +439,7 @@ class UserInteractor(private val authManager: AuthManager) : IUserInteractor {
     override suspend fun purchaseSaveProgressUpgrade(userId: Int): Boolean {
         return try {
             val token = authManager.getToken() ?: return false
-            val response: HttpResponse = client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/users/$userId/purchase-save-progress-upgrade") {
+            val response: HttpResponse = client.post("${getBaseUrl()}/users/$userId/purchase-save-progress-upgrade") {
                 contentType(ContentType.Application.Json)
                 setAuthHeader()
             }
@@ -452,7 +458,7 @@ class UserInteractor(private val authManager: AuthManager) : IUserInteractor {
                 return false
             }
 
-            val response: HttpResponse = client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/users/$userId/purchase-click-multiplier-upgrade") {
+            val response: HttpResponse = client.post("${getBaseUrl()}/users/$userId/purchase-click-multiplier-upgrade") {
                 contentType(ContentType.Application.Json)
                 setAuthHeader()
             }

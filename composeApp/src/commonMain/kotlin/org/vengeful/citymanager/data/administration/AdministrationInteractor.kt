@@ -7,12 +7,10 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
-import org.vengeful.citymanager.SERVER_PORT
+import org.vengeful.citymanager.SERVER_BASE_URL
 import org.vengeful.citymanager.data.USER_AGENT
 import org.vengeful.citymanager.data.USER_AGENT_TAG
 import org.vengeful.citymanager.data.client
-import org.vengeful.citymanager.data.persons.PersonInteractor.Companion.SERVER_ADDRESS
-import org.vengeful.citymanager.data.persons.PersonInteractor.Companion.SERVER_PREFIX
 import org.vengeful.citymanager.data.users.AuthManager
 import org.vengeful.citymanager.models.AdministrationConfig
 import org.vengeful.citymanager.models.CallRequest
@@ -28,7 +26,7 @@ class AdministrationInteractor(private val authManager: AuthManager) : IAdminist
     override suspend fun getAdministrationConfig(): AdministrationConfig {
         return try {
             val token = authManager.getToken()
-            val response = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/admin/config") {
+            val response = client.get("$SERVER_BASE_URL/admin/config") {
                 setHttpBuilder(withAuth = token != null)
             }
             if (response.status.isSuccess()) {
@@ -43,7 +41,7 @@ class AdministrationInteractor(private val authManager: AuthManager) : IAdminist
 
     override suspend fun sendMessage(text: String, sender: String): Boolean {
         return try {
-            val response = client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/admin/chat/send") {
+            val response = client.post("$SERVER_BASE_URL/admin/chat/send") {
                 setHttpBuilder()
                 setBody(SendMessageRequest(text, sender))
             }
@@ -56,7 +54,7 @@ class AdministrationInteractor(private val authManager: AuthManager) : IAdminist
     override suspend fun callEnterprise(enterprise: Enterprise): Boolean {
         return try {
             val token = authManager.getToken()
-            val response = client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/call/send") {
+            val response = client.post("$SERVER_BASE_URL/call/send") {
                 setHttpBuilder(withAuth = token != null)
                 setBody(CallRequest(enterprise))
             }
@@ -69,7 +67,7 @@ class AdministrationInteractor(private val authManager: AuthManager) : IAdminist
     override suspend fun getCallStatus(enterprise: Enterprise): CallStatus {
         return try {
             val token = authManager.getToken()
-            val response = client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/call/status/${enterprise.name}") {
+            val response = client.get("$SERVER_BASE_URL/call/status/${enterprise.name}") {
                 setHttpBuilder(withAuth = token != null)
             }
             if (response.status.isSuccess()) {
@@ -85,7 +83,7 @@ class AdministrationInteractor(private val authManager: AuthManager) : IAdminist
     override suspend fun resetCallStatus(enterprise: Enterprise): Boolean {
         return try {
             val token = authManager.getToken()
-            val response = client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/call/reset/${enterprise.name}") {
+            val response = client.post("$SERVER_BASE_URL/call/reset/${enterprise.name}") {
                 setHttpBuilder(withAuth = token != null)
             }
             response.status.isSuccess()
@@ -97,7 +95,7 @@ class AdministrationInteractor(private val authManager: AuthManager) : IAdminist
     override suspend fun activateEmergencyShutdown(durationMinutes: Int, password: String): Boolean {
         return try {
             val token = authManager.getToken()
-            val response = client.post("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/administration/emergency-shutdown") {
+            val response = client.post("$SERVER_BASE_URL/administration/emergency-shutdown") {
                 setHttpBuilder(withAuth = token != null)
                 setBody(EmergencyShutdownRequest(durationMinutes, password))
             }
@@ -132,7 +130,7 @@ class AdministrationInteractor(private val authManager: AuthManager) : IAdminist
         return try {
             val token = authManager.getToken()
             val response =
-                client.get("$SERVER_PREFIX$SERVER_ADDRESS:$SERVER_PORT/administration/emergency-shutdown/status") {
+                client.get("$SERVER_BASE_URL/administration/emergency-shutdown/status") {
                     setHttpBuilder(withAuth = token != null)
                 }
             if (response.status.isSuccess()) {
