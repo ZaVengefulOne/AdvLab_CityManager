@@ -77,9 +77,12 @@ import org.vengeful.citymanager.ROUTE_POLICE
 import org.vengeful.citymanager.ROUTE_STOCKS
 import org.vengeful.citymanager.di.koinViewModel
 import org.vengeful.citymanager.data.users.states.LoginUiState
+import org.vengeful.citymanager.audio.rememberSoundPlayer
+import org.vengeful.citymanager.audio.SoundPlayer
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
 import org.vengeful.citymanager.uikit.animations.RestartAnimation
 import org.vengeful.citymanager.uikit.animations.ShutdownAnimation
+import org.vengeful.citymanager.uikit.animations.StartupScreen
 import org.vengeful.citymanager.uikit.composables.dialogs.AuthDialog
 import org.vengeful.citymanager.uikit.composables.icons.Home
 import org.vengeful.citymanager.uikit.composables.main.ScreenButtonCard
@@ -101,7 +104,11 @@ fun MainScreen(navController: NavController) {
     var currentTheme by remember { mutableStateOf(LocalTheme) }
     var showRestartAnimation by remember { mutableStateOf(false) }
     var showShutdownAnimation by remember { mutableStateOf(false) }
+    var showStartupScreen by remember { mutableStateOf(false) }
+    var isRestartMode by remember { mutableStateOf(false) } // Флаг для автоматического запуска
     var showLoggingDialog by remember { mutableStateOf(false) }
+    
+    val soundPlayer = rememberSoundPlayer()
 
     val isLoggedData = viewModel.isLoggedData.collectAsState()
     val loginState = viewModel.loginState.collectAsState()
@@ -113,18 +120,48 @@ fun MainScreen(navController: NavController) {
 
     val colorTint = Color.White
 
-    if (showShutdownAnimation) {
-        ShutdownAnimation(
-            onComplete = { exitProcess(0) },
-            theme = LocalTheme
+    // Экран запуска (после выключения или при перезагрузке)
+    if (showStartupScreen) {
+        StartupScreen(
+            onComplete = {
+                // Выход из аккаунта и возврат на главный экран
+                viewModel.logout()
+                showStartupScreen = false
+                showShutdownAnimation = false
+                showRestartAnimation = false
+                isRestartMode = false
+            },
+            theme = currentTheme,
+            autoStart = isRestartMode, // Автоматический старт при перезагрузке
+            soundPlayer = soundPlayer
         )
         return
     }
 
+    // Анимация выключения
+    if (showShutdownAnimation) {
+        ShutdownAnimation(
+            onComplete = { 
+                // После выключения показываем экран запуска
+                isRestartMode = false
+                showStartupScreen = true
+            },
+            theme = LocalTheme,
+            soundPlayer = soundPlayer
+        )
+        return
+    }
+
+    // Анимация перезагрузки
     if (showRestartAnimation) {
         RestartAnimation(
-            onComplete = { showRestartAnimation = false },
-            theme = currentTheme
+            onComplete = { 
+                // После перезагрузки показываем экран запуска с автоматическим стартом
+                isRestartMode = true
+                showStartupScreen = true
+            },
+            theme = currentTheme,
+            soundPlayer = soundPlayer
         )
         return
     }
