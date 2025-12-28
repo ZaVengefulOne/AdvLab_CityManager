@@ -14,6 +14,7 @@ import org.vengeful.citymanager.personService.db.PersonRepository
 import org.vengeful.citymanager.personService.db.PersonRights
 import org.vengeful.citymanager.personService.db.Persons
 import org.vengeful.citymanager.personService.db.RightsTable
+import org.vengeful.citymanager.severiteService.db.Severites
 import org.vengeful.citymanager.stockSerivce.db.Stocks
 import org.vengeful.citymanager.userService.db.UserRights
 import org.vengeful.citymanager.userService.db.Users
@@ -48,7 +49,8 @@ fun Application.configureDatabase(repository: PersonRepository) {
             MedicineOrders,
             Stocks,
             Articles,
-            NewsTable
+            NewsTable,
+            Severites
         )
         repository.initializeRights()
     }

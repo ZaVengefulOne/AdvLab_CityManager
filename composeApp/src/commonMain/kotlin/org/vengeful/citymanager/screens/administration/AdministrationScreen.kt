@@ -35,6 +35,7 @@ import org.vengeful.citymanager.uikit.composables.administration.ControlLossIndi
 import org.vengeful.citymanager.uikit.composables.administration.EmergencyShutdownDialog
 import org.vengeful.citymanager.uikit.composables.administration.EnterpriseCallWidget
 import org.vengeful.citymanager.uikit.composables.administration.SeveriteRateGraph
+import org.vengeful.citymanager.uikit.composables.administration.SeveriteSalesWidget
 import org.vengeful.citymanager.uikit.composables.dialogs.DeleteConfirmationDialog
 import org.vengeful.citymanager.uikit.composables.dialogs.RegisterDialog
 import org.vengeful.citymanager.uikit.composables.misc.ThemeSwitcher
@@ -47,6 +48,7 @@ import org.vengeful.citymanager.uikit.composables.veng.VengText
 import org.vengeful.citymanager.utilities.LocalTheme
 import androidx.compose.runtime.collectAsState
 import org.vengeful.citymanager.models.emergencyShutdown.ErrorResponse
+import org.vengeful.citymanager.ROUTE_USERS_AND_PERSONS
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,6 +62,7 @@ fun AdministrationScreen(navController: NavController) {
     val chatMessages = administrationViewModel.chatMessages.collectAsState().value
     val isEmergencyShutdownActive = administrationViewModel.isEmergencyShutdownActive.collectAsState().value
     val remainingTimeSeconds = administrationViewModel.remainingTimeSeconds.collectAsState().value
+    val severites = administrationViewModel.severites.collectAsState().value
 
 
     var currentTheme by remember { mutableStateOf(LocalTheme) }
@@ -125,6 +128,7 @@ fun AdministrationScreen(navController: NavController) {
         administrationViewModel.getAdminConfig()
         administrationViewModel.startConfigUpdates()
         administrationViewModel.checkEmergencyShutdownStatus()
+        administrationViewModel.loadSeverites()
     }
 
     LaunchedEffect(refreshTrigger) {
@@ -363,6 +367,19 @@ fun AdministrationScreen(navController: NavController) {
                             borderColor = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
                             theme = currentTheme
                         )
+
+                        SeveriteSalesWidget(
+                            severites = severites,
+                            severitRate = severitRate,
+                            onSell = { severiteIds ->
+                                administrationViewModel.sellSeverite(severiteIds)
+                            },
+                            modifier = Modifier
+                                .wrapContentHeight(),
+                            backgroundColor = SeveritepunkThemes.getColorScheme(currentTheme).background.copy(alpha = 0.3f),
+                            borderColor = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
+                            theme = currentTheme
+                        )
                     }
 
                 }
@@ -373,140 +390,39 @@ fun AdministrationScreen(navController: NavController) {
                         .padding(vertical = defaultSpacer),
                     horizontalArrangement = Arrangement.spacedBy(defaultSpacer)
                 ) {
+                    // Кнопка для управления пользователями и жителями
                     Column(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight(),
-                        verticalArrangement = Arrangement.spacedBy(mediumPadding)
+                        verticalArrangement = Arrangement.spacedBy(mediumPadding),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Row(
+                        VengText(
+                            text = "Управление пользователями и жителями",
+                            color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = mediumPadding),
+                            textAlign = TextAlign.Center
+                        )
+                        VengButton(
+                            onClick = {
+                                navController.navigate(ROUTE_USERS_AND_PERSONS)
+                            },
+                            text = "Открыть списки",
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            VengText(
-                                text = stringResource(Res.string.user_list, users.size),
-                                color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.weight(1f)
-                            )
-                            VengButton(
-                                onClick = {
-                                    showRegisterDialog = true
-                                    administrationViewModel.getPersons()
-                                },
-                                text = stringResource(Res.string.add_new_person),
-                                modifier = Modifier,
-                                padding = 10.dp,
-                                theme = currentTheme
-                            )
-                        }
-
-                        if (users.isNotEmpty()) {
-                            UserList(
-                                users = users,
-                                modifier = Modifier.fillMaxSize(),
-                                onEditClick = { user ->
-                                    userToEdit = user
-                                },
-                                onDeleteClick = { user ->
-                                    userToDelete = user
-                                },
-                                onToggleActive = { user ->
-                                    administrationViewModel.toggleUserStatus(user.id, user.isActive)
-                                },
-                                theme = currentTheme
-                            )
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        SeveritepunkThemes.getColorScheme(currentTheme).borderLight.copy(alpha = 0.1f)
-                                    )
-                                    .border(
-                                        1.dp,
-                                        SeveritepunkThemes.getColorScheme(currentTheme).borderLight.copy(alpha = 0.2f)
-                                    )
-                                    .padding(defaultSpacer),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                VengText(
-                                    text = "Нет пользователей",
-                                    color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                        }
-                    }
-
-                    // Правая колонка - Жители
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight(),
-                        verticalArrangement = Arrangement.spacedBy(mediumPadding)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            VengText(
-                                text = stringResource(Res.string.person_list, persons.size),
-                                color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.weight(1f)
-                            )
-                            VengButton(
-                                onClick = { showAddDialog = true },
-                                text = stringResource(Res.string.add_new_person),
-                                modifier = Modifier,
-                                padding = 10.dp,
-                                theme = currentTheme
-                            )
-                        }
-
-                        if (persons.isNotEmpty()) {
-                            PersonList(
-                                persons = persons,
-                                modifier = Modifier.fillMaxSize(),
-                                onEditClick = { person ->
-                                    personToEdit = person
-                                },
-                                onDeleteClick = { person ->
-                                    personToDelete = person
-                                },
-                                theme = currentTheme
-                            )
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        SeveritepunkThemes.getColorScheme(currentTheme).borderLight.copy(alpha = 0.1f)
-                                    )
-                                    .border(
-                                        1.dp,
-                                        SeveritepunkThemes.getColorScheme(currentTheme).borderLight.copy(alpha = 0.2f)
-                                    )
-                                    .padding(defaultSpacer),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                VengText(
-                                    text = stringResource(Res.string.base_empty),
-                                    color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    textAlign = TextAlign.Center,
-                                    lineHeight = 24.sp
-                                )
-                            }
-                        }
+                            padding = 16.dp,
+                            theme = currentTheme
+                        )
+                        VengText(
+                            text = "Пользователей: ${users.size}\nЖителей: ${persons.size}",
+                            color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(top = mediumPadding),
+                            textAlign = TextAlign.Center
+                        )
                     }
                 }
 

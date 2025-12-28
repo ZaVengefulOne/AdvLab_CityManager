@@ -7,12 +7,11 @@ import io.ktor.serialization.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
-import io.ktor.server.http.content.resources
-import io.ktor.server.http.content.static
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.vengeful.citymanager.Greeting
+import org.vengeful.citymanager.adminPanel.configurations.getSeveriteRate
 import org.vengeful.citymanager.auth.EmergencyShutdownConfig
 import org.vengeful.citymanager.auth.SessionLockManager
 import org.vengeful.citymanager.backupService.BackupService
@@ -31,10 +30,14 @@ import org.vengeful.citymanager.models.library.CreateArticleRequest
 import org.vengeful.citymanager.models.medicine.CreateMedicineOrderRequest
 import org.vengeful.citymanager.models.medicine.Medicine
 import org.vengeful.citymanager.models.medicine.MedicineOrderNotification
+import org.vengeful.citymanager.models.severite.AddSeveriteRequest
+import org.vengeful.citymanager.models.severite.SellSeveriteRequest
+import org.vengeful.citymanager.models.severite.SellSeveriteResult
+import org.vengeful.citymanager.models.severite.SeveritePurity
 import org.vengeful.citymanager.models.users.*
 import org.vengeful.citymanager.newsService.INewsRepository
-import org.vengeful.citymanager.newsService.NewsRepository
 import org.vengeful.citymanager.personService.IPersonRepository
+import org.vengeful.citymanager.severiteService.ISeveriteRepository
 import org.vengeful.citymanager.userService.IUserRepository
 import java.io.File
 import java.util.*
@@ -52,6 +55,7 @@ fun Application.configureRouting(
     bankRepository: IBankRepository,
     libraryRepository: ILibraryRepository,
     newsRepository: INewsRepository,
+    severiteRepository: ISeveriteRepository,
     emergencyShutdownConfig: EmergencyShutdownConfig
 ) {
 
@@ -1500,6 +1504,101 @@ fun Application.configureRouting(
             }
         }
 
+
+        route("/severite") {
+            // Добавить очищенный северит
+            post("/add") {
+                try {
+                    val request = call.receive<AddSeveriteRequest>()
+                    val purity = try {
+                        SeveritePurity.valueOf(request.purity)
+                    } catch (e: IllegalArgumentException) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid purity type"))
+                        return@post
+                    }
+                    val severite = severiteRepository.addSeverite(purity)
+                    call.respond(HttpStatusCode.OK, severite)
+                } catch (e: Exception) {
+                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Unknown error"))
+                }
+            }
+
+            // Получить счётчики по типам
+            get("/counts") {
+                try {
+                    val counts = severiteRepository.getSeveriteCounts()
+                    call.respond(HttpStatusCode.OK, counts)
+                } catch (e: Exception) {
+                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Unknown error"))
+                }
+            }
+
+            // Получить весь северит в наличии
+            get("/all") {
+                try {
+                    val severites = severiteRepository.getAllSeverite()
+                    call.respond(HttpStatusCode.OK, severites)
+                } catch (e: Exception) {
+                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Unknown error"))
+                }
+            }
+
+            // Продать северит
+            post("/sell") {
+                try {
+                    val request = call.receive<SellSeveriteRequest>()
+                    if (request.severiteIds.isEmpty()) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "No severite IDs provided"))
+                        return@post
+                    }
+
+                    val severites = severiteRepository.getSeveriteByIds(request.severiteIds)
+                    if (severites.size != request.severiteIds.size) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Some severite IDs not found"))
+                        return@post
+                    }
+
+                    val severiteRate = getSeveriteRate()
+
+                    // Коэффициенты чистоты
+                    val purityCoefficients = mapOf(
+                        SeveritePurity.CONTAMINATED to 0.75,
+                        SeveritePurity.NORMAL to 1.0,
+                        SeveritePurity.CRYSTAL_CLEAR to 1.5
+                    )
+
+                    // Вычисляем сумму
+                    val totalAmount = severites.sumOf { severite ->
+                        val coefficient = purityCoefficients[severite.purity] ?: 1.0
+                        coefficient * severiteRate
+                    }
+
+                    // Получаем счёт предприятия "Администрация"
+                    val adminAccount = bankRepository.getBankAccountByEnterpriseName("Администрация")
+                    if (adminAccount == null) {
+                        call.respond(HttpStatusCode.NotFound, mapOf("error" to "Administration account not found"))
+                        return@post
+                    }
+
+                    // Добавляем деньги на счёт
+                    val updatedAccount = adminAccount.copy(
+                        creditAmount = adminAccount.creditAmount + totalAmount
+                    )
+                    bankRepository.updateBankAccount(updatedAccount, null)
+
+                    // Удаляем проданный северит
+                    severiteRepository.deleteSeverite(request.severiteIds)
+
+                    val result = SellSeveriteResult(
+                        totalAmount = totalAmount,
+                        soldCount = severites.size
+                    )
+                    call.respond(HttpStatusCode.OK, result)
+                } catch (e: Exception) {
+                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "${e.message}"))
+                }
+            }
+        }
 
         route("/call") {
             get("/status/{enterprise}") {

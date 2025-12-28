@@ -26,6 +26,8 @@ import org.vengeful.citymanager.data.news.INewsInteractor
 import org.vengeful.citymanager.data.news.NewsInteractor
 import org.vengeful.citymanager.data.persons.IPersonInteractor
 import org.vengeful.citymanager.data.persons.PersonInteractor
+import org.vengeful.citymanager.data.severite.ISeveriteInteractor
+import org.vengeful.citymanager.data.severite.SeveriteInteractor
 import org.vengeful.citymanager.data.users.AuthManager
 import org.vengeful.citymanager.data.users.IUserInteractor
 import org.vengeful.citymanager.data.users.UserInteractor
@@ -40,6 +42,7 @@ import org.vengeful.citymanager.screens.medic.MedicViewModel
 import org.vengeful.citymanager.screens.my_bank.MyBankViewModel
 import org.vengeful.citymanager.screens.news.NewsItemViewModel
 import org.vengeful.citymanager.screens.news.NewsViewModel
+import org.vengeful.citymanager.screens.niis.NIISViewModel
 import org.vengeful.citymanager.screens.niis.SeveritCleaningViewModel
 import org.vengeful.citymanager.screens.stocks.StockViewModel
 import org.vengeful.citymanager.screens.userManagement.UserManagementViewModel
@@ -57,8 +60,9 @@ val appModule = module {
     single<IMedicInteractor> { MedicInteractor(get()) }
     single<ILibraryInteractor> { LibraryInteractor(get()) }
     single<INewsInteractor> { NewsInteractor(get()) }
+    single<ISeveriteInteractor> { SeveriteInteractor(get()) }
 
-    factory { AdministrationViewModel(get(), get(), get(), get()) }
+    factory { AdministrationViewModel(get(), get(), get(), get(), get()) }
     factory { MainViewModel(get(), get()) }
     factory { ClickerViewModel(get(), get(), get(), get()) }
     factory { BankViewModel(get(), get(), get(), get()) }
@@ -71,7 +75,8 @@ val appModule = module {
     factory { ArticleViewModel(get()) }
     factory { NewsViewModel(get()) }
     factory { NewsItemViewModel(get()) }
-    factory { SeveritCleaningViewModel() }
+    factory { SeveritCleaningViewModel(get()) }
+    factory { NIISViewModel(get()) }
 }
 
 fun initKoin() = startKoin {

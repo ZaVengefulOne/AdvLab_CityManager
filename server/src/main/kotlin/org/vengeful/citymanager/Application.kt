@@ -23,6 +23,7 @@ import org.vengeful.citymanager.libraryService.db.LibraryRepository
 import org.vengeful.citymanager.models.Rights
 import org.vengeful.citymanager.newsService.NewsRepository
 import org.vengeful.citymanager.personService.db.PersonRepository
+import org.vengeful.citymanager.severiteService.db.SeveriteRepository
 import org.vengeful.citymanager.stockSerivce.db.StockRepository
 import org.vengeful.citymanager.userService.db.UserRepository
 
@@ -89,6 +90,7 @@ fun Application.module() {
     val stockRepository = StockRepository()
     val libraryRepository = LibraryRepository()
     val newsRepository = NewsRepository()
+    val severiteRepository = SeveriteRepository()
 
     configureRouting(
         personRepository = personRepository,
@@ -97,6 +99,7 @@ fun Application.module() {
         emergencyShutdownConfig = emergencyShutdownConfig,
         libraryRepository = libraryRepository,
         newsRepository = newsRepository,
+        severiteRepository = severiteRepository
         )
     configureDatabase(repository = personRepository)
     configureAdminApi(

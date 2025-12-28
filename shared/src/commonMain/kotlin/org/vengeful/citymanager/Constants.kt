@@ -34,6 +34,7 @@ const val ROUTE_NEWS = "news"
 const val ROUTE_NEWS_ITEM = "news_item"
 const val ROUTE_NIIS = "niis"
 const val ROUTE_NIIS_CLEANING = "niis_cleaning"
+const val ROUTE_USERS_AND_PERSONS = "users_and_persons"
 
 val BUILD_VARIANT = BuildVariant.DEBUG
 

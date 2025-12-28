@@ -11,7 +11,9 @@ import org.vengeful.citymanager.base.BaseViewModel
 import org.vengeful.citymanager.data.administration.IAdministrationInteractor
 import org.vengeful.citymanager.data.backup.IBackupInteractor
 import org.vengeful.citymanager.data.persons.IPersonInteractor
+import org.vengeful.citymanager.data.severite.ISeveriteInteractor
 import org.vengeful.citymanager.data.users.IUserInteractor
+import org.vengeful.citymanager.models.severite.Severite
 import org.vengeful.citymanager.data.users.models.RegisterResult
 import org.vengeful.citymanager.data.users.states.RegisterUiState
 import org.vengeful.citymanager.models.ChatMessage
@@ -26,7 +28,8 @@ class AdministrationViewModel(
     private val personInteractor: IPersonInteractor,
     private val userInteractor: IUserInteractor,
     private val administrationInteractor: IAdministrationInteractor,
-    private val backupInteractor: IBackupInteractor
+    private val backupInteractor: IBackupInteractor,
+    private val severiteInteractor: ISeveriteInteractor
 ) : BaseViewModel() {
 
     private val _severitRate = MutableStateFlow<Double>(42.75)
@@ -61,6 +64,9 @@ class AdministrationViewModel(
 
     private val _remainingTimeSeconds = MutableStateFlow<Long?>(null)
     val remainingTimeSeconds: StateFlow<Long?> = _remainingTimeSeconds.asStateFlow()
+
+    private val _severites = MutableStateFlow<List<Severite>>(emptyList())
+    val severites: StateFlow<List<Severite>> = _severites.asStateFlow()
 
     private var emergencyShutdownStatusJob: Job? = null
     private var updateJob: Job? = null
@@ -371,6 +377,34 @@ class AdministrationViewModel(
         updateJob?.cancel()
         configUpdateJob?.cancel()
         stopPeriodicStatusSync()
+    }
+
+    fun loadSeverites() {
+        viewModelScope.launch {
+            try {
+                val severites = severiteInteractor.getAllSeverite()
+                _severites.value = severites
+            } catch (e: Exception) {
+                println("Failed to load severites: ${e.message}")
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun sellSeverite(severiteIds: List<Int>) {
+        viewModelScope.launch {
+            try {
+                val result = severiteInteractor.sellSeverite(severiteIds)
+                // Обновляем список северита после продажи
+                loadSeverites()
+                // Обновляем банковские счета (деньги уже добавлены на сервере)
+                // Можно добавить обновление банковских счетов здесь, если нужно
+            } catch (e: Exception) {
+                _errorMessage.value = "Ошибка продажи северита: ${e.message}"
+                println("Failed to sell severite: ${e.message}")
+                e.printStackTrace()
+            }
+        }
     }
 
     companion object {

@@ -3,7 +3,10 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import org.vengeful.citymanager.base.BaseViewModel
+import org.vengeful.citymanager.data.severite.ISeveriteInteractor
+import org.vengeful.citymanager.models.severite.SeveritePurity
 import kotlin.random.Random
 
 enum class CleaningMode {
@@ -12,7 +15,9 @@ enum class CleaningMode {
     FULL         // 7 элементов, все доступные (префикс "200")
 }
 
-class SeveritCleaningViewModel : BaseViewModel() {
+class SeveritCleaningViewModel(
+    private val severiteInteractor: ISeveriteInteractor
+) : BaseViewModel() {
 
     private val _cleaningMode = MutableStateFlow<CleaningMode>(CleaningMode.FULL)
     val cleaningMode: StateFlow<CleaningMode> = _cleaningMode.asStateFlow()
@@ -98,6 +103,8 @@ class SeveritCleaningViewModel : BaseViewModel() {
 
             // Проверяем, угаданы ли все активные элементы
             if (newGuessed.size == _activeIndices.value.size) {
+                // Сохраняем северит в зависимости от режима очистки
+                saveSeverite()
                 _showSuccessDialog.value = true
             }
         } else if (target != current && _guessedIndices.value.contains(index)) {
@@ -127,6 +134,22 @@ class SeveritCleaningViewModel : BaseViewModel() {
 
     fun reset() {
         generateSequence()
+    }
+
+    private fun saveSeverite() {
+        viewModelScope.launch {
+            try {
+                val purity = when (_cleaningMode.value) {
+                    CleaningMode.SIMPLE -> SeveritePurity.CONTAMINATED
+                    CleaningMode.MEDIUM -> SeveritePurity.NORMAL
+                    CleaningMode.FULL -> SeveritePurity.CRYSTAL_CLEAR
+                }
+                severiteInteractor.addSeverite(purity)
+            } catch (e: Exception) {
+                println("Failed to save severite: ${e.message}")
+                e.printStackTrace()
+            }
+        }
     }
 }
 

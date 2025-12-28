@@ -1,18 +1,23 @@
 package org.vengeful.citymanager.screens.niis
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.*
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import org.vengeful.citymanager.ROUTE_NIIS_CLEANING
+import org.vengeful.citymanager.di.koinViewModel
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
 import org.vengeful.citymanager.uikit.composables.veng.VengBackground
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
@@ -23,9 +28,17 @@ import org.vengeful.citymanager.utilities.LocalTheme
 @Composable
 fun NIISMainScreen(navController: NavController) {
     val currentTheme = LocalTheme
+    val viewModel: NIISViewModel = koinViewModel()
+    val severiteCounts by viewModel.severiteCounts.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    
     var showSampleDialog by remember { mutableStateOf(false) }
     var sampleNumber by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        viewModel.loadSeveriteCounts()
+    }
 
     VengBackground(theme = currentTheme) {
         Column(
@@ -41,7 +54,7 @@ fun NIISMainScreen(navController: NavController) {
                 VengText(
                     text = "НИИС",
                     fontSize = 48.sp,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
@@ -50,10 +63,65 @@ fun NIISMainScreen(navController: NavController) {
                     text = "Научно Исследовательский \n Институт Северита",
                     fontSize = 20.sp,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(bottom = 48.dp),
+                    modifier = Modifier.padding(bottom = 24.dp),
                     lineHeight = 24.sp,
                     maxLines = 2
                 )
+
+                // Счётчики очищенного северита
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 32.dp, vertical = 16.dp)
+                        .background(
+                            SeveritepunkThemes.getColorScheme(currentTheme).background.copy(alpha = 0.5f),
+                            androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                        )
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    VengText(
+                        text = "Очищенный северит:",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
+                    
+                    if (isLoading) {
+                        VengText(
+                            text = "Загрузка...",
+                            fontSize = 14.sp,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center
+                        )
+                    } else {
+                        severiteCounts?.let { counts ->
+                            VengText(
+                                text = "Загрязнённый северит: ${counts.contaminated}",
+                                fontSize = 14.sp,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            VengText(
+                                text = "Обычный северит: ${counts.normal}",
+                                fontSize = 14.sp,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            VengText(
+                                text = "Кристально чистый северит: ${counts.crystalClear}",
+                                fontSize = 14.sp,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        } ?: run {
+                            VengText(
+                                text = "Нет данных",
+                                fontSize = 14.sp,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
             }
 
             Column {

@@ -29,6 +29,7 @@ import org.vengeful.citymanager.uikit.composables.misc.ThemeSwitcher
 import org.vengeful.citymanager.uikit.composables.veng.VengBackground
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
 import org.vengeful.citymanager.uikit.composables.veng.VengText
+import org.vengeful.citymanager.uikit.composables.veng.VengTextField
 import org.vengeful.citymanager.utilities.LocalTheme
 
 
@@ -50,6 +51,7 @@ fun MedicScreen(navController: NavController) {
     var showMedicalRecordDialog by remember { mutableStateOf(false) }
     var showOrderMedicineDialog by remember { mutableStateOf(false) }
     var selectedPatientForEdit by remember { mutableStateOf<Person?>(null) }
+    var patientSearchQuery by remember { mutableStateOf("") }
 
     VengBackground(
         modifier = Modifier.fillMaxSize(),
@@ -117,7 +119,32 @@ fun MedicScreen(navController: NavController) {
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                 }
-                Spacer(modifier = Modifier.height(80.dp))
+
+                // Поле поиска
+                VengTextField(
+                    value = patientSearchQuery,
+                    onValueChange = { patientSearchQuery = it },
+                    label = "Поиск пациентов",
+                    placeholder = "Введите имя, фамилию или ID...",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    theme = currentTheme
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Фильтрация пациентов
+                val filteredPatients = remember(patients, patientSearchQuery) {
+                    if (patientSearchQuery.isBlank()) {
+                        patients
+                    } else {
+                        val searchText = patientSearchQuery.lowercase()
+                        patients.filter { patient ->
+                            "${patient.firstName} ${patient.lastName} ${patient.id}".lowercase().contains(searchText)
+                        }
+                    }
+                }
 
                 // Индикатор загрузки или список пациентов
                 if (isLoading) {
@@ -134,7 +161,7 @@ fun MedicScreen(navController: NavController) {
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         contentPadding = PaddingValues(8.dp)
                     ) {
-                        items(patients) { patient ->
+                        items(filteredPatients) { patient ->
                             PatientCard(
                                 modifier = Modifier.fillMaxWidth(),
                                 person = patient,

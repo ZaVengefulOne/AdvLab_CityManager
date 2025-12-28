@@ -27,6 +27,7 @@ import org.vengeful.citymanager.uikit.composables.misc.ThemeSwitcher
 import org.vengeful.citymanager.uikit.composables.veng.VengBackground
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
 import org.vengeful.citymanager.uikit.composables.veng.VengText
+import org.vengeful.citymanager.uikit.composables.veng.VengTextField
 import org.vengeful.citymanager.utilities.LocalTheme
 
 @Composable
@@ -40,6 +41,8 @@ fun BankScreen(navController: NavController) {
     var showAddDialog by remember { mutableStateOf(false) }
     var accountToEdit by remember { mutableStateOf<BankAccount?>(null) }
     var accountToDelete by remember { mutableStateOf<BankAccount?>(null) }
+    var personAccountsSearchQuery by remember { mutableStateOf("") }
+    var enterpriseAccountsSearchQuery by remember { mutableStateOf("") }
 
     val defaultSpacer = 16.dp
     val mediumPadding = 12.dp
@@ -130,42 +133,166 @@ fun BankScreen(navController: NavController) {
                 )
             }
 
-            if (bankAccounts.isNotEmpty()) {
-                BankAccountGrid(
-                    accounts = bankAccounts,
-                    persons = persons,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f, fill = false)
-                        .heightIn(max = 600.dp),
-                    onAccountClick = { account ->
-                        accountToEdit = account
-                    },
+            // Разделение счетов на личные и корпоративные
+            val personAccounts = remember(bankAccounts) {
+                bankAccounts.filter { it.personId != null }
+            }
+            val enterpriseAccounts = remember(bankAccounts) {
+                bankAccounts.filter { it.enterpriseName != null }
+            }
+
+            // Фильтрация личных счетов
+            val filteredPersonAccounts = remember(personAccounts, personAccountsSearchQuery, persons) {
+                if (personAccountsSearchQuery.isBlank()) {
+                    personAccounts
+                } else {
+                    val searchText = personAccountsSearchQuery.lowercase()
+                    personAccounts.filter { account ->
+                        val person = persons.find { it.id == account.personId }
+                        person?.let {
+                            "${it.firstName} ${it.lastName} ${it.id} ${account.id}".lowercase().contains(searchText)
+                        } ?: false
+                    }
+                }
+            }
+
+            // Фильтрация счетов предприятий
+            val filteredEnterpriseAccounts = remember(enterpriseAccounts, enterpriseAccountsSearchQuery) {
+                if (enterpriseAccountsSearchQuery.isBlank()) {
+                    enterpriseAccounts
+                } else {
+                    val searchText = enterpriseAccountsSearchQuery.lowercase()
+                    enterpriseAccounts.filter { account ->
+                        "${account.enterpriseName} ${account.id}".lowercase().contains(searchText)
+                    }
+                }
+            }
+
+            // Личные счета
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false),
+                verticalArrangement = Arrangement.spacedBy(mediumPadding)
+            ) {
+                VengText(
+                    text = "Личные счета (${personAccounts.size})",
+                    color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+
+                VengTextField(
+                    value = personAccountsSearchQuery,
+                    onValueChange = { personAccountsSearchQuery = it },
+                    label = "Поиск личных счетов",
+                    placeholder = "Введите имя, фамилию или ID...",
+                    modifier = Modifier.fillMaxWidth(),
                     theme = currentTheme
                 )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                        .background(
-                            SeveritepunkThemes.getColorScheme(currentTheme).borderLight.copy(alpha = 0.1f)
-                        )
-                        .border(
-                            1.dp,
-                            SeveritepunkThemes.getColorScheme(currentTheme).borderLight.copy(alpha = 0.2f),
-                            androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
-                        )
-                        .padding(defaultSpacer),
-                    contentAlignment = Alignment.Center
-                ) {
-                    VengText(
-                        text = stringResource(Res.string.bank_empty),
-                        color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium,
-                        textAlign = TextAlign.Center
+
+                if (filteredPersonAccounts.isNotEmpty()) {
+                    BankAccountGrid(
+                        accounts = filteredPersonAccounts,
+                        persons = persons,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 300.dp),
+                        onAccountClick = { account ->
+                            accountToEdit = account
+                        },
+                        theme = currentTheme
                     )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(150.dp)
+                            .background(
+                                SeveritepunkThemes.getColorScheme(currentTheme).borderLight.copy(alpha = 0.1f)
+                            )
+                            .border(
+                                1.dp,
+                                SeveritepunkThemes.getColorScheme(currentTheme).borderLight.copy(alpha = 0.2f),
+                                androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+                            )
+                            .padding(defaultSpacer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        VengText(
+                            text = if (personAccountsSearchQuery.isBlank()) "Нет личных счетов" else "Ничего не найдено",
+                            color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(mediumPadding))
+
+            // Счета предприятий
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false),
+                verticalArrangement = Arrangement.spacedBy(mediumPadding)
+            ) {
+                VengText(
+                    text = "Счета предприятий (${enterpriseAccounts.size})",
+                    color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+
+                VengTextField(
+                    value = enterpriseAccountsSearchQuery,
+                    onValueChange = { enterpriseAccountsSearchQuery = it },
+                    label = "Поиск счетов предприятий",
+                    placeholder = "Введите название предприятия или ID...",
+                    modifier = Modifier.fillMaxWidth(),
+                    theme = currentTheme
+                )
+
+                if (filteredEnterpriseAccounts.isNotEmpty()) {
+                    BankAccountGrid(
+                        accounts = filteredEnterpriseAccounts,
+                        persons = persons,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 300.dp),
+                        onAccountClick = { account ->
+                            accountToEdit = account
+                        },
+                        theme = currentTheme
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(150.dp)
+                            .background(
+                                SeveritepunkThemes.getColorScheme(currentTheme).borderLight.copy(alpha = 0.1f)
+                            )
+                            .border(
+                                1.dp,
+                                SeveritepunkThemes.getColorScheme(currentTheme).borderLight.copy(alpha = 0.2f),
+                                androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+                            )
+                            .padding(defaultSpacer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        VengText(
+                            text = if (enterpriseAccountsSearchQuery.isBlank()) "Нет счетов предприятий" else "Ничего не найдено",
+                            color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             }
         }

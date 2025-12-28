@@ -75,6 +75,10 @@ fun getMedicineOrderNotifications(count: Int = 50): List<MedicineOrderNotificati
     return medicineOrderNotifications.takeLast(count)
 }
 
+fun getSeveriteRate(): Double {
+    return adminConfig.severiteRate
+}
+
 private fun getRecentMessages(count: Int = 5): List<ChatMessage> {
     return chatMessages.takeLast(count)
 }

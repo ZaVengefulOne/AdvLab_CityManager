@@ -25,6 +25,7 @@ import org.vengeful.citymanager.ROUTE_NIIS
 import org.vengeful.citymanager.ROUTE_NIIS_CLEANING
 import org.vengeful.citymanager.ROUTE_POLICE
 import org.vengeful.citymanager.ROUTE_STOCKS
+import org.vengeful.citymanager.ROUTE_USERS_AND_PERSONS
 import org.vengeful.citymanager.screens.administration.AdministrationScreen
 import org.vengeful.citymanager.screens.backup.BackupScreen
 import org.vengeful.citymanager.screens.bank.BankScreen
@@ -42,6 +43,7 @@ import org.vengeful.citymanager.screens.niis.NIISMainScreen
 import org.vengeful.citymanager.screens.niis.SeveriteCleaningScreen
 import org.vengeful.citymanager.screens.police.PoliceScreen
 import org.vengeful.citymanager.screens.stocks.StockScreen
+import org.vengeful.citymanager.screens.usersAndPersons.UsersAndPersonsScreen
 
 
 @Composable
@@ -57,6 +59,9 @@ fun Host() {
         }
         composable(route = ROUTE_ADMINISTRATION) {
             AdministrationScreen(navController = navController)
+        }
+        composable(route = ROUTE_USERS_AND_PERSONS) {
+            UsersAndPersonsScreen(navController = navController)
         }
         composable(route = ROUTE_COMMON_LIBRARY) {
             CommonLibraryScreen(navController = navController)
