@@ -27,6 +27,7 @@ import org.vengeful.citymanager.data.users.states.RegisterUiState
 import org.vengeful.citymanager.di.koinViewModel
 import org.vengeful.citymanager.models.Person
 import org.vengeful.citymanager.models.users.User
+import org.vengeful.citymanager.audio.rememberSoundPlayer
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
 import org.vengeful.citymanager.uikit.animations.RestartAnimation
 import org.vengeful.citymanager.uikit.animations.ShutdownAnimation
@@ -80,6 +81,8 @@ fun AdministrationScreen(navController: NavController) {
     var showRestartAnimation by remember { mutableStateOf(false) }
     var isRefreshing by remember { mutableStateOf(false) }
     var refreshTrigger by remember { mutableIntStateOf(0) }
+    
+    val soundPlayer = rememberSoundPlayer()
 
     val getId = remember { mutableStateOf("") }
     val delId = remember { mutableStateOf("") }
@@ -109,7 +112,8 @@ fun AdministrationScreen(navController: NavController) {
     if (showShutdownAnimation) {
         ShutdownAnimation(
             onComplete = { navController.popBackStack() },
-            theme = currentTheme
+            theme = currentTheme,
+            soundPlayer = soundPlayer
         )
         return
     }
@@ -117,7 +121,8 @@ fun AdministrationScreen(navController: NavController) {
     if (showRestartAnimation) {
         RestartAnimation(
             onComplete = { showRestartAnimation = false },
-            theme = currentTheme
+            theme = currentTheme,
+            soundPlayer = soundPlayer
         )
         return
     }
