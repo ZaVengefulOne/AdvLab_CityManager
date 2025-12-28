@@ -46,6 +46,17 @@ object DateFormatter {
         return date1950.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
     }
 
+    /**
+     * Форматирует epoch milliseconds в формат "dd.MM.yyyy" с реальным годом (для отображения в полях редактирования)
+     */
+    @Suppress("NewApi")
+    fun formatEpochMillisToDate(epochMillis: Long): String {
+        val javaInstant = Instant.ofEpochMilli(epochMillis)
+        val localDate = javaInstant.atZone(ZoneId.systemDefault()).toLocalDate()
+
+        return localDate.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
+    }
+
     fun formatDateTimeTo1950(dateString: String): Long {
         return try {
             val parts = dateString.split(".")
@@ -53,7 +64,8 @@ object DateFormatter {
                 val day = parts[0].toInt()
                 val month = parts[1].toInt()
                 val year = parts[2].toInt()
-                java.time.LocalDate.of(1950, month, day)
+                // Используем реальный год из ввода, а не 1950
+                java.time.LocalDate.of(year, month, day)
                     .atStartOfDay(java.time.ZoneId.systemDefault())
                     .toInstant()
                     .toEpochMilli()

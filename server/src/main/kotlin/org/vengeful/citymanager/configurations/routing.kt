@@ -3,6 +3,7 @@ package org.vengeful.citymanager.configurations
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import io.ktor.http.*
+import io.ktor.http.content.*
 import io.ktor.serialization.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -20,6 +21,7 @@ import org.vengeful.citymanager.bankService.db.BankRepository
 import org.vengeful.citymanager.libraryService.ILibraryRepository
 import org.vengeful.citymanager.medicService.MedicalRepository
 import org.vengeful.citymanager.medicService.MedicineRepository
+import org.vengeful.citymanager.policeService.PoliceRepository
 import org.vengeful.citymanager.models.*
 import org.vengeful.citymanager.models.backup.MasterBackup
 import org.vengeful.citymanager.models.emergencyShutdown.EmergencyShutdownRequest
@@ -35,6 +37,7 @@ import org.vengeful.citymanager.models.severite.SellSeveriteRequest
 import org.vengeful.citymanager.models.severite.SellSeveriteResult
 import org.vengeful.citymanager.models.severite.SeveritePurity
 import org.vengeful.citymanager.models.users.*
+import org.vengeful.citymanager.models.police.PoliceRecord
 import org.vengeful.citymanager.newsService.INewsRepository
 import org.vengeful.citymanager.personService.IPersonRepository
 import org.vengeful.citymanager.severiteService.ISeveriteRepository
@@ -142,6 +145,17 @@ fun Application.configureRouting(
 
         }
 
+        route("/police") {
+            get("/photos/{filename}") {
+                val filename = call.parameters["filename"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+                val file = File("src/main/resources/police_photos", filename)
+                if (file.exists() && file.isFile) {
+                    call.respondFile(file)
+                } else {
+                    call.respond(HttpStatusCode.NotFound, "Photo not found")
+                }
+            }
+        }
 
         post("/adminReg") {
             try {
@@ -1279,6 +1293,241 @@ fun Application.configureRouting(
                             HttpStatusCode.InternalServerError,
                             mapOf("error" to e.message)
                         )
+                    }
+                }
+            }
+
+            route("/police") {
+                val policeRepository = PoliceRepository()
+
+                // Создание личного дела (с загрузкой фото)
+                post("/records") {
+                    try {
+                        val multipart = call.receiveMultipart()
+                        var recordJson: String? = null
+                        var photoBytes: ByteArray? = null
+                        var fileName: String? = null
+
+                        multipart.forEachPart { part ->
+                            when (part) {
+                                is PartData.FormItem -> {
+                                    when (part.name) {
+                                        "record" -> recordJson = part.value
+                                    }
+                                }
+
+                                is PartData.FileItem -> {
+                                    if (part.name == "photo") {
+                                        fileName = part.originalFileName
+                                        photoBytes = part.streamProvider().readBytes()
+                                    }
+                                }
+
+                                else -> {}
+                            }
+                            part.dispose()
+                        }
+
+                        if (recordJson == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Record data is required"))
+                            return@post
+                        }
+
+                        // Парсим JSON записи
+                        val record = kotlinx.serialization.json.Json.decodeFromString<PoliceRecord>(recordJson)
+
+                        var photoUrl: String? = null
+                        if (photoBytes != null && fileName != null) {
+                            // Проверка расширения файла
+                            val extension = fileName!!.substringAfterLast('.', "").lowercase()
+                            if (extension !in listOf("png", "jpg", "jpeg")) {
+                                call.respond(
+                                    HttpStatusCode.BadRequest,
+                                    mapOf("error" to "Only PNG and JPG images are allowed")
+                                )
+                                return@post
+                            }
+
+                            // Сохранение файла
+                            val uploadDir = File("src/main/resources/police_photos")
+                            uploadDir.mkdirs()
+                            val uniqueFileName = "${UUID.randomUUID()}.$extension"
+                            val file = File(uploadDir, uniqueFileName)
+                            file.writeBytes(photoBytes!!)
+
+                            photoUrl = "/police/photos/$uniqueFileName"
+                        }
+
+                        val createdRecord = policeRepository.createPoliceRecord(record, photoUrl)
+                        call.respond(HttpStatusCode.OK, createdRecord)
+                    } catch (e: IllegalStateException) {
+                        call.respond(HttpStatusCode.BadRequest, e.message ?: "")
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, e.message ?: "")
+                    }
+                }
+
+                // Получение всех личных дел
+                get("/records") {
+                    try {
+                        val records = policeRepository.getAllPoliceRecords()
+                        call.respond(HttpStatusCode.OK, records)
+                    } catch (e: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, e.message ?: "")
+                    }
+                }
+
+                // Получение списка персон с личными делами
+                get("/persons") {
+                    try {
+                        val persons = policeRepository.getPersonsWithRecords()
+                        call.respond(HttpStatusCode.OK, persons)
+                    } catch (e: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, e.message ?: "")
+                    }
+                }
+
+                // Получение личных дел по personId
+                get("/records/{personId}") {
+                    val personId = call.parameters["personId"]?.toInt()
+                    if (personId == null) {
+                        call.respond(HttpStatusCode.BadRequest)
+                        return@get
+                    }
+                    try {
+                        val records = policeRepository.getPoliceRecordsByPersonId(personId)
+                        call.respond(HttpStatusCode.OK, records)
+                    } catch (e: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, e.message ?: "")
+                    }
+                }
+
+                // Получение личного дела по ID
+                get("/records/byId/{recordId}") {
+                    try {
+                        val recordId = call.parameters["recordId"]?.toInt()
+                        if (recordId == null) {
+                            call.respond(HttpStatusCode.BadRequest)
+                            return@get
+                        }
+                        val record = policeRepository.getPoliceRecordById(recordId)
+                        if (record == null) {
+                            call.respond(HttpStatusCode.NotFound)
+                        } else {
+                            call.respond(HttpStatusCode.OK, record)
+                        }
+                    } catch (e: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, e.message ?: "")
+                    }
+                }
+
+                // Получение личного дела по номеру отпечатка
+                get("/records/byFingerprint/{fingerprintNumber}") {
+                    try {
+                        val fingerprintNumber = call.parameters["fingerprintNumber"]?.toInt()
+                        if (fingerprintNumber == null) {
+                            call.respond(HttpStatusCode.BadRequest)
+                            return@get
+                        }
+                        val record = policeRepository.getPoliceRecordByFingerprintNumber(fingerprintNumber)
+                        if (record == null) {
+                            call.respond(HttpStatusCode.NotFound)
+                        } else {
+                            call.respond(HttpStatusCode.OK, record)
+                        }
+                    } catch (e: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, e.message ?: "")
+                    }
+                }
+
+                // Обновление личного дела
+                put("/records/{recordId}") {
+                    try {
+                        val recordId = call.parameters["recordId"]?.toInt()
+                        if (recordId == null) {
+                            call.respond(HttpStatusCode.BadRequest, "Invalid record ID")
+                            return@put
+                        }
+
+                        val multipart = call.receiveMultipart()
+                        var recordJson: String? = null
+                        var photoBytes: ByteArray? = null
+                        var fileName: String? = null
+
+                        multipart.forEachPart { part ->
+                            when (part) {
+                                is PartData.FormItem -> {
+                                    when (part.name) {
+                                        "record" -> recordJson = part.value
+                                    }
+                                }
+
+                                is PartData.FileItem -> {
+                                    if (part.name == "photo") {
+                                        fileName = part.originalFileName
+                                        photoBytes = part.streamProvider().readBytes()
+                                    }
+                                }
+
+                                else -> {}
+                            }
+                            part.dispose()
+                        }
+
+                        if (recordJson == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Record data is required"))
+                            return@put
+                        }
+
+                        val record = kotlinx.serialization.json.Json.decodeFromString<PoliceRecord>(recordJson)
+
+                        var photoUrl: String? = null
+                        if (photoBytes != null && fileName != null) {
+                            val extension = fileName!!.substringAfterLast('.', "").lowercase()
+                            if (extension !in listOf("png", "jpg", "jpeg")) {
+                                call.respond(
+                                    HttpStatusCode.BadRequest,
+                                    mapOf("error" to "Only PNG and JPG images are allowed")
+                                )
+                                return@put
+                            }
+
+                            val uploadDir = File("src/main/resources/police_photos")
+                            uploadDir.mkdirs()
+                            val uniqueFileName = "${UUID.randomUUID()}.$extension"
+                            val file = File(uploadDir, uniqueFileName)
+                            file.writeBytes(photoBytes!!)
+
+                            photoUrl = "/police/photos/$uniqueFileName"
+                        }
+
+                        val updatedRecord = policeRepository.updatePoliceRecord(recordId, record, photoUrl)
+                        call.respond(HttpStatusCode.OK, updatedRecord)
+                    } catch (e: IllegalStateException) {
+                        call.respond(HttpStatusCode.BadRequest, e.message ?: "")
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, e.message ?: "")
+                    }
+                }
+
+                // Удаление личного дела
+                delete("/records/{recordId}") {
+                    try {
+                        val recordId = call.parameters["recordId"]?.toInt()
+                        if (recordId == null) {
+                            call.respond(HttpStatusCode.BadRequest, "Invalid record ID")
+                            return@delete
+                        }
+                        val success = policeRepository.deletePoliceRecord(recordId)
+                        if (success) {
+                            call.respond(HttpStatusCode.OK, mapOf("status" to "success", "message" to "Police record deleted"))
+                        } else {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "Police record not found"))
+                        }
+                    } catch (e: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Failed to delete police record: ${e.message}"))
                     }
                 }
             }
