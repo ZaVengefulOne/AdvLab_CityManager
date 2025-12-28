@@ -1,4 +1,4 @@
-package org.vengeful.citymanager.screens.userManagement
+package org.vengeful.citymanager.screens.administration.userManagement
 
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow

@@ -6,7 +6,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.compose.viewModel
-import io.ktor.client.HttpClient
 import org.koin.core.context.GlobalContext
 import org.koin.core.context.GlobalContext.startKoin
 import org.koin.core.parameter.ParametersHolder
@@ -45,7 +44,7 @@ import org.vengeful.citymanager.screens.news.NewsViewModel
 import org.vengeful.citymanager.screens.niis.NIISViewModel
 import org.vengeful.citymanager.screens.niis.SeveritCleaningViewModel
 import org.vengeful.citymanager.screens.stocks.StockViewModel
-import org.vengeful.citymanager.screens.userManagement.UserManagementViewModel
+import org.vengeful.citymanager.screens.administration.userManagement.UserManagementViewModel
 import kotlin.reflect.KClass
 
 

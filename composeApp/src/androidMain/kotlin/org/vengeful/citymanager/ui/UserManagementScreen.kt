@@ -21,8 +21,7 @@ import org.vengeful.citymanager.data.users.states.RegisterUiState
 import org.vengeful.citymanager.di.koinViewModel
 import org.vengeful.citymanager.models.Person
 import org.vengeful.citymanager.models.Rights
-import org.vengeful.citymanager.screens.userManagement.UserManagementViewModel
-import org.vengeful.citymanager.uikit.composables.dialogs.RegisterDialog
+import org.vengeful.citymanager.screens.administration.userManagement.UserManagementViewModel
 import org.vengeful.citymanager.uikit.composables.veng.VengBackground
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
 import org.vengeful.citymanager.uikit.composables.veng.VengText
