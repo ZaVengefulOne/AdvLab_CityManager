@@ -16,6 +16,7 @@ fun PersonList(
     modifier: Modifier = Modifier,
     onEditClick: (Person) -> Unit,
     onDeleteClick: (Person) -> Unit,
+    onPersonClick: ((Person) -> Unit)? = null,
     theme: ColorTheme = ColorTheme.GOLDEN
 ) {
     LazyColumn(
@@ -30,6 +31,7 @@ fun PersonList(
                 PersonCard(
                     person = person,
                     modifier = Modifier.fillMaxWidth(),
+                    onCardClick = onPersonClick?.let { { it(person) } },
                     theme = theme
                 )
 

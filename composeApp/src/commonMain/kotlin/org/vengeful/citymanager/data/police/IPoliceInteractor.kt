@@ -14,3 +14,4 @@ interface IPoliceInteractor {
     suspend fun getPoliceRecordByFingerprintNumber(fingerprintNumber: Int): PoliceRecord?
 }
 
+

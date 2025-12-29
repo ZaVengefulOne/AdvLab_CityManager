@@ -1,6 +1,8 @@
 package org.vengeful.citymanager.screens.police
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -21,10 +23,20 @@ import org.vengeful.citymanager.data.police.FilePicker
 import org.vengeful.citymanager.data.police.FingerprintsReader
 import org.vengeful.citymanager.data.police.createFilePicker
 import org.vengeful.citymanager.data.police.createFingerprintsReader
+import org.vengeful.citymanager.data.users.IUserInteractor
+import org.vengeful.citymanager.data.persons.IPersonInteractor
 import org.vengeful.citymanager.di.koinViewModel
+import org.koin.core.context.GlobalContext
 import org.vengeful.citymanager.models.Person
+import org.vengeful.citymanager.models.police.Case
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
 import org.vengeful.citymanager.uikit.composables.misc.ThemeSwitcher
+import org.vengeful.citymanager.uikit.composables.police.CaseCard
+import org.vengeful.citymanager.uikit.composables.police.CaseDialog
+import org.vengeful.citymanager.uikit.composables.police.CaseList
+import org.vengeful.citymanager.uikit.composables.police.EditCaseDialog
+import org.vengeful.citymanager.uikit.composables.police.ViewCaseDialog
+import org.vengeful.citymanager.uikit.composables.veng.VengTabRow
 import org.vengeful.citymanager.uikit.composables.police.EditPoliceRecordDialog
 import org.vengeful.citymanager.uikit.composables.police.PoliceRecordCard
 import org.vengeful.citymanager.uikit.composables.police.PoliceRecordDialog
@@ -33,10 +45,16 @@ import org.vengeful.citymanager.uikit.composables.veng.VengButton
 import org.vengeful.citymanager.uikit.composables.veng.VengText
 import org.vengeful.citymanager.uikit.composables.veng.VengTextField
 import org.vengeful.citymanager.utilities.LocalTheme
+import kotlinx.coroutines.launch
+import org.vengeful.citymanager.models.police.CaseStatus
 
 @Composable
 fun PoliceScreen(navController: NavController) {
     val policeViewModel: PoliceViewModel = koinViewModel()
+    val caseViewModel: CaseViewModel = koinViewModel()
+    val userInteractor: IUserInteractor = remember { GlobalContext.get().get() }
+    val personInteractor: IPersonInteractor = remember { GlobalContext.get().get() }
+
     val persons by policeViewModel.persons.collectAsState()
     val isLoading by policeViewModel.isLoading.collectAsState()
     val currentRecord by policeViewModel.currentRecord.collectAsState()
@@ -45,14 +63,40 @@ fun PoliceScreen(navController: NavController) {
     val successMessage by policeViewModel.successMessage.collectAsState()
     val allPersons by policeViewModel.allPersons.collectAsState()
 
+    val cases by caseViewModel.cases.collectAsState()
+    val casesLoading by caseViewModel.isLoading.collectAsState()
+    val casesError by caseViewModel.errorMessage.collectAsState()
+    val casesSuccess by caseViewModel.successMessage.collectAsState()
+
     var currentTheme by remember { mutableStateOf(LocalTheme) }
+    var selectedTab by remember { mutableIntStateOf(0) } // 0 = Личные дела, 1 = Дела
     var showRecordDialog by remember { mutableStateOf(false) }
+    var showCaseDialog by remember { mutableStateOf(false) }
     var showFingerprintsBrowser by remember { mutableStateOf(false) }
     var selectedPersonForEdit by remember { mutableStateOf<Person?>(null) }
+    var selectedCase by remember { mutableStateOf<Case?>(null) }
     var personSearchQuery by remember { mutableStateOf("") }
+    var caseSearchQuery by remember { mutableStateOf("") }
+
+    var investigatorPersonId by remember { mutableIntStateOf(-1) }
+    var investigatorName by remember { mutableStateOf("Неизвестно") }
+
+    val scope = rememberCoroutineScope()
 
     val filePicker = remember { createFilePicker() }
     val fingerprintsReader = remember { createFingerprintsReader() }
+
+    // Загружаем информацию о текущем пользователе
+    LaunchedEffect(Unit) {
+        scope.launch {
+            val currentUser = userInteractor.getCurrentUserWithPersonId()
+            if (currentUser != null && currentUser.personId > 0) {
+                investigatorPersonId = currentUser.personId
+                val person = personInteractor.getPersonById(currentUser.personId)
+                investigatorName = person?.let { "${it.firstName} ${it.lastName}" } ?: "Неизвестно"
+            }
+        }
+    }
 
     VengBackground(
         modifier = Modifier.fillMaxSize(),
@@ -87,7 +131,7 @@ fun PoliceScreen(navController: NavController) {
                 )
             }
 
-            // Центральная колонка - заголовок и список личных дел
+            // Центральная колонка - заголовок и список личных дел/дел
             Column(
                 modifier = Modifier
                     .weight(0.6f)
@@ -103,7 +147,19 @@ fun PoliceScreen(navController: NavController) {
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
-                errorMessage?.let {
+                // Вкладки
+                VengTabRow(
+                    selectedTabIndex = selectedTab,
+                    tabs = listOf("Личные дела", "Дела"),
+                    onTabSelected = { selectedTab = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    theme = currentTheme
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Сообщения об ошибках/успехе
+                (if (selectedTab == 0) errorMessage else casesError)?.let {
                     VengText(
                         text = it,
                         color = Color.Red,
@@ -112,7 +168,7 @@ fun PoliceScreen(navController: NavController) {
                     )
                 }
 
-                successMessage?.let {
+                (if (selectedTab == 0) successMessage else casesSuccess)?.let {
                     VengText(
                         text = it,
                         color = Color(0xFF4CAF50),
@@ -121,58 +177,181 @@ fun PoliceScreen(navController: NavController) {
                     )
                 }
 
-                // Поле поиска
-                VengTextField(
-                    value = personSearchQuery,
-                    onValueChange = { personSearchQuery = it },
-                    label = "Поиск личных дел",
-                    placeholder = "Введите имя, фамилию или ID...",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    theme = currentTheme
-                )
+                when (selectedTab) {
+                    0 -> {
+                        // Поле поиска для личных дел
+                        VengTextField(
+                            value = personSearchQuery,
+                            onValueChange = { personSearchQuery = it },
+                            label = "Поиск личных дел",
+                            placeholder = "Введите имя, фамилию или ID...",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            theme = currentTheme
+                        )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                // Фильтрация персон
-                val filteredPersons = remember(persons, personSearchQuery) {
-                    if (personSearchQuery.isBlank()) {
-                        persons
-                    } else {
-                        val searchText = personSearchQuery.lowercase()
-                        persons.filter { person ->
-                            "${person.firstName} ${person.lastName} ${person.id}".lowercase().contains(searchText)
+                        // Фильтрация персон
+                        val filteredPersons = remember(persons, personSearchQuery) {
+                            if (personSearchQuery.isBlank()) {
+                                persons
+                            } else {
+                                val searchText = personSearchQuery.lowercase()
+                                persons.filter { person ->
+                                    "${person.firstName} ${person.lastName} ${person.id}".lowercase().contains(searchText)
+                                }
+                            }
+                        }
+
+                        // Индикатор загрузки или список личных дел
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                color = Color(0xFF4A90E2),
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        } else {
+                            LazyVerticalGrid(
+                                columns = GridCells.Adaptive(minSize = 250.dp),
+                                modifier = Modifier.fillMaxSize(),
+                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                contentPadding = PaddingValues(8.dp)
+                            ) {
+                                items(filteredPersons) { person ->
+                                    PoliceRecordCard(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        person = person,
+                                        policeRecord = policeRecords[person.id],
+                                        theme = currentTheme,
+                                        onCardClick = {
+                                            selectedPersonForEdit = person
+                                            policeViewModel.loadPoliceRecordByPersonId(person.id)
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
-                }
+                    1 -> {
+                        // Поле поиска для дел
+                        VengTextField(
+                            value = caseSearchQuery,
+                            onValueChange = { caseSearchQuery = it },
+                            label = "Поиск дел",
+                            placeholder = "Введите номер дела, имя заявителя или подозреваемого...",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            theme = currentTheme
+                        )
 
-                // Индикатор загрузки или список личных дел
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        color = Color(0xFF4A90E2),
-                        strokeWidth = 2.dp,
-                        modifier = Modifier.size(20.dp)
-                    )
-                } else {
-                    LazyVerticalGrid(
-                        columns = GridCells.Adaptive(minSize = 250.dp),
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        contentPadding = PaddingValues(8.dp)
-                    ) {
-                        items(filteredPersons) { person ->
-                            PoliceRecordCard(
-                                modifier = Modifier.fillMaxWidth(),
-                                person = person,
-                                policeRecord = policeRecords[person.id],
-                                theme = currentTheme,
-                                onCardClick = {
-                                    selectedPersonForEdit = person
-                                    policeViewModel.loadPoliceRecordByPersonId(person.id)
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Разделение дел на активные и закрытые
+                        val activeCases = remember(cases) {
+                            cases.filter { it.status != CaseStatus.CLOSED }
+                        }
+                        val closedCases = remember(cases) {
+                            cases.filter { it.status == CaseStatus.CLOSED }
+                        }
+
+                        // Фильтрация активных дел
+                        val filteredActiveCases = remember(activeCases, caseSearchQuery) {
+                            if (caseSearchQuery.isBlank()) {
+                                activeCases
+                            } else {
+                                val searchText = caseSearchQuery.lowercase()
+                                activeCases.filter { case ->
+                                    "${case.id} ${case.complainantName} ${case.suspectName} ${case.violationArticle}".lowercase().contains(searchText)
                                 }
+                            }
+                        }
+
+                        // Фильтрация закрытых дел
+                        val filteredClosedCases = remember(closedCases, caseSearchQuery) {
+                            if (caseSearchQuery.isBlank()) {
+                                closedCases
+                            } else {
+                                val searchText = caseSearchQuery.lowercase()
+                                closedCases.filter { case ->
+                                    "${case.id} ${case.complainantName} ${case.suspectName} ${case.violationArticle}".lowercase().contains(searchText)
+                                }
+                            }
+                        }
+
+                        // Индикатор загрузки или список дел
+                        if (casesLoading) {
+                            CircularProgressIndicator(
+                                color = Color(0xFF4A90E2),
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(20.dp)
                             )
+                        } else {
+                            if (filteredActiveCases.isEmpty() && filteredClosedCases.isEmpty()) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    VengText(
+                                        text = "Дела не найдены",
+                                        color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
+                                        fontSize = 16.sp
+                                    )
+                                }
+                            } else {
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxSize(),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                    contentPadding = PaddingValues(8.dp)
+                                ) {
+                                    // Активные дела
+                                    if (filteredActiveCases.isNotEmpty()) {
+                                        item {
+                                            VengText(
+                                                text = "Активные дела",
+                                                color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
+                                                fontSize = 18.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
+                                            )
+                                        }
+                                        items(filteredActiveCases) { case ->
+                                            CaseCard(
+                                                case = case,
+                                                modifier = Modifier.fillMaxWidth(),
+                                                onClick = { selectedCase = case },
+                                                theme = currentTheme
+                                            )
+                                        }
+                                    }
+
+                                    // Архив (закрытые дела)
+                                    if (filteredClosedCases.isNotEmpty()) {
+                                        item {
+                                            VengText(
+                                                text = "Архив",
+                                                color = SeveritepunkThemes.getColorScheme(currentTheme).borderLight,
+                                                fontSize = 18.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
+                                            )
+                                        }
+                                        items(filteredClosedCases) { case ->
+                                            CaseCard(
+                                                case = case,
+                                                modifier = Modifier.fillMaxWidth(),
+                                                onClick = { selectedCase = case },
+                                                theme = currentTheme
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -186,22 +365,38 @@ fun PoliceScreen(navController: NavController) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Top
             ) {
-                VengButton(
-                    onClick = { showRecordDialog = true },
-                    text = "Создать личное дело",
-                    theme = currentTheme,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp, bottom = 8.dp)
-                )
-                VengButton(
-                    onClick = { showFingerprintsBrowser = true },
-                    text = "Просмотр отпечатков",
-                    theme = currentTheme,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp, bottom = 8.dp)
-                )
+                if (selectedTab == 0) {
+                    VengButton(
+                        onClick = { showRecordDialog = true },
+                        text = "Создать личное дело",
+                        theme = currentTheme,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp, bottom = 8.dp)
+                    )
+                    VengButton(
+                        onClick = { showFingerprintsBrowser = true },
+                        text = "Просмотр отпечатков",
+                        theme = currentTheme,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp, bottom = 8.dp)
+                    )
+                } else {
+                    VengButton(
+                        onClick = {
+                            if (investigatorPersonId > 0) {
+                                showCaseDialog = true
+                            }
+                        },
+                        text = "Создать дело",
+                        theme = currentTheme,
+                        enabled = investigatorPersonId > 0,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp, bottom = 8.dp)
+                    )
+                }
             }
         }
 
@@ -255,6 +450,60 @@ fun PoliceScreen(navController: NavController) {
                 },
                 theme = currentTheme
             )
+        }
+
+        // Диалог создания дела
+        if (showCaseDialog && investigatorPersonId > 0) {
+            CaseDialog(
+                persons = allPersons,
+                investigatorPersonId = investigatorPersonId,
+                investigatorName = investigatorName,
+                onDismiss = { showCaseDialog = false },
+                onCreateCase = { case ->
+                    caseViewModel.createCase(case)
+                },
+                theme = currentTheme
+            )
+        }
+
+        // Диалог редактирования/просмотра дела
+        selectedCase?.let { case ->
+            if (case.status == CaseStatus.CLOSED) {
+                // Просмотр закрытого дела (read-only)
+                ViewCaseDialog(
+                    case = case,
+                    onDismiss = {
+                        selectedCase = null
+                    },
+                    onDelete = { caseId ->
+                        caseViewModel.deleteCase(caseId)
+                        selectedCase = null
+                    },
+                    theme = currentTheme
+                )
+            } else {
+                // Редактирование активного дела
+                EditCaseDialog(
+                    case = case,
+                    persons = allPersons,
+                    onDismiss = {
+                        selectedCase = null
+                    },
+                    onSave = { updatedCase ->
+                        caseViewModel.updateCase(case.id, updatedCase)
+                        selectedCase = null
+                    },
+                    onSendToCourt = { updatedCase ->
+                        caseViewModel.updateCase(case.id, updatedCase.copy(status = CaseStatus.SENT_TO_COURT))
+                        selectedCase = null
+                    },
+                    onClose = { caseId ->
+                        caseViewModel.updateCaseStatus(caseId, CaseStatus.CLOSED)
+                        selectedCase = null
+                    },
+                    theme = currentTheme
+                )
+            }
         }
     }
 }

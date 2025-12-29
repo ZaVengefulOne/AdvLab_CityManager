@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -304,6 +305,41 @@ private fun ExpandedPersonCardContent(person: Person, colors: SeveritepunkCardCo
 //                fontStyle = FontStyle.Italic
 //            )
 //        }
+
+        // Дела (если есть)
+        person.casesAsSuspect?.let { cases ->
+            if (cases.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                VengText(
+                    text = "Дела (подозреваемый): ${cases.size}",
+                    color = colors.accent,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                cases.take(3).forEach { case ->
+                    val statusText = when (case.status) {
+                        org.vengeful.citymanager.models.police.CaseStatus.OPEN -> "Открыто"
+                        org.vengeful.citymanager.models.police.CaseStatus.SENT_TO_COURT -> "Передано в суд"
+                        org.vengeful.citymanager.models.police.CaseStatus.VERDICT_PRONOUNCED -> "Вынесен приговор"
+                        org.vengeful.citymanager.models.police.CaseStatus.CLOSED -> "Закрыто"
+                    }
+                    VengText(
+                        text = "  • Дело №${case.id}: $statusText",
+                        color = colors.text.copy(alpha = 0.8f),
+                        fontSize = 10.sp,
+                        modifier = Modifier.padding(start = 8.dp, top = 2.dp)
+                    )
+                }
+                if (cases.size > 3) {
+                    VengText(
+                        text = "  ... и ещё ${cases.size - 3}",
+                        color = colors.text.copy(alpha = 0.6f),
+                        fontSize = 10.sp,
+                        modifier = Modifier.padding(start = 8.dp, top = 2.dp)
+                    )
+                }
+            }
+        }
 
         // Декоративный разделитель
         Box(

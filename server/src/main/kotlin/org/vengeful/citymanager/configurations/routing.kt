@@ -21,6 +21,7 @@ import org.vengeful.citymanager.bankService.db.BankRepository
 import org.vengeful.citymanager.libraryService.ILibraryRepository
 import org.vengeful.citymanager.medicService.MedicalRepository
 import org.vengeful.citymanager.medicService.MedicineRepository
+import org.vengeful.citymanager.policeService.CaseRepository
 import org.vengeful.citymanager.policeService.PoliceRepository
 import org.vengeful.citymanager.models.*
 import org.vengeful.citymanager.models.backup.MasterBackup
@@ -37,7 +38,11 @@ import org.vengeful.citymanager.models.severite.SellSeveriteRequest
 import org.vengeful.citymanager.models.severite.SellSeveriteResult
 import org.vengeful.citymanager.models.severite.SeveritePurity
 import org.vengeful.citymanager.models.users.*
+import org.vengeful.citymanager.models.police.Case
+import org.vengeful.citymanager.models.police.CaseStatus
+import org.vengeful.citymanager.models.police.CreateCaseRequest
 import org.vengeful.citymanager.models.police.PoliceRecord
+import org.vengeful.citymanager.models.police.UpdateCaseRequest
 import org.vengeful.citymanager.newsService.INewsRepository
 import org.vengeful.citymanager.personService.IPersonRepository
 import org.vengeful.citymanager.severiteService.ISeveriteRepository
@@ -1528,6 +1533,199 @@ fun Application.configureRouting(
                         }
                     } catch (e: Exception) {
                         call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Failed to delete police record: ${e.message}"))
+                    }
+                }
+
+                // ========== CASE ENDPOINTS ==========
+                val caseRepository = CaseRepository()
+
+                // Создание дела
+                post("/cases") {
+                    try {
+                        val currentUser = getCurrentUser(call, userRepository)
+                        if (currentUser == null || currentUser.personId == null) {
+                            call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "User not authenticated or person not linked"))
+                            return@post
+                        }
+
+                        val request = call.receive<CreateCaseRequest>()
+                        
+                        val case = Case(
+                            complainantPersonId = request.complainantPersonId,
+                            complainantName = request.complainantName,
+                            investigatorPersonId = currentUser.personId!!,
+                            suspectPersonId = request.suspectPersonId,
+                            suspectName = request.suspectName,
+                            statementText = request.statementText,
+                            violationArticle = request.violationArticle,
+                            status = request.status
+                        )
+
+                        val createdCase = caseRepository.createCase(case)
+                        call.respond(HttpStatusCode.OK, createdCase)
+                    } catch (e: IllegalStateException) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to (e.message ?: "Invalid request")))
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                    }
+                }
+
+                // Получение всех дел
+                get("/cases") {
+                    try {
+                        val cases = caseRepository.getAllCases()
+                        call.respond(HttpStatusCode.OK, cases)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                    }
+                }
+
+                // Получение дела по ID
+                get("/cases/{caseId}") {
+                    try {
+                        val caseId = call.parameters["caseId"]?.toInt()
+                        if (caseId == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid case ID"))
+                            return@get
+                        }
+                        val case = caseRepository.getCaseById(caseId)
+                        if (case == null) {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "Case not found"))
+                        } else {
+                            call.respond(HttpStatusCode.OK, case)
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                    }
+                }
+
+                // Получение дел по подозреваемому
+                get("/cases/bySuspect/{personId}") {
+                    try {
+                        val personId = call.parameters["personId"]?.toInt()
+                        if (personId == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid person ID"))
+                            return@get
+                        }
+                        val cases = caseRepository.getCasesBySuspect(personId)
+                        call.respond(HttpStatusCode.OK, cases)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                    }
+                }
+
+                // Получение дел по следователю
+                get("/cases/byInvestigator/{personId}") {
+                    try {
+                        val personId = call.parameters["personId"]?.toInt()
+                        if (personId == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid person ID"))
+                            return@get
+                        }
+                        val cases = caseRepository.getCasesByInvestigator(personId)
+                        call.respond(HttpStatusCode.OK, cases)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                    }
+                }
+
+                // Обновление дела
+                put("/cases/{caseId}") {
+                    try {
+                        val caseId = call.parameters["caseId"]?.toInt()
+                        if (caseId == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid case ID"))
+                            return@put
+                        }
+
+                        val currentUser = getCurrentUser(call, userRepository)
+                        if (currentUser == null || currentUser.personId == null) {
+                            call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "User not authenticated or person not linked"))
+                            return@put
+                        }
+
+                        val request = call.receive<UpdateCaseRequest>()
+                        
+                        val existingCase = caseRepository.getCaseById(caseId)
+                            ?: throw IllegalStateException("Case with id $caseId not found")
+
+                        val updatedCase = Case(
+                            id = caseId,
+                            complainantPersonId = request.complainantPersonId,
+                            complainantName = request.complainantName,
+                            investigatorPersonId = existingCase.investigatorPersonId, // Не меняем следователя
+                            suspectPersonId = request.suspectPersonId,
+                            suspectName = request.suspectName,
+                            statementText = request.statementText,
+                            violationArticle = request.violationArticle,
+                            status = request.status,
+                            createdAt = existingCase.createdAt
+                        )
+
+                        val result = caseRepository.updateCase(caseId, updatedCase)
+                        call.respond(HttpStatusCode.OK, result)
+                    } catch (e: IllegalStateException) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to (e.message ?: "Invalid request")))
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                    }
+                }
+
+                // Обновление статуса дела
+                put("/cases/{caseId}/status") {
+                    try {
+                        val caseId = call.parameters["caseId"]?.toInt()
+                        if (caseId == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid case ID"))
+                            return@put
+                        }
+
+                        val statusStr = call.receive<Map<String, String>>()["status"]
+                        if (statusStr == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Status is required"))
+                            return@put
+                        }
+
+                        val status = try {
+                            CaseStatus.valueOf(statusStr)
+                        } catch (e: IllegalArgumentException) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid status"))
+                            return@put
+                        }
+
+                        val updatedCase = caseRepository.updateCaseStatus(caseId, status)
+                        call.respond(HttpStatusCode.OK, updatedCase)
+                    } catch (e: IllegalStateException) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to (e.message ?: "Invalid request")))
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                    }
+                }
+
+                // Удаление дела
+                delete("/cases/{caseId}") {
+                    try {
+                        val caseId = call.parameters["caseId"]?.toInt()
+                        if (caseId == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid case ID"))
+                            return@delete
+                        }
+                        val success = caseRepository.deleteCase(caseId)
+                        if (success) {
+                            call.respond(HttpStatusCode.OK, mapOf("status" to "success", "message" to "Case deleted"))
+                        } else {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "Case not found"))
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
                     }
                 }
             }
