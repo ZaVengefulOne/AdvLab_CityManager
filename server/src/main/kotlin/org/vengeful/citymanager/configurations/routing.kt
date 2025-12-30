@@ -23,6 +23,7 @@ import org.vengeful.citymanager.medicService.MedicalRepository
 import org.vengeful.citymanager.medicService.MedicineRepository
 import org.vengeful.citymanager.policeService.CaseRepository
 import org.vengeful.citymanager.policeService.PoliceRepository
+import org.vengeful.citymanager.courtService.HearingRepository
 import org.vengeful.citymanager.models.*
 import org.vengeful.citymanager.models.backup.MasterBackup
 import org.vengeful.citymanager.models.emergencyShutdown.EmergencyShutdownRequest
@@ -43,6 +44,7 @@ import org.vengeful.citymanager.models.police.CaseStatus
 import org.vengeful.citymanager.models.police.CreateCaseRequest
 import org.vengeful.citymanager.models.police.PoliceRecord
 import org.vengeful.citymanager.models.police.UpdateCaseRequest
+import org.vengeful.citymanager.models.court.Hearing
 import org.vengeful.citymanager.newsService.INewsRepository
 import org.vengeful.citymanager.personService.IPersonRepository
 import org.vengeful.citymanager.severiteService.ISeveriteRepository
@@ -1722,6 +1724,128 @@ fun Application.configureRouting(
                             call.respond(HttpStatusCode.OK, mapOf("status" to "success", "message" to "Case deleted"))
                         } else {
                             call.respond(HttpStatusCode.NotFound, mapOf("error" to "Case not found"))
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                    }
+                }
+            }
+
+            // ========== COURT ENDPOINTS ==========
+            route("/court") {
+                val hearingRepository = HearingRepository()
+
+                // Создание слушания
+                post("/hearings") {
+                    try {
+                        val currentUser = getCurrentUser(call, userRepository)
+                        if (currentUser == null || currentUser.personId == null) {
+                            call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "User not authenticated or person not linked"))
+                            return@post
+                        }
+
+                        val hearing = call.receive<Hearing>()
+                        val createdHearing = hearingRepository.createHearing(hearing)
+                        call.respond(HttpStatusCode.OK, createdHearing)
+                    } catch (e: IllegalStateException) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to (e.message ?: "Invalid request")))
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                    }
+                }
+
+                // Получение всех слушаний
+                get("/hearings") {
+                    try {
+                        val hearings = hearingRepository.getAllHearings()
+                        call.respond(HttpStatusCode.OK, hearings)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                    }
+                }
+
+                // Получение слушания по ID
+                get("/hearings/{id}") {
+                    try {
+                        val id = call.parameters["id"]?.toInt()
+                        if (id == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid hearing ID"))
+                            return@get
+                        }
+                        val hearing = hearingRepository.getHearingById(id)
+                        if (hearing == null) {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "Hearing not found"))
+                        } else {
+                            call.respond(HttpStatusCode.OK, hearing)
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                    }
+                }
+
+                // Получение слушания по делу
+                get("/hearings/byCase/{caseId}") {
+                    try {
+                        val caseId = call.parameters["caseId"]?.toInt()
+                        if (caseId == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid case ID"))
+                            return@get
+                        }
+                        val hearing = hearingRepository.getHearingByCaseId(caseId)
+                        if (hearing == null) {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "Hearing not found"))
+                        } else {
+                            call.respond(HttpStatusCode.OK, hearing)
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                    }
+                }
+
+                // Обновление слушания
+                put("/hearings/{id}") {
+                    try {
+                        val id = call.parameters["id"]?.toInt()
+                        if (id == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid hearing ID"))
+                            return@put
+                        }
+
+                        val currentUser = getCurrentUser(call, userRepository)
+                        if (currentUser == null || currentUser.personId == null) {
+                            call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "User not authenticated or person not linked"))
+                            return@put
+                        }
+
+                        val hearing = call.receive<Hearing>()
+                        val updatedHearing = hearingRepository.updateHearing(id, hearing)
+                        call.respond(HttpStatusCode.OK, updatedHearing)
+                    } catch (e: IllegalStateException) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to (e.message ?: "Invalid request")))
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                    }
+                }
+
+                // Удаление слушания
+                delete("/hearings/{id}") {
+                    try {
+                        val id = call.parameters["id"]?.toInt()
+                        if (id == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid hearing ID"))
+                            return@delete
+                        }
+                        val success = hearingRepository.deleteHearing(id)
+                        if (success) {
+                            call.respond(HttpStatusCode.OK, mapOf("status" to "success", "message" to "Hearing deleted"))
+                        } else {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "Hearing not found"))
                         }
                     } catch (e: Exception) {
                         e.printStackTrace()

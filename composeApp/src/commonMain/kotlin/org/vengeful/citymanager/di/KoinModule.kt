@@ -27,6 +27,8 @@ import org.vengeful.citymanager.data.police.ICaseInteractor
 import org.vengeful.citymanager.data.police.CaseInteractor
 import org.vengeful.citymanager.data.police.IPoliceInteractor
 import org.vengeful.citymanager.data.police.PoliceInteractor
+import org.vengeful.citymanager.data.court.IHearingInteractor
+import org.vengeful.citymanager.data.court.HearingInteractor
 import org.vengeful.citymanager.data.persons.IPersonInteractor
 import org.vengeful.citymanager.data.persons.PersonInteractor
 import org.vengeful.citymanager.data.severite.ISeveriteInteractor
@@ -45,6 +47,7 @@ import org.vengeful.citymanager.screens.medic.MedicViewModel
 import org.vengeful.citymanager.screens.my_bank.MyBankViewModel
 import org.vengeful.citymanager.screens.police.CaseViewModel
 import org.vengeful.citymanager.screens.police.PoliceViewModel
+import org.vengeful.citymanager.screens.court.CourtViewModel
 import org.vengeful.citymanager.screens.news.NewsItemViewModel
 import org.vengeful.citymanager.screens.news.NewsViewModel
 import org.vengeful.citymanager.screens.niis.NIISViewModel
@@ -68,6 +71,7 @@ val appModule = module {
     single<ISeveriteInteractor> { SeveriteInteractor(get()) }
     single<IPoliceInteractor> { PoliceInteractor(get()) }
     single<ICaseInteractor> { CaseInteractor(get()) }
+    single<IHearingInteractor> { HearingInteractor(get()) }
 
     factory { AdministrationViewModel(get(), get(), get(), get(), get()) }
     factory { MainViewModel(get(), get()) }
@@ -86,6 +90,7 @@ val appModule = module {
     factory { NIISViewModel(get()) }
     factory { PoliceViewModel(get(), get()) }
     factory { CaseViewModel(get()) }
+    factory { CourtViewModel(get(), get()) }
 }
 
 fun initKoin() = startKoin {
