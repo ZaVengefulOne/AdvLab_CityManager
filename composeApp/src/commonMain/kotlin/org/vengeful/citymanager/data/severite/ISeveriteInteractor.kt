@@ -12,3 +12,4 @@ interface ISeveriteInteractor {
     suspend fun sellSeverite(severiteIds: List<Int>): SellSeveriteResult
 }
 
+

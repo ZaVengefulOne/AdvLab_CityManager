@@ -9,6 +9,9 @@ import org.vengeful.citymanager.libraryService.db.Articles
 import org.vengeful.citymanager.medicService.db.MedicalRecords
 import org.vengeful.citymanager.medicService.db.MedicineOrders
 import org.vengeful.citymanager.medicService.db.Medicines
+import org.vengeful.citymanager.policeService.db.Cases
+import org.vengeful.citymanager.policeService.db.PoliceRecords
+import org.vengeful.citymanager.courtService.db.Hearings
 import org.vengeful.citymanager.newsService.db.NewsTable
 import org.vengeful.citymanager.personService.db.PersonRepository
 import org.vengeful.citymanager.personService.db.PersonRights
@@ -47,6 +50,9 @@ fun Application.configureDatabase(repository: PersonRepository) {
             MedicalRecords,
             Medicines,
             MedicineOrders,
+            PoliceRecords,
+            Cases,
+            Hearings,
             Stocks,
             Articles,
             NewsTable,

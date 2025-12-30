@@ -32,10 +32,16 @@ fun AsyncNewsImage(
     var error by remember(imageUrl) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(imageUrl) {
+        if (imageUrl.isBlank()) {
+            error = "Empty image URL"
+            isLoading = false
+            return@LaunchedEffect
+        }
+        
         isLoading = true
         error = null
+        val client = HttpClient()
         try {
-            val client = HttpClient()
             val response = client.get(imageUrl) {
                 // Указываем, что ожидаем бинарные данные
             }
@@ -82,6 +88,11 @@ fun AsyncNewsImage(
             error = e.message ?: "Unknown error: ${e.javaClass.simpleName}"
             e.printStackTrace()
         } finally {
+            try {
+                client.close()
+            } catch (e: Exception) {
+                // Игнорируем ошибки при закрытии
+            }
             isLoading = false
         }
     }

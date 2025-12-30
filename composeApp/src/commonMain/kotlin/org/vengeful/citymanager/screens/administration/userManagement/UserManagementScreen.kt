@@ -18,21 +18,31 @@ import org.vengeful.citymanager.di.koinViewModel
 import org.vengeful.citymanager.models.Person
 import org.vengeful.citymanager.models.users.User
 import org.vengeful.citymanager.screens.administration.AdministrationViewModel
+import org.vengeful.citymanager.data.users.states.RegisterUiState
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
 import org.vengeful.citymanager.uikit.composables.dialogs.DeleteConfirmationDialog
+import org.vengeful.citymanager.uikit.composables.dialogs.RegisterDialog
 import org.vengeful.citymanager.uikit.composables.misc.ThemeSwitcher
+import org.vengeful.citymanager.uikit.composables.person.PersonDialog
+import org.vengeful.citymanager.uikit.composables.person.PersonDossierDialog
 import org.vengeful.citymanager.uikit.composables.person.PersonEditDialog
 import org.vengeful.citymanager.uikit.composables.person.PersonList
 import org.vengeful.citymanager.uikit.composables.user.UserEditDialog
 import org.vengeful.citymanager.uikit.composables.user.UserList
 import org.vengeful.citymanager.uikit.composables.veng.VengBackground
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
+import org.vengeful.citymanager.uikit.composables.veng.VengTabRow
 import org.vengeful.citymanager.uikit.composables.veng.VengText
 import org.vengeful.citymanager.uikit.composables.veng.VengTextField
 import org.vengeful.citymanager.utilities.LocalTheme
 import androidx.compose.runtime.collectAsState
 import citymanager.composeapp.generated.resources.back
 import citymanager.composeapp.generated.resources.base_empty
+import org.vengeful.citymanager.data.bank.IBankInteractor
+import org.vengeful.citymanager.screens.police.CaseViewModel
+import org.koin.core.context.GlobalContext
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,6 +59,16 @@ fun UsersAndPersonsScreen(navController: NavController) {
     var personToEdit by remember { mutableStateOf<Person?>(null) }
     var userToDelete by remember { mutableStateOf<User?>(null) }
     var personToDelete by remember { mutableStateOf<Person?>(null) }
+    var showAddUserDialog by remember { mutableStateOf(false) }
+    var showAddPersonDialog by remember { mutableStateOf(false) }
+    var personForDossier by remember { mutableStateOf<Person?>(null) }
+    var bankBalance by remember { mutableStateOf<Double?>(null) }
+    var hasBankAccount by remember { mutableStateOf(false) }
+
+    val caseViewModel: CaseViewModel = koinViewModel()
+    val bankInteractor: IBankInteractor = remember { GlobalContext.get().get() }
+    val scope = rememberCoroutineScope()
+    val casesFromViewModel by caseViewModel.cases.collectAsState()
 
     val defaultSpacer = 24.dp
     val mediumPadding = 12.dp
@@ -130,23 +150,31 @@ fun UsersAndPersonsScreen(navController: NavController) {
                 )
             }
 
-            // Переключатель вкладок
+            // Переключатель вкладок и кнопка добавления
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                VengButton(
-                    text = "Пользователи (${users.size})",
-                    onClick = { selectedTab = 0 },
-                    theme = currentTheme,
+                VengTabRow(
+                    selectedTabIndex = selectedTab,
+                    tabs = listOf("Пользователи (${users.size})", "Жители (${persons.size})"),
+                    onTabSelected = { selectedTab = it },
                     modifier = Modifier.weight(1f),
-                    padding = 12.dp
+                    theme = currentTheme
                 )
+                
                 VengButton(
-                    text = "Жители (${persons.size})",
-                    onClick = { selectedTab = 1 },
+                    text = if (selectedTab == 0) "Добавить пользователя" else "Добавить жителя",
+                    onClick = {
+                        if (selectedTab == 0) {
+                            showAddUserDialog = true
+                        } else {
+                            showAddPersonDialog = true
+                        }
+                    },
                     theme = currentTheme,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.padding(start = 8.dp),
                     padding = 12.dp
                 )
             }
@@ -227,6 +255,9 @@ fun UsersAndPersonsScreen(navController: NavController) {
                             onDeleteClick = { person ->
                                 personToDelete = person
                             },
+                            onPersonClick = { person ->
+                                personForDossier = person
+                            },
                             theme = currentTheme
                         )
                     } else {
@@ -304,6 +335,89 @@ fun UsersAndPersonsScreen(navController: NavController) {
                 onConfirm = {
                     administrationViewModel.deletePerson(person.id)
                     personToDelete = null
+                },
+                theme = currentTheme
+            )
+        }
+
+        // Диалог добавления пользователя
+        if (showAddUserDialog) {
+            val registerState = administrationViewModel.registerState.collectAsState().value
+            RegisterDialog(
+                onDismiss = { 
+                    showAddUserDialog = false
+                    administrationViewModel.resetRegisterState()
+                },
+                onRegister = { username, password, personId ->
+                    administrationViewModel.register(username, password, personId)
+                },
+                persons = persons,
+                isLoading = registerState is RegisterUiState.Loading,
+                errorMessage = when (registerState) {
+                    is RegisterUiState.Error -> registerState.message
+                    else -> null
+                },
+                theme = currentTheme
+            )
+            
+            // Закрываем диалог при успешной регистрации
+            LaunchedEffect(registerState) {
+                if (registerState is RegisterUiState.Success) {
+                    showAddUserDialog = false
+                    administrationViewModel.resetRegisterState()
+                }
+            }
+        }
+
+        // Диалог добавления жителя
+        if (showAddPersonDialog) {
+            PersonDialog(
+                onDismiss = { showAddPersonDialog = false },
+                onAddPerson = { person ->
+                    administrationViewModel.addPerson(person)
+                    administrationViewModel.getPersons()
+                    showAddPersonDialog = false
+                },
+                theme = currentTheme
+            )
+        }
+
+        // Диалог досье жителя
+        personForDossier?.let { person ->
+            LaunchedEffect(person.id) {
+                scope.launch {
+                    // Загружаем дела, где житель является подозреваемым
+                    try {
+                        caseViewModel.loadCasesBySuspect(person.id)
+                    } catch (e: Exception) {
+                        // Ошибка будет обработана в ViewModel
+                    }
+
+                    // Загружаем информацию о банковском счёте
+                    try {
+                        val account = bankInteractor.getBankAccountByPersonId(person.id)
+                        hasBankAccount = account != null
+                        // Баланс хранится в Person, а не в BankAccount
+                        bankBalance = person.balance
+                    } catch (e: Exception) {
+                        hasBankAccount = false
+                        bankBalance = null
+                    }
+                }
+            }
+
+            // Обновляем список дел из ViewModel
+            val currentCasesAsSuspect = casesFromViewModel.filter { it.suspectPersonId == person.id }
+
+            PersonDossierDialog(
+                person = person,
+                casesAsSuspect = currentCasesAsSuspect,
+                bankBalance = bankBalance,
+                hasBankAccount = hasBankAccount,
+                onDismiss = {
+                    personForDossier = null
+                    bankBalance = null
+                    hasBankAccount = false
                 },
                 theme = currentTheme
             )

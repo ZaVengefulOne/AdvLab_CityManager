@@ -1,6 +1,7 @@
 package org.vengeful.citymanager.models
 
 import kotlinx.serialization.Serializable
+import org.vengeful.citymanager.models.police.Case
 
 @Serializable
 data class Person(
@@ -11,4 +12,5 @@ data class Person(
     val health: String = "здоров",
     val rights: List<Rights>,
     val balance: Double = 0.0,
+    val casesAsSuspect: List<Case>? = null,  // Дела, где житель является подозреваемым
 )

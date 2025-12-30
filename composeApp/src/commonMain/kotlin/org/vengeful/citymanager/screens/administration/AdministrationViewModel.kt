@@ -83,6 +83,7 @@ class AdministrationViewModel(
                 is RegisterResult.Success -> {
                     _registerState.value = RegisterUiState.Success
                     getPersons()
+                    getUsers()
                 }
                 is RegisterResult.Error -> {
                     _registerState.value = RegisterUiState.Error(result.message)
@@ -118,13 +119,25 @@ class AdministrationViewModel(
 
     fun addPerson(person: Person) {
         viewModelScope.launch {
-            personInteractor.addPerson(person)
+            try {
+                personInteractor.addPerson(person)
+                getPersons()
+            } catch (e: Exception) {
+                _errorMessage.value = e.message
+                println("Error adding person: ${e.message}")
+            }
         }
     }
 
     fun deletePerson(id: Int) {
         viewModelScope.launch {
-            personInteractor.deletePerson(id)
+            try {
+                personInteractor.deletePerson(id)
+                getPersons()
+            } catch (e: Exception) {
+                _errorMessage.value = e.message
+                println("Error deleting person: ${e.message}")
+            }
         }
     }
 

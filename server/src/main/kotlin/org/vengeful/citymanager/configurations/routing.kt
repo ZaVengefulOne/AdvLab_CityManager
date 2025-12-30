@@ -3,6 +3,7 @@ package org.vengeful.citymanager.configurations
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import io.ktor.http.*
+import io.ktor.http.content.*
 import io.ktor.serialization.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -20,6 +21,9 @@ import org.vengeful.citymanager.bankService.db.BankRepository
 import org.vengeful.citymanager.libraryService.ILibraryRepository
 import org.vengeful.citymanager.medicService.MedicalRepository
 import org.vengeful.citymanager.medicService.MedicineRepository
+import org.vengeful.citymanager.policeService.CaseRepository
+import org.vengeful.citymanager.policeService.PoliceRepository
+import org.vengeful.citymanager.courtService.HearingRepository
 import org.vengeful.citymanager.models.*
 import org.vengeful.citymanager.models.backup.MasterBackup
 import org.vengeful.citymanager.models.emergencyShutdown.EmergencyShutdownRequest
@@ -35,6 +39,12 @@ import org.vengeful.citymanager.models.severite.SellSeveriteRequest
 import org.vengeful.citymanager.models.severite.SellSeveriteResult
 import org.vengeful.citymanager.models.severite.SeveritePurity
 import org.vengeful.citymanager.models.users.*
+import org.vengeful.citymanager.models.police.Case
+import org.vengeful.citymanager.models.police.CaseStatus
+import org.vengeful.citymanager.models.police.CreateCaseRequest
+import org.vengeful.citymanager.models.police.PoliceRecord
+import org.vengeful.citymanager.models.police.UpdateCaseRequest
+import org.vengeful.citymanager.models.court.Hearing
 import org.vengeful.citymanager.newsService.INewsRepository
 import org.vengeful.citymanager.personService.IPersonRepository
 import org.vengeful.citymanager.severiteService.ISeveriteRepository
@@ -142,6 +152,17 @@ fun Application.configureRouting(
 
         }
 
+        route("/police") {
+            get("/photos/{filename}") {
+                val filename = call.parameters["filename"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+                val file = File("src/main/resources/police_photos", filename)
+                if (file.exists() && file.isFile) {
+                    call.respondFile(file)
+                } else {
+                    call.respond(HttpStatusCode.NotFound, "Photo not found")
+                }
+            }
+        }
 
         post("/adminReg") {
             try {
@@ -1279,6 +1300,556 @@ fun Application.configureRouting(
                             HttpStatusCode.InternalServerError,
                             mapOf("error" to e.message)
                         )
+                    }
+                }
+            }
+
+            route("/police") {
+                val policeRepository = PoliceRepository()
+
+                // Создание личного дела (с загрузкой фото)
+                post("/records") {
+                    try {
+                        val multipart = call.receiveMultipart()
+                        var recordJson: String? = null
+                        var photoBytes: ByteArray? = null
+                        var fileName: String? = null
+
+                        multipart.forEachPart { part ->
+                            when (part) {
+                                is PartData.FormItem -> {
+                                    when (part.name) {
+                                        "record" -> recordJson = part.value
+                                    }
+                                }
+
+                                is PartData.FileItem -> {
+                                    if (part.name == "photo") {
+                                        fileName = part.originalFileName
+                                        photoBytes = part.streamProvider().readBytes()
+                                    }
+                                }
+
+                                else -> {}
+                            }
+                            part.dispose()
+                        }
+
+                        if (recordJson == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Record data is required"))
+                            return@post
+                        }
+
+                        // Парсим JSON записи
+                        val record = kotlinx.serialization.json.Json.decodeFromString<PoliceRecord>(recordJson)
+
+                        var photoUrl: String? = null
+                        if (photoBytes != null && fileName != null) {
+                            // Проверка расширения файла
+                            val extension = fileName!!.substringAfterLast('.', "").lowercase()
+                            if (extension !in listOf("png", "jpg", "jpeg")) {
+                                call.respond(
+                                    HttpStatusCode.BadRequest,
+                                    mapOf("error" to "Only PNG and JPG images are allowed")
+                                )
+                                return@post
+                            }
+
+                            // Сохранение файла
+                            val uploadDir = File("src/main/resources/police_photos")
+                            uploadDir.mkdirs()
+                            val uniqueFileName = "${UUID.randomUUID()}.$extension"
+                            val file = File(uploadDir, uniqueFileName)
+                            file.writeBytes(photoBytes!!)
+
+                            photoUrl = "/police/photos/$uniqueFileName"
+                        }
+
+                        val createdRecord = policeRepository.createPoliceRecord(record, photoUrl)
+                        call.respond(HttpStatusCode.OK, createdRecord)
+                    } catch (e: IllegalStateException) {
+                        call.respond(HttpStatusCode.BadRequest, e.message ?: "")
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, e.message ?: "")
+                    }
+                }
+
+                // Получение всех личных дел
+                get("/records") {
+                    try {
+                        val records = policeRepository.getAllPoliceRecords()
+                        call.respond(HttpStatusCode.OK, records)
+                    } catch (e: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, e.message ?: "")
+                    }
+                }
+
+                // Получение списка персон с личными делами
+                get("/persons") {
+                    try {
+                        val persons = policeRepository.getPersonsWithRecords()
+                        call.respond(HttpStatusCode.OK, persons)
+                    } catch (e: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, e.message ?: "")
+                    }
+                }
+
+                // Получение личных дел по personId
+                get("/records/{personId}") {
+                    val personId = call.parameters["personId"]?.toInt()
+                    if (personId == null) {
+                        call.respond(HttpStatusCode.BadRequest)
+                        return@get
+                    }
+                    try {
+                        val records = policeRepository.getPoliceRecordsByPersonId(personId)
+                        call.respond(HttpStatusCode.OK, records)
+                    } catch (e: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, e.message ?: "")
+                    }
+                }
+
+                // Получение личного дела по ID
+                get("/records/byId/{recordId}") {
+                    try {
+                        val recordId = call.parameters["recordId"]?.toInt()
+                        if (recordId == null) {
+                            call.respond(HttpStatusCode.BadRequest)
+                            return@get
+                        }
+                        val record = policeRepository.getPoliceRecordById(recordId)
+                        if (record == null) {
+                            call.respond(HttpStatusCode.NotFound)
+                        } else {
+                            call.respond(HttpStatusCode.OK, record)
+                        }
+                    } catch (e: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, e.message ?: "")
+                    }
+                }
+
+                // Получение личного дела по номеру отпечатка
+                get("/records/byFingerprint/{fingerprintNumber}") {
+                    try {
+                        val fingerprintNumber = call.parameters["fingerprintNumber"]?.toInt()
+                        if (fingerprintNumber == null) {
+                            call.respond(HttpStatusCode.BadRequest)
+                            return@get
+                        }
+                        val record = policeRepository.getPoliceRecordByFingerprintNumber(fingerprintNumber)
+                        if (record == null) {
+                            call.respond(HttpStatusCode.NotFound)
+                        } else {
+                            call.respond(HttpStatusCode.OK, record)
+                        }
+                    } catch (e: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, e.message ?: "")
+                    }
+                }
+
+                // Обновление личного дела
+                put("/records/{recordId}") {
+                    try {
+                        val recordId = call.parameters["recordId"]?.toInt()
+                        if (recordId == null) {
+                            call.respond(HttpStatusCode.BadRequest, "Invalid record ID")
+                            return@put
+                        }
+
+                        val multipart = call.receiveMultipart()
+                        var recordJson: String? = null
+                        var photoBytes: ByteArray? = null
+                        var fileName: String? = null
+
+                        multipart.forEachPart { part ->
+                            when (part) {
+                                is PartData.FormItem -> {
+                                    when (part.name) {
+                                        "record" -> recordJson = part.value
+                                    }
+                                }
+
+                                is PartData.FileItem -> {
+                                    if (part.name == "photo") {
+                                        fileName = part.originalFileName
+                                        photoBytes = part.streamProvider().readBytes()
+                                    }
+                                }
+
+                                else -> {}
+                            }
+                            part.dispose()
+                        }
+
+                        if (recordJson == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Record data is required"))
+                            return@put
+                        }
+
+                        val record = kotlinx.serialization.json.Json.decodeFromString<PoliceRecord>(recordJson)
+
+                        var photoUrl: String? = null
+                        if (photoBytes != null && fileName != null) {
+                            val extension = fileName!!.substringAfterLast('.', "").lowercase()
+                            if (extension !in listOf("png", "jpg", "jpeg")) {
+                                call.respond(
+                                    HttpStatusCode.BadRequest,
+                                    mapOf("error" to "Only PNG and JPG images are allowed")
+                                )
+                                return@put
+                            }
+
+                            val uploadDir = File("src/main/resources/police_photos")
+                            uploadDir.mkdirs()
+                            val uniqueFileName = "${UUID.randomUUID()}.$extension"
+                            val file = File(uploadDir, uniqueFileName)
+                            file.writeBytes(photoBytes!!)
+
+                            photoUrl = "/police/photos/$uniqueFileName"
+                        }
+
+                        val updatedRecord = policeRepository.updatePoliceRecord(recordId, record, photoUrl)
+                        call.respond(HttpStatusCode.OK, updatedRecord)
+                    } catch (e: IllegalStateException) {
+                        call.respond(HttpStatusCode.BadRequest, e.message ?: "")
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, e.message ?: "")
+                    }
+                }
+
+                // Удаление личного дела
+                delete("/records/{recordId}") {
+                    try {
+                        val recordId = call.parameters["recordId"]?.toInt()
+                        if (recordId == null) {
+                            call.respond(HttpStatusCode.BadRequest, "Invalid record ID")
+                            return@delete
+                        }
+                        val success = policeRepository.deletePoliceRecord(recordId)
+                        if (success) {
+                            call.respond(HttpStatusCode.OK, mapOf("status" to "success", "message" to "Police record deleted"))
+                        } else {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "Police record not found"))
+                        }
+                    } catch (e: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Failed to delete police record: ${e.message}"))
+                    }
+                }
+
+                // ========== CASE ENDPOINTS ==========
+                val caseRepository = CaseRepository()
+
+                // Создание дела
+                post("/cases") {
+                    try {
+                        val currentUser = getCurrentUser(call, userRepository)
+                        if (currentUser == null || currentUser.personId == null) {
+                            call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "User not authenticated or person not linked"))
+                            return@post
+                        }
+
+                        val request = call.receive<CreateCaseRequest>()
+                        
+                        val case = Case(
+                            complainantPersonId = request.complainantPersonId,
+                            complainantName = request.complainantName,
+                            investigatorPersonId = currentUser.personId!!,
+                            suspectPersonId = request.suspectPersonId,
+                            suspectName = request.suspectName,
+                            statementText = request.statementText,
+                            violationArticle = request.violationArticle,
+                            status = request.status
+                        )
+
+                        val createdCase = caseRepository.createCase(case)
+                        call.respond(HttpStatusCode.OK, createdCase)
+                    } catch (e: IllegalStateException) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to (e.message ?: "Invalid request")))
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                    }
+                }
+
+                // Получение всех дел
+                get("/cases") {
+                    try {
+                        val cases = caseRepository.getAllCases()
+                        call.respond(HttpStatusCode.OK, cases)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                    }
+                }
+
+                // Получение дела по ID
+                get("/cases/{caseId}") {
+                    try {
+                        val caseId = call.parameters["caseId"]?.toInt()
+                        if (caseId == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid case ID"))
+                            return@get
+                        }
+                        val case = caseRepository.getCaseById(caseId)
+                        if (case == null) {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "Case not found"))
+                        } else {
+                            call.respond(HttpStatusCode.OK, case)
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                    }
+                }
+
+                // Получение дел по подозреваемому
+                get("/cases/bySuspect/{personId}") {
+                    try {
+                        val personId = call.parameters["personId"]?.toInt()
+                        if (personId == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid person ID"))
+                            return@get
+                        }
+                        val cases = caseRepository.getCasesBySuspect(personId)
+                        call.respond(HttpStatusCode.OK, cases)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                    }
+                }
+
+                // Получение дел по следователю
+                get("/cases/byInvestigator/{personId}") {
+                    try {
+                        val personId = call.parameters["personId"]?.toInt()
+                        if (personId == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid person ID"))
+                            return@get
+                        }
+                        val cases = caseRepository.getCasesByInvestigator(personId)
+                        call.respond(HttpStatusCode.OK, cases)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                    }
+                }
+
+                // Обновление дела
+                put("/cases/{caseId}") {
+                    try {
+                        val caseId = call.parameters["caseId"]?.toInt()
+                        if (caseId == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid case ID"))
+                            return@put
+                        }
+
+                        val currentUser = getCurrentUser(call, userRepository)
+                        if (currentUser == null || currentUser.personId == null) {
+                            call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "User not authenticated or person not linked"))
+                            return@put
+                        }
+
+                        val request = call.receive<UpdateCaseRequest>()
+                        
+                        val existingCase = caseRepository.getCaseById(caseId)
+                            ?: throw IllegalStateException("Case with id $caseId not found")
+
+                        val updatedCase = Case(
+                            id = caseId,
+                            complainantPersonId = request.complainantPersonId,
+                            complainantName = request.complainantName,
+                            investigatorPersonId = existingCase.investigatorPersonId, // Не меняем следователя
+                            suspectPersonId = request.suspectPersonId,
+                            suspectName = request.suspectName,
+                            statementText = request.statementText,
+                            violationArticle = request.violationArticle,
+                            status = request.status,
+                            createdAt = existingCase.createdAt
+                        )
+
+                        val result = caseRepository.updateCase(caseId, updatedCase)
+                        call.respond(HttpStatusCode.OK, result)
+                    } catch (e: IllegalStateException) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to (e.message ?: "Invalid request")))
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                    }
+                }
+
+                // Обновление статуса дела
+                put("/cases/{caseId}/status") {
+                    try {
+                        val caseId = call.parameters["caseId"]?.toInt()
+                        if (caseId == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid case ID"))
+                            return@put
+                        }
+
+                        val statusStr = call.receive<Map<String, String>>()["status"]
+                        if (statusStr == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Status is required"))
+                            return@put
+                        }
+
+                        val status = try {
+                            CaseStatus.valueOf(statusStr)
+                        } catch (e: IllegalArgumentException) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid status"))
+                            return@put
+                        }
+
+                        val updatedCase = caseRepository.updateCaseStatus(caseId, status)
+                        call.respond(HttpStatusCode.OK, updatedCase)
+                    } catch (e: IllegalStateException) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to (e.message ?: "Invalid request")))
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                    }
+                }
+
+                // Удаление дела
+                delete("/cases/{caseId}") {
+                    try {
+                        val caseId = call.parameters["caseId"]?.toInt()
+                        if (caseId == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid case ID"))
+                            return@delete
+                        }
+                        val success = caseRepository.deleteCase(caseId)
+                        if (success) {
+                            call.respond(HttpStatusCode.OK, mapOf("status" to "success", "message" to "Case deleted"))
+                        } else {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "Case not found"))
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                    }
+                }
+            }
+
+            // ========== COURT ENDPOINTS ==========
+            route("/court") {
+                val hearingRepository = HearingRepository()
+
+                // Создание слушания
+                post("/hearings") {
+                    try {
+                        val currentUser = getCurrentUser(call, userRepository)
+                        if (currentUser == null || currentUser.personId == null) {
+                            call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "User not authenticated or person not linked"))
+                            return@post
+                        }
+
+                        val hearing = call.receive<Hearing>()
+                        val createdHearing = hearingRepository.createHearing(hearing)
+                        call.respond(HttpStatusCode.OK, createdHearing)
+                    } catch (e: IllegalStateException) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to (e.message ?: "Invalid request")))
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                    }
+                }
+
+                // Получение всех слушаний
+                get("/hearings") {
+                    try {
+                        val hearings = hearingRepository.getAllHearings()
+                        call.respond(HttpStatusCode.OK, hearings)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                    }
+                }
+
+                // Получение слушания по ID
+                get("/hearings/{id}") {
+                    try {
+                        val id = call.parameters["id"]?.toInt()
+                        if (id == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid hearing ID"))
+                            return@get
+                        }
+                        val hearing = hearingRepository.getHearingById(id)
+                        if (hearing == null) {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "Hearing not found"))
+                        } else {
+                            call.respond(HttpStatusCode.OK, hearing)
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                    }
+                }
+
+                // Получение слушания по делу
+                get("/hearings/byCase/{caseId}") {
+                    try {
+                        val caseId = call.parameters["caseId"]?.toInt()
+                        if (caseId == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid case ID"))
+                            return@get
+                        }
+                        val hearing = hearingRepository.getHearingByCaseId(caseId)
+                        if (hearing == null) {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "Hearing not found"))
+                        } else {
+                            call.respond(HttpStatusCode.OK, hearing)
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                    }
+                }
+
+                // Обновление слушания
+                put("/hearings/{id}") {
+                    try {
+                        val id = call.parameters["id"]?.toInt()
+                        if (id == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid hearing ID"))
+                            return@put
+                        }
+
+                        val currentUser = getCurrentUser(call, userRepository)
+                        if (currentUser == null || currentUser.personId == null) {
+                            call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "User not authenticated or person not linked"))
+                            return@put
+                        }
+
+                        val hearing = call.receive<Hearing>()
+                        val updatedHearing = hearingRepository.updateHearing(id, hearing)
+                        call.respond(HttpStatusCode.OK, updatedHearing)
+                    } catch (e: IllegalStateException) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to (e.message ?: "Invalid request")))
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                    }
+                }
+
+                // Удаление слушания
+                delete("/hearings/{id}") {
+                    try {
+                        val id = call.parameters["id"]?.toInt()
+                        if (id == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid hearing ID"))
+                            return@delete
+                        }
+                        val success = hearingRepository.deleteHearing(id)
+                        if (success) {
+                            call.respond(HttpStatusCode.OK, mapOf("status" to "success", "message" to "Hearing deleted"))
+                        } else {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "Hearing not found"))
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
                     }
                 }
             }
