@@ -1,11 +1,14 @@
 package org.vengeful.citymanager.screens.police
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -44,8 +47,10 @@ import org.vengeful.citymanager.uikit.composables.veng.VengBackground
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
 import org.vengeful.citymanager.uikit.composables.veng.VengText
 import org.vengeful.citymanager.uikit.composables.veng.VengTextField
+import org.vengeful.citymanager.uikit.composables.CallIndicator
 import org.vengeful.citymanager.utilities.LocalTheme
 import kotlinx.coroutines.launch
+import org.vengeful.citymanager.models.getDisplayName
 import org.vengeful.citymanager.models.police.CaseStatus
 
 @Composable
@@ -67,6 +72,8 @@ fun PoliceScreen(navController: NavController) {
     val casesLoading by caseViewModel.isLoading.collectAsState()
     val casesError by caseViewModel.errorMessage.collectAsState()
     val casesSuccess by caseViewModel.successMessage.collectAsState()
+    val callStatus by policeViewModel.callStatus.collectAsState()
+    val emergencyAlerts by policeViewModel.emergencyAlerts.collectAsState()
 
     var currentTheme by remember { mutableStateOf(LocalTheme) }
     var selectedTab by remember { mutableIntStateOf(0) } // 0 = Личные дела, 1 = Дела
@@ -96,6 +103,8 @@ fun PoliceScreen(navController: NavController) {
                 investigatorName = person?.let { "${it.firstName} ${it.lastName}" } ?: "Неизвестно"
             }
         }
+        policeViewModel.startStatusCheck()
+        policeViewModel.startAlertsCheck()
     }
 
     VengBackground(
@@ -146,6 +155,78 @@ fun PoliceScreen(navController: NavController) {
                     letterSpacing = 2.sp,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
+
+                CallIndicator(
+                    isCalled = callStatus?.isCalled ?: false,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    onDismiss = {
+                        policeViewModel.resetCall()
+                    }
+                )
+
+                // Тревожные уведомления
+                if (emergencyAlerts.isNotEmpty()) {
+                    println("PoliceScreen: Displaying ${emergencyAlerts.size} emergency alerts")
+                }
+                emergencyAlerts.forEachIndexed { index, alert ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                            .background(
+                                Color(0xFFDC143C),
+                                androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+                            )
+                            .border(
+                                2.dp,
+                                Color(0xFFFF0000),
+                                androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+                            )
+                            .padding(16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                VengText(
+                                    text = "ТРЕВОГА!",
+                                    color = Color.White,
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                VengText(
+                                    text = "Предприятие: ${alert.enterprise.getDisplayName()}",
+                                    color = Color.White,
+                                    fontSize = 16.sp,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                                val timeAgo = (System.currentTimeMillis() - alert.timestamp) / 1000
+                                val timeText = when {
+                                    timeAgo < 60 -> "$timeAgo сек назад"
+                                    timeAgo < 3600 -> "${timeAgo / 60} мин назад"
+                                    else -> "${timeAgo / 3600} ч назад"
+                                }
+                                VengText(
+                                    text = timeText,
+                                    color = Color.White.copy(alpha = 0.8f),
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.padding(top = 2.dp)
+                                )
+                            }
+                            VengButton(
+                                onClick = { policeViewModel.dismissEmergencyAlert(index) },
+                                text = "Закрыть",
+                                modifier = Modifier.height(40.dp),
+                                padding = 8.dp,
+                                theme = currentTheme
+                            )
+                        }
+                    }
+                }
 
                 // Вкладки
                 VengTabRow(

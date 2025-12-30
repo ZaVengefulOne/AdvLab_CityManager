@@ -15,11 +15,14 @@ import org.vengeful.citymanager.data.users.AuthManager
 import org.vengeful.citymanager.models.AdministrationConfig
 import org.vengeful.citymanager.models.CallRequest
 import org.vengeful.citymanager.models.CallStatus
+import org.vengeful.citymanager.models.EmergencyAlert
+import org.vengeful.citymanager.models.EmergencyAlertRequest
 import org.vengeful.citymanager.models.emergencyShutdown.EmergencyShutdownRequest
 import org.vengeful.citymanager.models.emergencyShutdown.EmergencyShutdownStatusResponse
 import org.vengeful.citymanager.models.Enterprise
 import org.vengeful.citymanager.models.SendMessageRequest
 import org.vengeful.citymanager.models.emergencyShutdown.ErrorResponse
+import io.ktor.client.request.delete
 
 class AdministrationInteractor(private val authManager: AuthManager) : IAdministrationInteractor {
 
@@ -140,6 +143,81 @@ class AdministrationInteractor(private val authManager: AuthManager) : IAdminist
             }
         } catch (e: Exception) {
             EmergencyShutdownStatusResponse(isActive = false, remainingTimeSeconds = null)
+        }
+    }
+
+    override suspend fun sendEmergencyAlert(enterprise: Enterprise): Boolean {
+        return try {
+            val token = authManager.getToken()
+            println("Sending emergency alert for enterprise: ${enterprise.name}")
+            val request = EmergencyAlertRequest(enterprise)
+            println("Request object: $request")
+            val response = client.post("$SERVER_BASE_URL/police/emergency-alert") {
+                setHttpBuilder(withAuth = token != null)
+                setBody(request)
+            }
+            println("Response status: ${response.status}")
+            if (!response.status.isSuccess()) {
+                val errorBody = try {
+                    response.body<String>()
+                } catch (e: Exception) {
+                    "Unknown error"
+                }
+                println("Error response body: $errorBody")
+                throw Exception("Server returned ${response.status}: $errorBody")
+            }
+            true
+        } catch (e: Exception) {
+            println("Exception sending emergency alert: ${e::class.simpleName} - ${e.message}")
+            e.printStackTrace()
+            throw Exception("Failed to send emergency alert: ${e.message}")
+        }
+    }
+
+    override suspend fun getEmergencyAlerts(): List<EmergencyAlert> {
+        return try {
+            val token = authManager.getToken()
+            println("Getting emergency alerts, token present: ${token != null}")
+            val response = client.get("$SERVER_BASE_URL/police/emergency-alerts") {
+                setHttpBuilder(withAuth = token != null)
+            }
+            println("Emergency alerts response status: ${response.status}")
+            if (response.status.isSuccess()) {
+                val alerts = response.body<List<EmergencyAlert>>()
+                println("Received ${alerts.size} emergency alerts: ${alerts.map { it.enterprise.name }}")
+                alerts
+            } else {
+                println("Failed to get emergency alerts: ${response.status}")
+                emptyList()
+            }
+        } catch (e: Exception) {
+            println("Exception getting emergency alerts: ${e::class.simpleName} - ${e.message}")
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    override suspend fun deleteEmergencyAlert(index: Int): Boolean {
+        return try {
+            val token = authManager.getToken()
+            println("Deleting emergency alert at index $index")
+            val response = client.delete("$SERVER_BASE_URL/police/emergency-alerts/$index") {
+                setHttpBuilder(withAuth = token != null)
+            }
+            println("Delete emergency alert response status: ${response.status}")
+            if (!response.status.isSuccess()) {
+                val errorBody = try {
+                    response.body<String>()
+                } catch (e: Exception) {
+                    "Unknown error"
+                }
+                println("Error response body: $errorBody")
+            }
+            response.status.isSuccess()
+        } catch (e: Exception) {
+            println("Exception deleting emergency alert: ${e::class.simpleName} - ${e.message}")
+            e.printStackTrace()
+            throw Exception("Failed to delete emergency alert: ${e.message}")
         }
     }
 

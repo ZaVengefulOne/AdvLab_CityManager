@@ -79,7 +79,7 @@ val appModule = module {
     factory { BankViewModel(get(), get(), get(), get()) }
     factory { BackupViewModel(get()) }
     factory { UserManagementViewModel(get(), get()) }
-    factory { MedicViewModel(get(), get(), get(), get(), get()) }
+    factory { MedicViewModel(get(), get(), get(), get(), get(), get()) }
     factory { MyBankViewModel(get(), get(), get(), get()) }
     factory { StockViewModel(get()) }
     factory { CommonLibraryViewModel(get()) }
@@ -87,10 +87,10 @@ val appModule = module {
     factory { NewsViewModel(get()) }
     factory { NewsItemViewModel(get()) }
     factory { SeveritCleaningViewModel(get()) }
-    factory { NIISViewModel(get()) }
-    factory { PoliceViewModel(get(), get()) }
+    factory { NIISViewModel(get(), get()) }
+    factory { PoliceViewModel(get(), get(), get()) }
     factory { CaseViewModel(get()) }
-    factory { CourtViewModel(get(), get()) }
+    factory { CourtViewModel(get(), get(), get()) }
 }
 
 fun initKoin() = startKoin {

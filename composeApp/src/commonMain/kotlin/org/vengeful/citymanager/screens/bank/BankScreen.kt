@@ -3,9 +3,8 @@ package org.vengeful.citymanager.screens.bank
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -19,6 +18,7 @@ import org.vengeful.citymanager.di.koinViewModel
 import org.vengeful.citymanager.models.BankAccount
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
 import org.vengeful.citymanager.uikit.composables.CallIndicator
+import org.vengeful.citymanager.uikit.composables.EmergencyButton
 import org.vengeful.citymanager.uikit.composables.bank.BankAccountDialog
 import org.vengeful.citymanager.uikit.composables.bank.BankAccountEditDialog
 import org.vengeful.citymanager.uikit.composables.bank.BankAccountGrid
@@ -52,6 +52,8 @@ fun BankScreen(navController: NavController) {
         viewModel.getPersons()
         viewModel.getBankAccounts()
         viewModel.startStatusCheck()
+        // Сбрасываем состояние "нажата" при входе на экран
+        viewModel.resetEmergencyButtonState()
     }
 
     VengBackground(
@@ -60,6 +62,7 @@ fun BankScreen(navController: NavController) {
             .safeContentPadding(),
         theme = currentTheme,
     ) {
+        Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -110,6 +113,7 @@ fun BankScreen(navController: NavController) {
                     viewModel.resetCall()
                 }
             )
+
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -339,6 +343,34 @@ fun BankScreen(navController: NavController) {
                 },
                 theme = currentTheme
             )
+        }
+
+        // Тревожная кнопка в левом нижнем углу
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(16.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
+            EmergencyButton(
+                onClick = { viewModel.sendEmergencyAlert() },
+                modifier = Modifier,
+                enabled = true
+            )
+            // Индикатор "нажата" под кнопкой
+            if (viewModel.isEmergencyButtonPressed.collectAsState().value) {
+                VengText(
+                    text = "нажата",
+                    color = Color(0xFFDC143C),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .fillMaxWidth(),
+                    textAlign = TextAlign.Start
+                )
+            }
+        }
         }
     }
 }

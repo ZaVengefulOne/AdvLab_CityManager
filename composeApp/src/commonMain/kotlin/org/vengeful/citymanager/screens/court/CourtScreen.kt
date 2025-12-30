@@ -2,6 +2,7 @@ package org.vengeful.citymanager.screens.court
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
@@ -31,6 +32,9 @@ import org.vengeful.citymanager.uikit.composables.veng.VengBackground
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
 import org.vengeful.citymanager.uikit.composables.veng.VengText
 import org.vengeful.citymanager.uikit.composables.veng.VengTextField
+import org.vengeful.citymanager.uikit.composables.EmergencyButton
+import org.vengeful.citymanager.uikit.composables.CallIndicator
+import androidx.compose.ui.text.style.TextAlign
 
 @Composable
 fun CourtScreen(navController: NavController) {
@@ -42,6 +46,7 @@ fun CourtScreen(navController: NavController) {
     val successMessage by courtViewModel.successMessage.collectAsState()
 
     val currentHearing by courtViewModel.currentHearing.collectAsState()
+    val callStatus by courtViewModel.callStatus.collectAsState()
 
     var currentTheme by remember { mutableStateOf(ColorTheme.SEVERITE) }
     var showCreateDialog by remember { mutableStateOf(false) }
@@ -54,12 +59,16 @@ fun CourtScreen(navController: NavController) {
     // Обновляем список слушаний при открытии экрана
     LaunchedEffect(Unit) {
         courtViewModel.loadAllHearings()
+        courtViewModel.startStatusCheck()
+        // Сбрасываем состояние "нажата" при входе на экран
+        courtViewModel.resetEmergencyButtonState()
     }
 
     VengBackground(
         modifier = Modifier.fillMaxSize(),
         theme = currentTheme,
     ) {
+        Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
@@ -109,6 +118,17 @@ fun CourtScreen(navController: NavController) {
                         letterSpacing = 2.sp,
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
+
+                    CallIndicator(
+                        isCalled = callStatus?.isCalled ?: false,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        onDismiss = {
+                            courtViewModel.resetCall()
+                        }
+                    )
+
 
                     // Сообщения об ошибках/успехе
                     errorMessage?.let {
@@ -219,6 +239,34 @@ fun CourtScreen(navController: NavController) {
                     modifier = Modifier.fillMaxWidth(0.3f)
                 )
             }
+        }
+
+        // Тревожная кнопка в левом нижнем углу
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(16.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
+            EmergencyButton(
+                onClick = { courtViewModel.sendEmergencyAlert() },
+                modifier = Modifier,
+                enabled = true
+            )
+            // Индикатор "нажата" под кнопкой
+            if (courtViewModel.isEmergencyButtonPressed.collectAsState().value) {
+                VengText(
+                    text = "нажата",
+                    color = Color(0xFFDC143C),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .fillMaxWidth(),
+                    textAlign = TextAlign.Start
+                )
+            }
+        }
         }
     }
 

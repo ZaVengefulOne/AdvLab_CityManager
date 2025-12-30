@@ -1,21 +1,32 @@
 package org.vengeful.citymanager.screens.court
 
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.vengeful.citymanager.base.BaseViewModel
+import org.vengeful.citymanager.data.administration.IAdministrationInteractor
 import org.vengeful.citymanager.data.court.IHearingInteractor
 import org.vengeful.citymanager.data.police.ICaseInteractor
+import org.vengeful.citymanager.models.CallStatus
+import org.vengeful.citymanager.models.Enterprise
 import org.vengeful.citymanager.models.court.Hearing
 import org.vengeful.citymanager.models.police.Case
 import org.vengeful.citymanager.models.police.CaseStatus
 
 class CourtViewModel(
     private val hearingInteractor: IHearingInteractor,
-    private val caseInteractor: ICaseInteractor
+    private val caseInteractor: ICaseInteractor,
+    private val administrationInteractor: IAdministrationInteractor
 ) : BaseViewModel() {
+
+    private val _callStatus = MutableStateFlow<CallStatus?>(null)
+    val callStatus: StateFlow<CallStatus?> = _callStatus.asStateFlow()
+
+    private var statusCheckJob: Job? = null
 
     private val _hearings = MutableStateFlow<List<Hearing>>(emptyList())
     val hearings: StateFlow<List<Hearing>> = _hearings.asStateFlow()
@@ -37,6 +48,9 @@ class CourtViewModel(
 
     private val _successMessage = MutableStateFlow<String?>(null)
     val successMessage: StateFlow<String?> = _successMessage.asStateFlow()
+
+    private val _isEmergencyButtonPressed = MutableStateFlow(false)
+    val isEmergencyButtonPressed: StateFlow<Boolean> = _isEmergencyButtonPressed.asStateFlow()
 
     init {
         loadAllHearings()
@@ -143,6 +157,58 @@ class CourtViewModel(
 
     fun clearCurrentHearing() {
         _currentHearing.value = null
+    }
+
+    fun startStatusCheck() {
+        statusCheckJob?.cancel()
+        statusCheckJob = viewModelScope.launch {
+            while (true) {
+                delay(3000)
+                try {
+                    val status = administrationInteractor.getCallStatus(Enterprise.COURT)
+                    _callStatus.value = status
+                } catch (e: Exception) {
+                    println("Error checking call status: ${e.message}")
+                }
+            }
+        }
+    }
+
+    fun resetCall() {
+        viewModelScope.launch {
+            try {
+                administrationInteractor.resetCallStatus(Enterprise.COURT)
+                _callStatus.value = CallStatus(Enterprise.COURT, false)
+            } catch (e: Exception) {
+                println("Error resetting call: ${e.message}")
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        statusCheckJob?.cancel()
+    }
+
+    fun sendEmergencyAlert() {
+        viewModelScope.launch {
+            try {
+                _isEmergencyButtonPressed.value = true
+                val success = administrationInteractor.sendEmergencyAlert(Enterprise.COURT)
+                if (!success) {
+                    _errorMessage.value = "Не удалось отправить тревожное уведомление"
+                    _isEmergencyButtonPressed.value = false
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = e.message
+                _isEmergencyButtonPressed.value = false
+                println("Error sending emergency alert: ${e.message}")
+            }
+        }
+    }
+
+    fun resetEmergencyButtonState() {
+        _isEmergencyButtonPressed.value = false
     }
 }
 

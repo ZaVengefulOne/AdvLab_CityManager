@@ -12,7 +12,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -23,7 +22,10 @@ import org.vengeful.citymanager.uikit.composables.veng.VengBackground
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
 import org.vengeful.citymanager.uikit.composables.veng.VengText
 import org.vengeful.citymanager.uikit.composables.veng.VengTextField
+import org.vengeful.citymanager.uikit.composables.CallIndicator
+import org.vengeful.citymanager.uikit.composables.EmergencyButton
 import org.vengeful.citymanager.utilities.LocalTheme
+import androidx.compose.ui.text.style.TextAlign
 
 @Composable
 fun NIISMainScreen(navController: NavController) {
@@ -31,16 +33,21 @@ fun NIISMainScreen(navController: NavController) {
     val viewModel: NIISViewModel = koinViewModel()
     val severiteCounts by viewModel.severiteCounts.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
-    
+    val callStatus by viewModel.callStatus.collectAsState()
+
     var showSampleDialog by remember { mutableStateOf(false) }
     var sampleNumber by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.loadSeveriteCounts()
+        viewModel.startStatusCheck()
+        // Сбрасываем состояние "нажата" при входе на экран
+        viewModel.resetEmergencyButtonState()
     }
 
     VengBackground(theme = currentTheme) {
+        Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -58,6 +65,17 @@ fun NIISMainScreen(navController: NavController) {
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
+
+                CallIndicator(
+                    isCalled = callStatus?.isCalled ?: false,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    onDismiss = {
+                        viewModel.resetCall()
+                    }
+                )
+
 
                 VengText(
                     text = "Научно Исследовательский \n Институт Северита",
@@ -87,7 +105,7 @@ fun NIISMainScreen(navController: NavController) {
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center
                     )
-                    
+
                     if (isLoading) {
                         VengText(
                             text = "Загрузка...",
@@ -143,6 +161,34 @@ fun NIISMainScreen(navController: NavController) {
                         .padding(horizontal = 32.dp)
                 )
             }
+        }
+
+        // Тревожная кнопка в левом нижнем углу
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(16.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
+            EmergencyButton(
+                onClick = { viewModel.sendEmergencyAlert() },
+                modifier = Modifier,
+                enabled = true
+            )
+            // Индикатор "нажата" под кнопкой
+            if (viewModel.isEmergencyButtonPressed.collectAsState().value) {
+                VengText(
+                    text = "нажата",
+                    color = Color(0xFFDC143C),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .fillMaxWidth(),
+                    textAlign = TextAlign.Start
+                )
+            }
+        }
         }
     }
 

@@ -2,19 +2,32 @@ package org.vengeful.citymanager.screens.police
 
 import androidx.lifecycle.viewModelScope
 import org.vengeful.citymanager.base.BaseViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.vengeful.citymanager.data.administration.IAdministrationInteractor
 import org.vengeful.citymanager.data.persons.IPersonInteractor
 import org.vengeful.citymanager.data.police.IPoliceInteractor
+import org.vengeful.citymanager.models.CallStatus
+import org.vengeful.citymanager.models.EmergencyAlert
+import org.vengeful.citymanager.models.Enterprise
 import org.vengeful.citymanager.models.Person
 import org.vengeful.citymanager.models.police.PoliceRecord
+import kotlinx.coroutines.delay
 
 class PoliceViewModel(
     private val policeInteractor: IPoliceInteractor,
     private val personInteractor: IPersonInteractor,
+    private val administrationInteractor: IAdministrationInteractor
 ) : BaseViewModel() {
+
+    private val _callStatus = MutableStateFlow<CallStatus?>(null)
+    val callStatus: StateFlow<CallStatus?> = _callStatus.asStateFlow()
+
+    private var statusCheckJob: Job? = null
 
     private val _persons = MutableStateFlow<List<Person>>(emptyList())
     val persons: StateFlow<List<Person>> = _persons.asStateFlow()
@@ -37,9 +50,15 @@ class PoliceViewModel(
     private val _successMessage = MutableStateFlow<String?>(null)
     val successMessage: StateFlow<String?> = _successMessage.asStateFlow()
 
+    private val _emergencyAlerts = MutableStateFlow<List<EmergencyAlert>>(emptyList())
+    val emergencyAlerts: StateFlow<List<EmergencyAlert>> = _emergencyAlerts.asStateFlow()
+
+    private var alertsCheckJob: Job? = null
+
     init {
         loadPersons()
         loadAllPersons()
+        startAlertsCheck()
     }
 
     fun loadPersons() {
@@ -162,6 +181,74 @@ class PoliceViewModel(
                 _isLoading.value = false
             }
         }
+    }
+
+    fun startStatusCheck() {
+        statusCheckJob?.cancel()
+        statusCheckJob = viewModelScope.launch {
+            while (true) {
+                delay(3000)
+                try {
+                    val status = administrationInteractor.getCallStatus(Enterprise.POLICE)
+                    _callStatus.value = status
+                } catch (e: Exception) {
+                    println("Error checking call status: ${e.message}")
+                }
+            }
+        }
+    }
+
+    fun resetCall() {
+        viewModelScope.launch {
+            try {
+                administrationInteractor.resetCallStatus(Enterprise.POLICE)
+                _callStatus.value = CallStatus(Enterprise.POLICE, false)
+            } catch (e: Exception) {
+                println("Error resetting call: ${e.message}")
+            }
+        }
+    }
+
+    fun startAlertsCheck() {
+        alertsCheckJob?.cancel()
+        alertsCheckJob = viewModelScope.launch {
+            while (true) {
+                delay(2000)
+                try {
+                    val alerts = administrationInteractor.getEmergencyAlerts()
+                    println("PoliceViewModel: Received ${alerts.size} emergency alerts")
+                    _emergencyAlerts.value = alerts
+                } catch (e: Exception) {
+                    println("Error checking emergency alerts: ${e.message}")
+                }
+            }
+        }
+    }
+
+    fun dismissEmergencyAlert(index: Int) {
+        viewModelScope.launch {
+            try {
+                println("PoliceViewModel: Dismissing alert at index $index")
+                val success = administrationInteractor.deleteEmergencyAlert(index)
+                if (success) {
+                    println("PoliceViewModel: Alert deleted successfully, refreshing list")
+                    val alerts = administrationInteractor.getEmergencyAlerts()
+                    _emergencyAlerts.value = alerts
+                    println("PoliceViewModel: Updated alerts list, new size: ${alerts.size}")
+                } else {
+                    println("PoliceViewModel: Failed to delete alert")
+                }
+            } catch (e: Exception) {
+                println("Error dismissing emergency alert: ${e.message}")
+                e.printStackTrace()
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        statusCheckJob?.cancel()
+        alertsCheckJob?.cancel()
     }
 }
 

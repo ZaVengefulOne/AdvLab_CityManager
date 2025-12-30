@@ -56,8 +56,11 @@ private val callStatuses = mutableMapOf(
     Enterprise.POLICE to CallStatus(Enterprise.POLICE, false),
     Enterprise.MEDIC to CallStatus(Enterprise.MEDIC, false),
     Enterprise.BANK to CallStatus(Enterprise.BANK, false),
-    Enterprise.COURT to CallStatus(Enterprise.COURT, false)
+    Enterprise.COURT to CallStatus(Enterprise.COURT, false),
+    Enterprise.NIIS to CallStatus(Enterprise.NIIS, false)
 )
+
+private val emergencyAlerts = mutableListOf<EmergencyAlert>()
 
 fun Application.configureRouting(
     personRepository: IPersonRepository,
@@ -153,6 +156,82 @@ fun Application.configureRouting(
         }
 
         route("/police") {
+            // Отправка тревожного уведомления (публичный endpoint, не требует аутентификации)
+            post("/emergency-alert") {
+                try {
+                    println("Received emergency alert request")
+                    val request = call.receive<EmergencyAlertRequest>()
+                    println("Parsed request: enterprise = ${request.enterprise}")
+                    
+                    // Проверяем, что это не полиция (полиция не может отправлять тревогу сама себе)
+                    if (request.enterprise == Enterprise.POLICE) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Police cannot send emergency alert"))
+                        return@post
+                    }
+                    
+                    // Проверяем, есть ли уже активная тревога от этого предприятия
+                    val existingAlert = emergencyAlerts.find { it.enterprise == request.enterprise }
+                    if (existingAlert != null) {
+                        println("Alert already exists for enterprise ${request.enterprise.name}, ignoring new alert")
+                        call.respond(HttpStatusCode.OK, mapOf("status" to "success", "message" to "Alert already exists"))
+                        return@post
+                    }
+                    
+                    val alert = EmergencyAlert(
+                        enterprise = request.enterprise
+                    )
+                    println("Created alert: enterprise = ${alert.enterprise}, timestamp = ${alert.timestamp}")
+                    
+                    emergencyAlerts.add(alert)
+                    println("Added alert to list. Total alerts: ${emergencyAlerts.size}")
+                    
+                    // Ограничиваем размер списка (храним последние 100 уведомлений)
+                    if (emergencyAlerts.size > 100) {
+                        emergencyAlerts.removeFirst()
+                    }
+                    
+                    call.respond(HttpStatusCode.OK, mapOf("status" to "success", "message" to "Emergency alert sent"))
+                } catch (e: Exception) {
+                    println("Error processing emergency alert: ${e::class.simpleName} - ${e.message}")
+                    e.printStackTrace()
+                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                }
+            }
+
+            // Получение всех тревожных уведомлений (публичный endpoint для полиции)
+            get("/emergency-alerts") {
+                try {
+                    println("Getting emergency alerts. Total: ${emergencyAlerts.size}")
+                    call.respond(HttpStatusCode.OK, emergencyAlerts)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                }
+            }
+
+            // Удаление тревожного уведомления (публичный endpoint для полиции)
+            delete("/emergency-alerts/{index}") {
+                try {
+                    val index = call.parameters["index"]?.toIntOrNull()
+                        ?: throw IllegalArgumentException("Invalid alert index")
+                    
+                    println("Deleting emergency alert at index $index. Total alerts: ${emergencyAlerts.size}")
+                    
+                    if (index >= 0 && index < emergencyAlerts.size) {
+                        val removedAlert = emergencyAlerts.removeAt(index)
+                        println("Removed alert: enterprise = ${removedAlert.enterprise}")
+                        call.respond(HttpStatusCode.OK, mapOf("status" to "success", "message" to "Alert removed"))
+                    } else {
+                        println("Alert index $index out of bounds (size: ${emergencyAlerts.size})")
+                        call.respond(HttpStatusCode.NotFound, mapOf("error" to "Alert not found"))
+                    }
+                } catch (e: Exception) {
+                    println("Error deleting emergency alert: ${e::class.simpleName} - ${e.message}")
+                    e.printStackTrace()
+                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                }
+            }
+
             get("/photos/{filename}") {
                 val filename = call.parameters["filename"] ?: return@get call.respond(HttpStatusCode.BadRequest)
                 val file = File("src/main/resources/police_photos", filename)
@@ -1852,6 +1931,7 @@ fun Application.configureRouting(
                         call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
                     }
                 }
+
             }
 
             route("/library") {

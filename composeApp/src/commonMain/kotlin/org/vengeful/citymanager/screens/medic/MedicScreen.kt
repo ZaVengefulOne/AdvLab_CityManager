@@ -2,6 +2,7 @@ package org.vengeful.citymanager.screens.medic
 
 import EditMedicalRecordDialog
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -30,7 +31,10 @@ import org.vengeful.citymanager.uikit.composables.veng.VengBackground
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
 import org.vengeful.citymanager.uikit.composables.veng.VengText
 import org.vengeful.citymanager.uikit.composables.veng.VengTextField
+import org.vengeful.citymanager.uikit.composables.CallIndicator
+import org.vengeful.citymanager.uikit.composables.EmergencyButton
 import org.vengeful.citymanager.utilities.LocalTheme
+import androidx.compose.ui.text.style.TextAlign
 
 
 @Composable
@@ -46,6 +50,7 @@ fun MedicScreen(navController: NavController) {
     val errorMessage by medicViewModel.errorMessage.collectAsState()
     val successMessage by medicViewModel.successMessage.collectAsState()
     val allPersons by medicViewModel.allPersons.collectAsState()
+    val callStatus by medicViewModel.callStatus.collectAsState()
 
     var currentTheme by remember { mutableStateOf(LocalTheme) }
     var showMedicalRecordDialog by remember { mutableStateOf(false) }
@@ -53,10 +58,17 @@ fun MedicScreen(navController: NavController) {
     var selectedPatientForEdit by remember { mutableStateOf<Person?>(null) }
     var patientSearchQuery by remember { mutableStateOf("") }
 
+    LaunchedEffect(Unit) {
+        medicViewModel.startStatusCheck()
+        // Сбрасываем состояние "нажата" при входе на экран
+        medicViewModel.resetEmergencyButtonState()
+    }
+
     VengBackground(
         modifier = Modifier.fillMaxSize(),
         theme = currentTheme,
     ) {
+        Box(modifier = Modifier.fillMaxSize()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -101,6 +113,17 @@ fun MedicScreen(navController: NavController) {
                     letterSpacing = 2.sp,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
+
+                CallIndicator(
+                    isCalled = callStatus?.isCalled ?: false,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    onDismiss = {
+                        medicViewModel.resetCall()
+                    }
+                )
+
 
                 errorMessage?.let {
                     VengText(
@@ -210,6 +233,34 @@ fun MedicScreen(navController: NavController) {
                         .padding(top = 8.dp, bottom = 8.dp)
                 )
             }
+        }
+
+        // Тревожная кнопка в левом нижнем углу
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(16.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
+            EmergencyButton(
+                onClick = { medicViewModel.sendEmergencyAlert() },
+                modifier = Modifier,
+                enabled = true
+            )
+            // Индикатор "нажата" под кнопкой
+            if (medicViewModel.isEmergencyButtonPressed.collectAsState().value) {
+                VengText(
+                    text = "нажата",
+                    color = Color(0xFFDC143C),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .fillMaxWidth(),
+                    textAlign = TextAlign.Start
+                )
+            }
+        }
         }
 
         // Диалог создания медкарты

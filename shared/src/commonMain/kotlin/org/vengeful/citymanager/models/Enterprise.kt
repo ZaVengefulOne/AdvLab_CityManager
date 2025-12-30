@@ -8,7 +8,8 @@ enum class Enterprise {
     MEDIC,     // Больница
     BANK,      // Банк
     COURT,      // Суд
-    ADMINISTRATION // Администрация
+    ADMINISTRATION, // Администрация
+    NIIS
 }
 
 fun Enterprise.getDisplayName(): String {
@@ -18,5 +19,6 @@ fun Enterprise.getDisplayName(): String {
         Enterprise.BANK -> "Банк"
         Enterprise.COURT -> "Суд"
         Enterprise.ADMINISTRATION -> "Администрация"
+        Enterprise.NIIS -> "НИИС"
     }
 }

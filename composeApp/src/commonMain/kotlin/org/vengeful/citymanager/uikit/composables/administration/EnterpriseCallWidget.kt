@@ -41,8 +41,8 @@ fun EnterpriseCallWidget(
     val textFieldColors = remember(theme) {
         SeveritepunkThemes.getColorScheme(theme)
     }
+    val entries = Enterprise.entries.filter{ it != Enterprise.ADMINISTRATION }
 
-    // LaunchedEffect должен быть на уровне composable функции, а не внутри onClick
     LaunchedEffect(showSuccessMessage) {
         if (showSuccessMessage) {
             delay(3000)
@@ -99,7 +99,7 @@ fun EnterpriseCallWidget(
                     .border(2.dp, textFieldColors.borderLight, RoundedCornerShape(6.dp))
                     .width(350.dp)
             ) {
-                Enterprise.entries.forEach { enterprise ->
+                entries.forEach { enterprise ->
                     DropdownMenuItem(
                         onClick = {
                             selectedEnterprise = enterprise
@@ -124,7 +124,6 @@ fun EnterpriseCallWidget(
                     onCallEnterprise(enterprise)
                     successMessage = "Представитель ${enterprise.getDisplayName()} успешно вызван"
                     showSuccessMessage = true
-                    // LaunchedEffect автоматически скроет сообщение через 3 секунды
                 }
             },
             text = "Вызвать",
@@ -133,11 +132,10 @@ fun EnterpriseCallWidget(
             theme = theme
         )
 
-        // Индикация успешного вызова
         if (showSuccessMessage) {
             VengText(
                 text = successMessage,
-                color = Color(0xFF27AE60), // Зеленый цвет для успеха
+                color = Color(0xFF27AE60),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.fillMaxWidth()

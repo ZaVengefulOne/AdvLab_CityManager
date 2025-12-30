@@ -43,6 +43,9 @@ class BankViewModel(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
+    private val _isEmergencyButtonPressed = MutableStateFlow(false)
+    val isEmergencyButtonPressed: StateFlow<Boolean> = _isEmergencyButtonPressed.asStateFlow()
+
     fun startStatusCheck() {
         statusCheckJob?.cancel()
         statusCheckJob = viewModelScope.launch {
@@ -169,5 +172,26 @@ class BankViewModel(
 
     fun clearError() {
         _errorMessage.value = null
+    }
+
+    fun sendEmergencyAlert() {
+        viewModelScope.launch {
+            try {
+                _isEmergencyButtonPressed.value = true
+                val success = administrationInteractor.sendEmergencyAlert(Enterprise.BANK)
+                if (!success) {
+                    _errorMessage.value = "Не удалось отправить тревожное уведомление"
+                    _isEmergencyButtonPressed.value = false
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = e.message
+                _isEmergencyButtonPressed.value = false
+                println("Error sending emergency alert: ${e.message}")
+            }
+        }
+    }
+
+    fun resetEmergencyButtonState() {
+        _isEmergencyButtonPressed.value = false
     }
 }

@@ -2,16 +2,21 @@ package org.vengeful.citymanager.screens.medic
 
 import androidx.lifecycle.viewModelScope
 import org.vengeful.citymanager.base.BaseViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.vengeful.citymanager.data.administration.IAdministrationInteractor
 import org.vengeful.citymanager.data.bank.IBankInteractor
 import org.vengeful.citymanager.data.medic.IMedicInteractor
 import org.vengeful.citymanager.data.persons.IPersonInteractor
 import org.vengeful.citymanager.data.users.AuthManager
 import org.vengeful.citymanager.data.users.IUserInteractor
 import org.vengeful.citymanager.models.BankAccount
+import org.vengeful.citymanager.models.CallStatus
+import org.vengeful.citymanager.models.Enterprise
 import org.vengeful.citymanager.models.medicine.MedicalRecord
 import org.vengeful.citymanager.models.Person
 import org.vengeful.citymanager.models.medicine.Medicine
@@ -24,7 +29,13 @@ class MedicViewModel(
     private val bankInteractor: IBankInteractor,
     private val userInteractor: IUserInteractor,
     private val authManager: AuthManager,
+    private val administrationInteractor: IAdministrationInteractor
 ) : BaseViewModel() {
+
+    private val _callStatus = MutableStateFlow<CallStatus?>(null)
+    val callStatus: StateFlow<CallStatus?> = _callStatus.asStateFlow()
+
+    private var statusCheckJob: Job? = null
 
     private val _patients = MutableStateFlow<List<Person>>(emptyList())
     val patients: StateFlow<List<Person>> = _patients.asStateFlow()
@@ -59,6 +70,9 @@ class MedicViewModel(
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+
+    private val _isEmergencyButtonPressed = MutableStateFlow(false)
+    val isEmergencyButtonPressed: StateFlow<Boolean> = _isEmergencyButtonPressed.asStateFlow()
 
     init {
         loadPatients()
@@ -276,5 +290,57 @@ class MedicViewModel(
                 _isLoading.value = false
             }
         }
+    }
+
+    fun startStatusCheck() {
+        statusCheckJob?.cancel()
+        statusCheckJob = viewModelScope.launch {
+            while (true) {
+                delay(3000)
+                try {
+                    val status = administrationInteractor.getCallStatus(Enterprise.MEDIC)
+                    _callStatus.value = status
+                } catch (e: Exception) {
+                    println("Error checking call status: ${e.message}")
+                }
+            }
+        }
+    }
+
+    fun resetCall() {
+        viewModelScope.launch {
+            try {
+                administrationInteractor.resetCallStatus(Enterprise.MEDIC)
+                _callStatus.value = CallStatus(Enterprise.MEDIC, false)
+            } catch (e: Exception) {
+                println("Error resetting call: ${e.message}")
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        statusCheckJob?.cancel()
+    }
+
+    fun sendEmergencyAlert() {
+        viewModelScope.launch {
+            try {
+                _isEmergencyButtonPressed.value = true
+                val success = administrationInteractor.sendEmergencyAlert(Enterprise.MEDIC)
+                if (!success) {
+                    _errorMessage.value = "Не удалось отправить тревожное уведомление"
+                    _isEmergencyButtonPressed.value = false
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = e.message
+                _isEmergencyButtonPressed.value = false
+                println("Error sending emergency alert: ${e.message}")
+            }
+        }
+    }
+
+    fun resetEmergencyButtonState() {
+        _isEmergencyButtonPressed.value = false
     }
 }
