@@ -52,6 +52,11 @@ import org.vengeful.citymanager.utilities.LocalTheme
 import kotlinx.coroutines.launch
 import org.vengeful.citymanager.models.getDisplayName
 import org.vengeful.citymanager.models.police.CaseStatus
+import org.vengeful.citymanager.models.Enterprise
+import org.vengeful.citymanager.models.toRights
+import org.vengeful.citymanager.uikit.composables.personnel.PasswordDialog
+import org.vengeful.citymanager.uikit.composables.personnel.PersonnelManagementDialog
+import androidx.compose.runtime.collectAsState
 
 @Composable
 fun PoliceScreen(navController: NavController) {
@@ -87,6 +92,9 @@ fun PoliceScreen(navController: NavController) {
 
     var investigatorPersonId by remember { mutableIntStateOf(-1) }
     var investigatorName by remember { mutableStateOf("Неизвестно") }
+
+    var showPasswordDialog by remember { mutableStateOf(false) }
+    var showPersonnelManagementDialog by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
 
@@ -137,6 +145,16 @@ fun PoliceScreen(navController: NavController) {
                     modifier = Modifier
                         .padding(top = 8.dp, bottom = 8.dp, start = 8.dp, end = 8.dp)
                         .fillMaxWidth()
+                )
+
+                VengButton(
+                    onClick = { showPasswordDialog = true },
+                    text = "Сотрудники",
+                    theme = currentTheme,
+                    modifier = Modifier
+                        .padding(top = 8.dp, bottom = 8.dp, start = 8.dp, end = 8.dp)
+                        .fillMaxWidth()
+                        .height(48.dp),
                 )
             }
 
@@ -585,6 +603,37 @@ fun PoliceScreen(navController: NavController) {
                     theme = currentTheme
                 )
             }
+        }
+
+        // Диалоги управления персоналом
+        if (showPasswordDialog) {
+            PasswordDialog(
+                onDismiss = { showPasswordDialog = false },
+                onPasswordCorrect = {
+                    showPasswordDialog = false
+                    showPersonnelManagementDialog = true
+                },
+                theme = currentTheme
+            )
+        }
+
+        if (showPersonnelManagementDialog) {
+            val personnel = policeViewModel.getPersonnelByRight(Enterprise.POLICE.toRights())
+            PersonnelManagementDialog(
+                enterpriseRight = Enterprise.POLICE.toRights(),
+                allPersons = allPersons,
+                personnel = personnel,
+                isLoading = false,
+                errorMessage = policeViewModel.errorMessage.collectAsState().value,
+                onAddPerson = { person ->
+                    policeViewModel.addRightToPerson(person.id, Enterprise.POLICE.toRights())
+                },
+                onRemovePerson = { person ->
+                    policeViewModel.removeRightFromPerson(person.id, Enterprise.POLICE.toRights())
+                },
+                onDismiss = { showPersonnelManagementDialog = false },
+                theme = currentTheme
+            )
         }
     }
 }

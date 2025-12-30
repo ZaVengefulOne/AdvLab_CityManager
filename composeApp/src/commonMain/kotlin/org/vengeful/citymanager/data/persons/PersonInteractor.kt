@@ -111,7 +111,7 @@ class PersonInteractor(
                 setBody(person)
             }
             if (response.status.isSuccess()) {
-                // Удачно, TODO: добавить сообщение?
+
             } else {
                 throw Exception("HTTP error ${response.status} : ${response.status.description}")
             }

@@ -27,10 +27,8 @@ class StockViewModel(
     private var nextColorIndex = 0
 
     companion object {
-        //        const val UPDATE_INTERVAL_MS = 120000L // 120 секунд TODO: Продовые значения
-//        const val CONFIG_UPDATE_INTERVAL_MS = 600000L // 600 секунд TODO: Продовые значения
-        const val UPDATE_INTERVAL_MS = 3000L
-        const val CONFIG_UPDATE_INTERVAL_MS = 10000L
+        const val UPDATE_INTERVAL_MS = 300000L // 300 секунд
+        const val CONFIG_UPDATE_INTERVAL_MS = 600000L // 600 секунд
         const val FLUCTUATION_MIN = -20
         const val FLUCTUATION_MAX = 20
         const val GRAPH_HISTORY_SIZE = 20

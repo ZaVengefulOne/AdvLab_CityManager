@@ -22,3 +22,14 @@ fun Enterprise.getDisplayName(): String {
         Enterprise.NIIS -> "НИИС"
     }
 }
+
+fun Enterprise.toRights(): Rights {
+    return when (this) {
+        Enterprise.POLICE -> Rights.Police
+        Enterprise.MEDIC -> Rights.Medic
+        Enterprise.BANK -> Rights.Bank
+        Enterprise.COURT -> Rights.Court
+        Enterprise.NIIS -> Rights.Uni
+        Enterprise.ADMINISTRATION -> Rights.Administration
+    }
+}

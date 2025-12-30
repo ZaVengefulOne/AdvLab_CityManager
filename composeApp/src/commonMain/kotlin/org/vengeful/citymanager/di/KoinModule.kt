@@ -87,10 +87,10 @@ val appModule = module {
     factory { NewsViewModel(get()) }
     factory { NewsItemViewModel(get()) }
     factory { SeveritCleaningViewModel(get()) }
-    factory { NIISViewModel(get(), get()) }
+    factory { NIISViewModel(get(), get(), get()) }
     factory { PoliceViewModel(get(), get(), get()) }
     factory { CaseViewModel(get()) }
-    factory { CourtViewModel(get(), get(), get()) }
+    factory { CourtViewModel(get(), get(), get(), get()) }
 }
 
 fun initKoin() = startKoin {

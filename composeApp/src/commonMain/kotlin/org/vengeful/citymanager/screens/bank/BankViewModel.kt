@@ -17,6 +17,7 @@ import org.vengeful.citymanager.models.BankAccount
 import org.vengeful.citymanager.models.CallStatus
 import org.vengeful.citymanager.models.Enterprise
 import org.vengeful.citymanager.models.Person
+import org.vengeful.citymanager.models.Rights
 import org.vengeful.citymanager.models.users.User
 
 class BankViewModel(
@@ -193,5 +194,41 @@ class BankViewModel(
 
     fun resetEmergencyButtonState() {
         _isEmergencyButtonPressed.value = false
+    }
+
+    fun getPersonnelByRight(right: Rights): List<Person> {
+        return _persons.value.filter { it.rights.contains(right) }
+    }
+
+    fun addRightToPerson(personId: Int, right: Rights) {
+        viewModelScope.launch {
+            try {
+                val person = personInteractor.getPersonById(personId)
+                if (person != null && !person.rights.contains(right)) {
+                    val updatedRights = person.rights + right
+                    val updatedPerson = person.copy(rights = updatedRights)
+                    personInteractor.updatePerson(updatedPerson)
+                    getPersons()
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = "Ошибка при найме: ${e.message}"
+            }
+        }
+    }
+
+    fun removeRightFromPerson(personId: Int, right: Rights) {
+        viewModelScope.launch {
+            try {
+                val person = personInteractor.getPersonById(personId)
+                if (person != null && person.rights.contains(right)) {
+                    val updatedRights = person.rights.filter { it != right }
+                    val updatedPerson = person.copy(rights = updatedRights)
+                    personInteractor.updatePerson(updatedPerson)
+                    getPersons()
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = "Ошибка при увольнении: ${e.message}"
+            }
+        }
     }
 }

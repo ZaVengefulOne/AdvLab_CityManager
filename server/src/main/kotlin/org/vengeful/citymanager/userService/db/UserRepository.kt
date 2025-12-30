@@ -131,7 +131,7 @@ class UserRepository : IUserRepository {
             // Обновляем связь с Person
             this.personId = personId?.let {
                 PersonDao.findById(it)?.id
-            } ?: null // TODO: Переделать
+            }
 
             // Обновляем права (существующая логика)
             val currentRightsSet = rights.map { it.right }.toSet()

@@ -28,7 +28,7 @@ object SessionStorage {
 
     fun getSession(sessionId: String): UserSession? {
         return activeSessions[sessionId]?.takeIf {
-            it.expiresAt > Clock.System.now() // TODO: проверить
+            it.expiresAt > Clock.System.now()
         }
     }
 
@@ -38,6 +38,6 @@ object SessionStorage {
 
     fun cleanupExpiredSessions() {
         val curTime = Clock.System.now()
-        activeSessions.entries.removeAll { it.value.expiresAt < curTime } // TODO: проверить
+        activeSessions.entries.removeAll { it.value.expiresAt < curTime }
     }
 }

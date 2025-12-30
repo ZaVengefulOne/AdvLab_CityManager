@@ -15,6 +15,7 @@ import org.vengeful.citymanager.models.CallStatus
 import org.vengeful.citymanager.models.EmergencyAlert
 import org.vengeful.citymanager.models.Enterprise
 import org.vengeful.citymanager.models.Person
+import org.vengeful.citymanager.models.Rights
 import org.vengeful.citymanager.models.police.PoliceRecord
 import kotlinx.coroutines.delay
 
@@ -241,6 +242,42 @@ class PoliceViewModel(
             } catch (e: Exception) {
                 println("Error dismissing emergency alert: ${e.message}")
                 e.printStackTrace()
+            }
+        }
+    }
+
+    fun getPersonnelByRight(right: Rights): List<Person> {
+        return _allPersons.value.filter { it.rights.contains(right) }
+    }
+
+    fun addRightToPerson(personId: Int, right: Rights) {
+        viewModelScope.launch {
+            try {
+                val person = personInteractor.getPersonById(personId)
+                if (person != null && !person.rights.contains(right)) {
+                    val updatedRights = person.rights + right
+                    val updatedPerson = person.copy(rights = updatedRights)
+                    personInteractor.updatePerson(updatedPerson)
+                    loadAllPersons()
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = "Ошибка при найме: ${e.message}"
+            }
+        }
+    }
+
+    fun removeRightFromPerson(personId: Int, right: Rights) {
+        viewModelScope.launch {
+            try {
+                val person = personInteractor.getPersonById(personId)
+                if (person != null && person.rights.contains(right)) {
+                    val updatedRights = person.rights.filter { it != right }
+                    val updatedPerson = person.copy(rights = updatedRights)
+                    personInteractor.updatePerson(updatedPerson)
+                    loadAllPersons()
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = "Ошибка при увольнении: ${e.message}"
             }
         }
     }

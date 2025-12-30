@@ -22,6 +22,13 @@ import org.jetbrains.compose.resources.stringResource
 import org.vengeful.citymanager.ROUTE_MEDIC_ORDERS
 import org.vengeful.citymanager.di.koinViewModel
 import org.vengeful.citymanager.models.Person
+import org.vengeful.citymanager.data.users.IUserInteractor
+import org.vengeful.citymanager.models.Enterprise
+import org.vengeful.citymanager.models.toRights
+import org.vengeful.citymanager.uikit.composables.personnel.PasswordDialog
+import org.vengeful.citymanager.uikit.composables.personnel.PersonnelManagementDialog
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
 import org.vengeful.citymanager.uikit.composables.medic.MedicalRecordDialog
 import org.vengeful.citymanager.uikit.composables.medic.OrderMedicineDialog
@@ -57,6 +64,10 @@ fun MedicScreen(navController: NavController) {
     var showOrderMedicineDialog by remember { mutableStateOf(false) }
     var selectedPatientForEdit by remember { mutableStateOf<Person?>(null) }
     var patientSearchQuery by remember { mutableStateOf("") }
+
+    var showPasswordDialog by remember { mutableStateOf(false) }
+    var showPersonnelManagementDialog by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         medicViewModel.startStatusCheck()
@@ -95,6 +106,16 @@ fun MedicScreen(navController: NavController) {
                     modifier = Modifier
                         .padding(top = 8.dp, bottom = 8.dp, start = 8.dp, end = 8.dp)
                         .fillMaxWidth()
+                )
+
+                VengButton(
+                    onClick = { showPasswordDialog = true },
+                    text = "Сотрудники",
+                    theme = currentTheme,
+                    modifier = Modifier
+                        .padding(top = 8.dp, bottom = 8.dp, start = 8.dp, end = 8.dp)
+                        .fillMaxWidth()
+                        .height(48.dp),
                 )
             }
 
@@ -320,6 +341,37 @@ fun MedicScreen(navController: NavController) {
                     theme = currentTheme
                 )
             }
+        }
+
+        // Диалоги управления персоналом
+        if (showPasswordDialog) {
+            PasswordDialog(
+                onDismiss = { showPasswordDialog = false },
+                onPasswordCorrect = {
+                    showPasswordDialog = false
+                    showPersonnelManagementDialog = true
+                },
+                theme = currentTheme
+            )
+        }
+
+        if (showPersonnelManagementDialog) {
+            val personnel = medicViewModel.getPersonnelByRight(Enterprise.MEDIC.toRights())
+            PersonnelManagementDialog(
+                enterpriseRight = Enterprise.MEDIC.toRights(),
+                allPersons = allPersons,
+                personnel = personnel,
+                isLoading = false,
+                errorMessage = medicViewModel.errorMessage.value,
+                onAddPerson = { person ->
+                    medicViewModel.addRightToPerson(person.id, Enterprise.MEDIC.toRights())
+                },
+                onRemovePerson = { person ->
+                    medicViewModel.removeRightFromPerson(person.id, Enterprise.MEDIC.toRights())
+                },
+                onDismiss = { showPersonnelManagementDialog = false },
+                theme = currentTheme
+            )
         }
     }
 }

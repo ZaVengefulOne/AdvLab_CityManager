@@ -10,9 +10,12 @@ import kotlinx.coroutines.launch
 import org.vengeful.citymanager.base.BaseViewModel
 import org.vengeful.citymanager.data.administration.IAdministrationInteractor
 import org.vengeful.citymanager.data.court.IHearingInteractor
+import org.vengeful.citymanager.data.persons.IPersonInteractor
 import org.vengeful.citymanager.data.police.ICaseInteractor
 import org.vengeful.citymanager.models.CallStatus
 import org.vengeful.citymanager.models.Enterprise
+import org.vengeful.citymanager.models.Person
+import org.vengeful.citymanager.models.Rights
 import org.vengeful.citymanager.models.court.Hearing
 import org.vengeful.citymanager.models.police.Case
 import org.vengeful.citymanager.models.police.CaseStatus
@@ -20,7 +23,8 @@ import org.vengeful.citymanager.models.police.CaseStatus
 class CourtViewModel(
     private val hearingInteractor: IHearingInteractor,
     private val caseInteractor: ICaseInteractor,
-    private val administrationInteractor: IAdministrationInteractor
+    private val administrationInteractor: IAdministrationInteractor,
+    private val personInteractor: IPersonInteractor
 ) : BaseViewModel() {
 
     private val _callStatus = MutableStateFlow<CallStatus?>(null)
@@ -52,9 +56,23 @@ class CourtViewModel(
     private val _isEmergencyButtonPressed = MutableStateFlow(false)
     val isEmergencyButtonPressed: StateFlow<Boolean> = _isEmergencyButtonPressed.asStateFlow()
 
+    private val _allPersons = MutableStateFlow<List<Person>>(emptyList())
+    val allPersons: StateFlow<List<Person>> = _allPersons.asStateFlow()
+
     init {
         loadAllHearings()
         loadAllCases()
+        loadAllPersons()
+    }
+
+    fun loadAllPersons() {
+        viewModelScope.launch {
+            try {
+                _allPersons.value = personInteractor.getPersons()
+            } catch (e: Exception) {
+                println("Error loading all persons: ${e.message}")
+            }
+        }
     }
 
     fun loadAllHearings() {
@@ -209,6 +227,42 @@ class CourtViewModel(
 
     fun resetEmergencyButtonState() {
         _isEmergencyButtonPressed.value = false
+    }
+
+    fun getPersonnelByRight(right: Rights): List<Person> {
+        return _allPersons.value.filter { it.rights.contains(right) }
+    }
+
+    fun addRightToPerson(personId: Int, right: Rights) {
+        viewModelScope.launch {
+            try {
+                val person = personInteractor.getPersonById(personId)
+                if (person != null && !person.rights.contains(right)) {
+                    val updatedRights = person.rights + right
+                    val updatedPerson = person.copy(rights = updatedRights)
+                    personInteractor.updatePerson(updatedPerson)
+                    loadAllPersons()
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = "Ошибка при найме: ${e.message}"
+            }
+        }
+    }
+
+    fun removeRightFromPerson(personId: Int, right: Rights) {
+        viewModelScope.launch {
+            try {
+                val person = personInteractor.getPersonById(personId)
+                if (person != null && person.rights.contains(right)) {
+                    val updatedRights = person.rights.filter { it != right }
+                    val updatedPerson = person.copy(rights = updatedRights)
+                    personInteractor.updatePerson(updatedPerson)
+                    loadAllPersons()
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = "Ошибка при увольнении: ${e.message}"
+            }
+        }
     }
 }
 

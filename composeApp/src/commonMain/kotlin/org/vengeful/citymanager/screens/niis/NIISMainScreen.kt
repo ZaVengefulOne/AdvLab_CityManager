@@ -26,6 +26,13 @@ import org.vengeful.citymanager.uikit.composables.CallIndicator
 import org.vengeful.citymanager.uikit.composables.EmergencyButton
 import org.vengeful.citymanager.utilities.LocalTheme
 import androidx.compose.ui.text.style.TextAlign
+import org.vengeful.citymanager.models.Enterprise
+import org.vengeful.citymanager.models.toRights
+import org.vengeful.citymanager.models.Person
+import org.vengeful.citymanager.uikit.composables.personnel.PasswordDialog
+import org.vengeful.citymanager.uikit.composables.personnel.PersonnelManagementDialog
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 
 @Composable
 fun NIISMainScreen(navController: NavController) {
@@ -39,8 +46,13 @@ fun NIISMainScreen(navController: NavController) {
     var sampleNumber by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    var showPasswordDialog by remember { mutableStateOf(false) }
+    var showPersonnelManagementDialog by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
     LaunchedEffect(Unit) {
         viewModel.loadSeveriteCounts()
+        viewModel.loadAllPersons()
         viewModel.startStatusCheck()
         // Сбрасываем состояние "нажата" при входе на экран
         viewModel.resetEmergencyButtonState()
@@ -149,6 +161,16 @@ fun NIISMainScreen(navController: NavController) {
                     theme = currentTheme,
                     modifier = Modifier
                         .fillMaxWidth()
+                        .padding(horizontal = 32.dp)
+                )
+
+                VengButton(
+                    onClick = { showPasswordDialog = true },
+                    text = "Сотрудники",
+                    theme = currentTheme,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
                         .padding(horizontal = 32.dp)
                 )
 
@@ -266,5 +288,37 @@ fun NIISMainScreen(navController: NavController) {
             },
             containerColor = SeveritepunkThemes.getColorScheme(currentTheme).background
         )
+
+        // Диалоги управления персоналом
+        if (showPasswordDialog) {
+            PasswordDialog(
+                onDismiss = { showPasswordDialog = false },
+                onPasswordCorrect = {
+                    showPasswordDialog = false
+                    showPersonnelManagementDialog = true
+                },
+                theme = currentTheme
+            )
+        }
+
+        if (showPersonnelManagementDialog) {
+            val allPersons = viewModel.allPersons.collectAsState().value
+            val personnel = viewModel.getPersonnelByRight(Enterprise.NIIS.toRights())
+            PersonnelManagementDialog(
+                enterpriseRight = Enterprise.NIIS.toRights(),
+                allPersons = allPersons,
+                personnel = personnel,
+                isLoading = false,
+                errorMessage = null,
+                onAddPerson = { person ->
+                    viewModel.addRightToPerson(person.id, Enterprise.NIIS.toRights())
+                },
+                onRemovePerson = { person ->
+                    viewModel.removeRightFromPerson(person.id, Enterprise.NIIS.toRights())
+                },
+                onDismiss = { showPersonnelManagementDialog = false },
+                theme = currentTheme
+            )
+        }
     }
 }

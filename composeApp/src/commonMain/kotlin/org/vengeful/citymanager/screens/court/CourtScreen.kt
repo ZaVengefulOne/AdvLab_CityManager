@@ -35,6 +35,13 @@ import org.vengeful.citymanager.uikit.composables.veng.VengTextField
 import org.vengeful.citymanager.uikit.composables.EmergencyButton
 import org.vengeful.citymanager.uikit.composables.CallIndicator
 import androidx.compose.ui.text.style.TextAlign
+import org.vengeful.citymanager.models.Enterprise
+import org.vengeful.citymanager.models.toRights
+import org.vengeful.citymanager.models.Person
+import org.vengeful.citymanager.uikit.composables.personnel.PasswordDialog
+import org.vengeful.citymanager.uikit.composables.personnel.PersonnelManagementDialog
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 
 @Composable
 fun CourtScreen(navController: NavController) {
@@ -55,6 +62,10 @@ fun CourtScreen(navController: NavController) {
     var showAllHearings by remember { mutableStateOf(false) }
     var selectedHearingForView by remember { mutableStateOf<Hearing?>(null) }
     var hearingSearchQuery by remember { mutableStateOf("") }
+
+    var showPasswordDialog by remember { mutableStateOf(false) }
+    var showPersonnelManagementDialog by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     // Обновляем список слушаний при открытии экрана
     LaunchedEffect(Unit) {
@@ -100,6 +111,16 @@ fun CourtScreen(navController: NavController) {
                         modifier = Modifier
                             .padding(top = 8.dp, bottom = 8.dp, start = 8.dp, end = 8.dp)
                             .fillMaxWidth()
+                    )
+
+                    VengButton(
+                        onClick = { showPasswordDialog = true },
+                        text = "Сотрудники",
+                        theme = currentTheme,
+                        modifier = Modifier
+                            .padding(top = 8.dp, bottom = 8.dp, start = 8.dp, end = 8.dp)
+                            .fillMaxWidth()
+                            .height(48.dp),
                     )
                 }
 
@@ -336,6 +357,38 @@ fun CourtScreen(navController: NavController) {
             onUpdateCaseStatus = { caseId, status ->
                 courtViewModel.updateCaseStatus(caseId, status)
             },
+            theme = currentTheme
+        )
+    }
+
+    // Диалоги управления персоналом
+    if (showPasswordDialog) {
+        PasswordDialog(
+            onDismiss = { showPasswordDialog = false },
+            onPasswordCorrect = {
+                showPasswordDialog = false
+                showPersonnelManagementDialog = true
+            },
+            theme = currentTheme
+        )
+    }
+
+    if (showPersonnelManagementDialog) {
+        val allPersons = courtViewModel.allPersons.collectAsState().value
+        val personnel = courtViewModel.getPersonnelByRight(Enterprise.COURT.toRights())
+        PersonnelManagementDialog(
+            enterpriseRight = Enterprise.COURT.toRights(),
+            allPersons = allPersons,
+            personnel = personnel,
+            isLoading = false,
+            errorMessage = courtViewModel.errorMessage.value,
+            onAddPerson = { person ->
+                courtViewModel.addRightToPerson(person.id, Enterprise.COURT.toRights())
+            },
+            onRemovePerson = { person ->
+                courtViewModel.removeRightFromPerson(person.id, Enterprise.COURT.toRights())
+            },
+            onDismiss = { showPersonnelManagementDialog = false },
             theme = currentTheme
         )
     }

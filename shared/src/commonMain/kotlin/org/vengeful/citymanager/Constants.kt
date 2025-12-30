@@ -36,6 +36,9 @@ const val ROUTE_NIIS = "niis"
 const val ROUTE_NIIS_CLEANING = "niis_cleaning"
 const val ROUTE_USERS_AND_PERSONS = "users_and_persons"
 
+// Пароль для управления персоналом предприятий
+const val PERSONNEL_MANAGEMENT_PASSWORD = "196482"
+
 val BUILD_VARIANT = BuildVariant.DEBUG
 
 enum class BuildVariant {

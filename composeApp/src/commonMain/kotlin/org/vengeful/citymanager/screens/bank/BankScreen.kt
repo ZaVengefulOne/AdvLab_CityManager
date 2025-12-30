@@ -29,6 +29,12 @@ import org.vengeful.citymanager.uikit.composables.veng.VengButton
 import org.vengeful.citymanager.uikit.composables.veng.VengText
 import org.vengeful.citymanager.uikit.composables.veng.VengTextField
 import org.vengeful.citymanager.utilities.LocalTheme
+import org.vengeful.citymanager.models.Enterprise
+import org.vengeful.citymanager.models.toRights
+import org.vengeful.citymanager.uikit.composables.personnel.PasswordDialog
+import org.vengeful.citymanager.uikit.composables.personnel.PersonnelManagementDialog
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 
 @Composable
 fun BankScreen(navController: NavController) {
@@ -43,6 +49,10 @@ fun BankScreen(navController: NavController) {
     var accountToDelete by remember { mutableStateOf<BankAccount?>(null) }
     var personAccountsSearchQuery by remember { mutableStateOf("") }
     var enterpriseAccountsSearchQuery by remember { mutableStateOf("") }
+
+    var showPasswordDialog by remember { mutableStateOf(false) }
+    var showPersonnelManagementDialog by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     val defaultSpacer = 16.dp
     val mediumPadding = 12.dp
@@ -75,14 +85,29 @@ fun BankScreen(navController: NavController) {
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                ThemeSwitcher(
-                    currentTheme = currentTheme,
-                    onThemeChange = { newTheme ->
-                        LocalTheme = newTheme
-                        currentTheme = LocalTheme
-                    },
+                Column(
                     modifier = Modifier.weight(0.1f),
-                )
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    ThemeSwitcher(
+                        currentTheme = currentTheme,
+                        onThemeChange = { newTheme ->
+                            LocalTheme = newTheme
+                            currentTheme = LocalTheme
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+
+                    VengButton(
+                        onClick = { showPasswordDialog = true },
+                        text = "Сотрудники",
+                        theme = currentTheme,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                    )
+                }
 
                 VengText(
                     text = stringResource(Res.string.bank_name),
@@ -370,6 +395,37 @@ fun BankScreen(navController: NavController) {
                     textAlign = TextAlign.Start
                 )
             }
+        }
+
+        // Диалоги управления персоналом
+        if (showPasswordDialog) {
+            PasswordDialog(
+                onDismiss = { showPasswordDialog = false },
+                onPasswordCorrect = {
+                    showPasswordDialog = false
+                    showPersonnelManagementDialog = true
+                },
+                theme = currentTheme
+            )
+        }
+
+        if (showPersonnelManagementDialog) {
+            val personnel = viewModel.getPersonnelByRight(Enterprise.BANK.toRights())
+            PersonnelManagementDialog(
+                enterpriseRight = Enterprise.BANK.toRights(),
+                allPersons = persons,
+                personnel = personnel,
+                isLoading = false,
+                errorMessage = viewModel.errorMessage.value,
+                onAddPerson = { person ->
+                    viewModel.addRightToPerson(person.id, Enterprise.BANK.toRights())
+                },
+                onRemovePerson = { person ->
+                    viewModel.removeRightFromPerson(person.id, Enterprise.BANK.toRights())
+                },
+                onDismiss = { showPersonnelManagementDialog = false },
+                theme = currentTheme
+            )
         }
         }
     }
