@@ -75,13 +75,13 @@ class CaseViewModel(
         }
     }
 
-    fun createCase(case: Case) {
+    fun createCase(case: Case, photoBytes: ByteArray? = null) {
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
             _successMessage.value = null
             try {
-                val createdCase = caseInteractor.createCase(case)
+                val createdCase = caseInteractor.createCase(case, photoBytes)
                 _successMessage.value = "Дело успешно создано!"
                 loadAllCases()
                 kotlinx.coroutines.delay(3000)
@@ -94,12 +94,12 @@ class CaseViewModel(
         }
     }
 
-    fun updateCase(caseId: Int, case: Case) {
+    fun updateCase(caseId: Int, case: Case, photoBytes: ByteArray? = null) {
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
             try {
-                val updatedCase = caseInteractor.updateCase(caseId, case)
+                val updatedCase = caseInteractor.updateCase(caseId, case, photoBytes)
                 _currentCase.value = updatedCase
                 loadAllCases()
             } catch (e: Exception) {

@@ -1,5 +1,6 @@
 package org.vengeful.citymanager.uikit.composables.police
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,19 +12,29 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asComposeImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import kotlinx.coroutines.launch
+import org.jetbrains.skia.Bitmap
+import org.jetbrains.skia.Image as SkiaImage
+import org.vengeful.citymanager.SERVER_BASE_URL
+import org.vengeful.citymanager.data.police.FilePicker
 import org.vengeful.citymanager.models.Person
 import org.vengeful.citymanager.models.police.Case
 import org.vengeful.citymanager.models.police.CaseStatus
 import org.vengeful.citymanager.uikit.ColorTheme
 import org.vengeful.citymanager.uikit.DialogColors
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
+import org.vengeful.citymanager.uikit.composables.news.AsyncNewsImage
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
 import org.vengeful.citymanager.uikit.composables.veng.VengText
 import org.vengeful.citymanager.uikit.composables.veng.VengTextField
@@ -32,12 +43,14 @@ import org.vengeful.citymanager.uikit.composables.veng.VengTextField
 fun EditCaseDialog(
     case: Case,
     persons: List<Person>,
+    filePicker: FilePicker,
     onDismiss: () -> Unit,
-    onSave: (Case) -> Unit,
-    onSendToCourt: (Case) -> Unit,
+    onSave: (Case, ByteArray?) -> Unit,
+    onSendToCourt: (Case, ByteArray?) -> Unit,
     onClose: (Int) -> Unit,
     theme: ColorTheme = ColorTheme.GOLDEN
 ) {
+    val scope = rememberCoroutineScope()
     var complainantPersonId by remember { mutableStateOf<Int?>(case.complainantPersonId) }
     var complainantName by remember { mutableStateOf(case.complainantName) }
     var complainantManualInput by remember { mutableStateOf(case.complainantPersonId == null) }
@@ -52,6 +65,23 @@ fun EditCaseDialog(
 
     var statementText by remember { mutableStateOf(case.statementText) }
     var violationArticle by remember { mutableStateOf(case.violationArticle) }
+    var selectedPhotoBytes by remember { mutableStateOf<ByteArray?>(null) }
+    var isLoadingPhoto by remember { mutableStateOf(false) }
+    var photoPreviewBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+
+    // Загружаем превью выбранного фото
+    LaunchedEffect(selectedPhotoBytes) {
+        photoPreviewBitmap = selectedPhotoBytes?.let { bytes ->
+            try {
+                val skiaImage = SkiaImage.makeFromEncoded(bytes)
+                val bitmap = Bitmap.makeFromImage(skiaImage)
+                bitmap.asComposeImageBitmap()
+            } catch (e: Exception) {
+                println("Error creating photo preview: ${e.message}")
+                null
+            }
+        }
+    }
 
     val dialogColors = remember(theme) {
         when (theme) {
@@ -115,6 +145,68 @@ fun EditCaseDialog(
                             .padding(bottom = 20.dp)
                             .align(Alignment.CenterHorizontally)
                     )
+
+                    // Отображение фоторобота (наверху)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp)
+                            .align(Alignment.CenterHorizontally)
+                    ) {
+                        when {
+                            // Показываем превью нового выбранного фоторобота
+                            photoPreviewBitmap != null -> {
+                                Image(
+                                    bitmap = photoPreviewBitmap!!,
+                                    contentDescription = "Предпросмотр фоторобота",
+                                    modifier = Modifier
+                                        .fillMaxWidth(0.7f)
+                                        .aspectRatio(1f)
+                                        .align(Alignment.Center)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .border(2.dp, dialogColors.borderLight, RoundedCornerShape(8.dp)),
+                                    contentScale = ContentScale.Fit
+                                )
+                            }
+                            // Показываем существующий фоторобот с сервера
+                            case.photoCompositeUrl != null -> {
+                                val photoUrl = case.photoCompositeUrl
+                                val fullImageUrl = if (photoUrl?.startsWith("http") == true) {
+                                    photoUrl
+                                } else {
+                                    "$SERVER_BASE_URL$photoUrl"
+                                }
+                                AsyncNewsImage(
+                                    imageUrl = fullImageUrl,
+                                    modifier = Modifier
+                                        .fillMaxWidth(0.7f)
+                                        .aspectRatio(1f)
+                                        .align(Alignment.Center)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .border(2.dp, dialogColors.borderLight, RoundedCornerShape(8.dp))
+                                )
+                            }
+                            // Нет фоторобота
+                            else -> {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth(0.7f)
+                                        .aspectRatio(1f)
+                                        .align(Alignment.Center)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(dialogColors.surface)
+                                        .border(2.dp, dialogColors.borderDark, RoundedCornerShape(8.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    VengText(
+                                        text = "Нет фоторобота",
+                                        color = dialogColors.borderLight,
+                                        fontSize = 14.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
 
                     // Следователь (только для отображения)
                     VengText(
@@ -403,6 +495,28 @@ fun EditCaseDialog(
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium
                     )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Загрузка фоторобота
+                    VengButton(
+                        onClick = {
+                            isLoadingPhoto = true
+                            scope.launch {
+                                try {
+                                    selectedPhotoBytes = filePicker.pickImage()
+                                } catch (e: Exception) {
+                                    println("Error picking image: ${e.message}")
+                                } finally {
+                                    isLoadingPhoto = false
+                                }
+                            }
+                        },
+                        text = if (selectedPhotoBytes != null) "Фоторобот выбран" else "Выбрать фоторобот",
+                        modifier = Modifier.fillMaxWidth(),
+                        theme = theme,
+                        enabled = !isLoadingPhoto
+                    )
                 }
 
                 // Кнопки
@@ -432,7 +546,7 @@ fun EditCaseDialog(
                                 statementText = statementText,
                                 violationArticle = violationArticle
                             )
-                            onSave(updatedCase)
+                            onSave(updatedCase, selectedPhotoBytes)
                             onDismiss()
                         },
                         text = "Сохранить",
@@ -454,7 +568,7 @@ fun EditCaseDialog(
                                 violationArticle = violationArticle,
                                 status = CaseStatus.SENT_TO_COURT
                             )
-                            onSendToCourt(updatedCase)
+                            onSendToCourt(updatedCase, selectedPhotoBytes)
                             onDismiss()
                         },
                         text = "В суд",

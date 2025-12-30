@@ -241,6 +241,17 @@ fun Application.configureRouting(
                     call.respond(HttpStatusCode.NotFound, "Photo not found")
                 }
             }
+
+            // Получение фото фоторобота (публичный доступ)
+            get("/cases/photos/{filename}") {
+                val filename = call.parameters["filename"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+                val file = File("src/main/resources/case_photos", filename)
+                if (file.exists() && file.isFile) {
+                    call.respondFile(file)
+                } else {
+                    call.respond(HttpStatusCode.NotFound, "Photo not found")
+                }
+            }
         }
 
         post("/adminReg") {
@@ -1620,7 +1631,7 @@ fun Application.configureRouting(
                 // ========== CASE ENDPOINTS ==========
                 val caseRepository = CaseRepository()
 
-                // Создание дела
+                // Создание дела (с загрузкой фоторобота)
                 post("/cases") {
                     try {
                         val currentUser = getCurrentUser(call, userRepository)
@@ -1629,17 +1640,71 @@ fun Application.configureRouting(
                             return@post
                         }
 
-                        val request = call.receive<CreateCaseRequest>()
+                        val multipart = call.receiveMultipart()
+                        var caseJson: String? = null
+                        var photoBytes: ByteArray? = null
+                        var fileName: String? = null
+
+                        multipart.forEachPart { part ->
+                            when (part) {
+                                is PartData.FormItem -> {
+                                    when (part.name) {
+                                        "case" -> caseJson = part.value
+                                    }
+                                }
+
+                                is PartData.FileItem -> {
+                                    if (part.name == "photoComposite") {
+                                        fileName = part.originalFileName
+                                        photoBytes = part.streamProvider().readBytes()
+                                    }
+                                }
+
+                                else -> {}
+                            }
+                            part.dispose()
+                        }
+
+                        if (caseJson == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Case data is required"))
+                            return@post
+                        }
+
+                        // Парсим JSON дела
+                        val caseData = kotlinx.serialization.json.Json.decodeFromString<Case>(caseJson)
+
+                        var photoUrl: String? = null
+                        if (photoBytes != null && fileName != null) {
+                            // Проверка расширения файла
+                            val extension = fileName!!.substringAfterLast('.', "").lowercase()
+                            if (extension !in listOf("png", "jpg", "jpeg")) {
+                                call.respond(
+                                    HttpStatusCode.BadRequest,
+                                    mapOf("error" to "Only PNG and JPG images are allowed")
+                                )
+                                return@post
+                            }
+
+                            // Сохранение файла
+                            val uploadDir = File("src/main/resources/case_photos")
+                            uploadDir.mkdirs()
+                            val uniqueFileName = "${UUID.randomUUID()}.$extension"
+                            val file = File(uploadDir, uniqueFileName)
+                            file.writeBytes(photoBytes!!)
+
+                            photoUrl = "/police/cases/photos/$uniqueFileName"
+                        }
                         
                         val case = Case(
-                            complainantPersonId = request.complainantPersonId,
-                            complainantName = request.complainantName,
+                            complainantPersonId = caseData.complainantPersonId,
+                            complainantName = caseData.complainantName,
                             investigatorPersonId = currentUser.personId!!,
-                            suspectPersonId = request.suspectPersonId,
-                            suspectName = request.suspectName,
-                            statementText = request.statementText,
-                            violationArticle = request.violationArticle,
-                            status = request.status
+                            suspectPersonId = caseData.suspectPersonId,
+                            suspectName = caseData.suspectName,
+                            statementText = caseData.statementText,
+                            violationArticle = caseData.violationArticle,
+                            status = caseData.status,
+                            photoCompositeUrl = photoUrl
                         )
 
                         val createdCase = caseRepository.createCase(case)
@@ -1715,7 +1780,7 @@ fun Application.configureRouting(
                     }
                 }
 
-                // Обновление дела
+                // Обновление дела (с загрузкой фоторобота)
                 put("/cases/{caseId}") {
                     try {
                         val caseId = call.parameters["caseId"]?.toInt()
@@ -1730,21 +1795,72 @@ fun Application.configureRouting(
                             return@put
                         }
 
-                        val request = call.receive<UpdateCaseRequest>()
+                        val multipart = call.receiveMultipart()
+                        var caseJson: String? = null
+                        var photoBytes: ByteArray? = null
+                        var fileName: String? = null
+
+                        multipart.forEachPart { part ->
+                            when (part) {
+                                is PartData.FormItem -> {
+                                    when (part.name) {
+                                        "case" -> caseJson = part.value
+                                    }
+                                }
+
+                                is PartData.FileItem -> {
+                                    if (part.name == "photoComposite") {
+                                        fileName = part.originalFileName
+                                        photoBytes = part.streamProvider().readBytes()
+                                    }
+                                }
+
+                                else -> {}
+                            }
+                            part.dispose()
+                        }
+
+                        if (caseJson == null) {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Case data is required"))
+                            return@put
+                        }
+
+                        val caseData = kotlinx.serialization.json.Json.decodeFromString<Case>(caseJson)
                         
                         val existingCase = caseRepository.getCaseById(caseId)
                             ?: throw IllegalStateException("Case with id $caseId not found")
 
+                        var photoUrl: String? = existingCase.photoCompositeUrl
+                        if (photoBytes != null && fileName != null) {
+                            val extension = fileName!!.substringAfterLast('.', "").lowercase()
+                            if (extension !in listOf("png", "jpg", "jpeg")) {
+                                call.respond(
+                                    HttpStatusCode.BadRequest,
+                                    mapOf("error" to "Only PNG and JPG images are allowed")
+                                )
+                                return@put
+                            }
+
+                            val uploadDir = File("src/main/resources/case_photos")
+                            uploadDir.mkdirs()
+                            val uniqueFileName = "${UUID.randomUUID()}.$extension"
+                            val file = File(uploadDir, uniqueFileName)
+                            file.writeBytes(photoBytes!!)
+
+                            photoUrl = "/police/cases/photos/$uniqueFileName"
+                        }
+
                         val updatedCase = Case(
                             id = caseId,
-                            complainantPersonId = request.complainantPersonId,
-                            complainantName = request.complainantName,
+                            complainantPersonId = caseData.complainantPersonId,
+                            complainantName = caseData.complainantName,
                             investigatorPersonId = existingCase.investigatorPersonId, // Не меняем следователя
-                            suspectPersonId = request.suspectPersonId,
-                            suspectName = request.suspectName,
-                            statementText = request.statementText,
-                            violationArticle = request.violationArticle,
-                            status = request.status,
+                            suspectPersonId = caseData.suspectPersonId,
+                            suspectName = caseData.suspectName,
+                            statementText = caseData.statementText,
+                            violationArticle = caseData.violationArticle,
+                            status = caseData.status,
+                            photoCompositeUrl = photoUrl,
                             createdAt = existingCase.createdAt
                         )
 

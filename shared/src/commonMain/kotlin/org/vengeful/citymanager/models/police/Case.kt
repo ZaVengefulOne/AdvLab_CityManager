@@ -23,6 +23,7 @@ data class Case @OptIn(ExperimentalTime::class) constructor(
     val statementText: String,               // Текст заявления
     val violationArticle: String,           // Статья правонарушения
     val status: CaseStatus,
+    val photoCompositeUrl: String? = null,  // URL фоторобота
     val createdAt: Long = Clock.System.now().toEpochMilliseconds(),
 )
 

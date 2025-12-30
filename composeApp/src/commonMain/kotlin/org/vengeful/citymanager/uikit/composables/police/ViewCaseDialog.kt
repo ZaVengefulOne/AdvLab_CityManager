@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -18,10 +19,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import org.vengeful.citymanager.SERVER_BASE_URL
 import org.vengeful.citymanager.models.police.Case
 import org.vengeful.citymanager.models.police.CaseStatus
 import org.vengeful.citymanager.uikit.ColorTheme
 import org.vengeful.citymanager.uikit.DialogColors
+import org.vengeful.citymanager.uikit.composables.news.AsyncNewsImage
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
 import org.vengeful.citymanager.uikit.composables.veng.VengText
 
@@ -90,6 +93,32 @@ fun ViewCaseDialog(
                             .padding(bottom = 20.dp)
                             .align(Alignment.CenterHorizontally)
                     )
+
+                    // Отображение фоторобота
+                    if (case.photoCompositeUrl != null) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 12.dp)
+                                .align(Alignment.CenterHorizontally)
+                        ) {
+                            val photoUrl = case.photoCompositeUrl
+                            val fullImageUrl = if (photoUrl?.startsWith("http") == true) {
+                                photoUrl
+                            } else {
+                                "$SERVER_BASE_URL$photoUrl"
+                            }
+                            AsyncNewsImage(
+                                imageUrl = fullImageUrl,
+                                modifier = Modifier
+                                    .fillMaxWidth(0.7f)
+                                    .aspectRatio(1f)
+                                    .align(Alignment.Center)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .border(2.dp, dialogColors.borderLight, RoundedCornerShape(8.dp))
+                            )
+                        }
+                    }
 
                     // Следователь
                     VengText(

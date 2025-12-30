@@ -18,6 +18,7 @@ object Cases : IntIdTable("cases") {
     val statementText = text("statement_text")
     val violationArticle = varchar("violation_article", 255)
     val status = varchar("status", 50)
+    val photoCompositeUrl = varchar("photo_composite_url", 500).nullable()
     val createdAt = long("created_at")
 }
 
@@ -32,6 +33,7 @@ class CaseDao(id: EntityID<Int>) : IntEntity(id) {
     var statementText by Cases.statementText
     var violationArticle by Cases.violationArticle
     var status by Cases.status
+    var photoCompositeUrl by Cases.photoCompositeUrl
     var createdAt by Cases.createdAt
 
     fun toCase() = Case(
@@ -44,6 +46,7 @@ class CaseDao(id: EntityID<Int>) : IntEntity(id) {
         statementText = statementText,
         violationArticle = violationArticle,
         status = CaseStatus.valueOf(status),
+        photoCompositeUrl = photoCompositeUrl,
         createdAt = createdAt
     )
 }

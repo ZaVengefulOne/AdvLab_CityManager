@@ -557,9 +557,10 @@ fun PoliceScreen(navController: NavController) {
                 persons = allPersons,
                 investigatorPersonId = investigatorPersonId,
                 investigatorName = investigatorName,
+                filePicker = filePicker,
                 onDismiss = { showCaseDialog = false },
-                onCreateCase = { case ->
-                    caseViewModel.createCase(case)
+                onCreateCase = { case, photoBytes ->
+                    caseViewModel.createCase(case, photoBytes)
                 },
                 theme = currentTheme
             )
@@ -585,15 +586,16 @@ fun PoliceScreen(navController: NavController) {
                 EditCaseDialog(
                     case = case,
                     persons = allPersons,
+                    filePicker = filePicker,
                     onDismiss = {
                         selectedCase = null
                     },
-                    onSave = { updatedCase ->
-                        caseViewModel.updateCase(case.id, updatedCase)
+                    onSave = { updatedCase, photoBytes ->
+                        caseViewModel.updateCase(case.id, updatedCase, photoBytes)
                         selectedCase = null
                     },
-                    onSendToCourt = { updatedCase ->
-                        caseViewModel.updateCase(case.id, updatedCase.copy(status = CaseStatus.SENT_TO_COURT))
+                    onSendToCourt = { updatedCase, photoBytes ->
+                        caseViewModel.updateCase(case.id, updatedCase.copy(status = CaseStatus.SENT_TO_COURT), photoBytes)
                         selectedCase = null
                     },
                     onClose = { caseId ->

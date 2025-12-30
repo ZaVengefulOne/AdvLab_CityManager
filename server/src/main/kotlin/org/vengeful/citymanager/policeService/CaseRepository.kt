@@ -35,6 +35,7 @@ class CaseRepository {
             statementText = case.statementText
             violationArticle = case.violationArticle
             status = case.status.name
+            photoCompositeUrl = case.photoCompositeUrl
             createdAt = case.createdAt
         }
 
@@ -92,6 +93,7 @@ class CaseRepository {
         caseDao.statementText = case.statementText
         caseDao.violationArticle = case.violationArticle
         caseDao.status = case.status.name
+        caseDao.photoCompositeUrl = case.photoCompositeUrl
 
         caseDao.toCase()
     }

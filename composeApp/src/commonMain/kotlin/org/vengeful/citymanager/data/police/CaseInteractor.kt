@@ -7,9 +7,12 @@ import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
+import io.ktor.client.request.forms.MultiPartFormDataContent
+import io.ktor.client.request.forms.formData
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.Headers
 import io.ktor.http.contentType
 import kotlinx.serialization.json.Json
 import org.vengeful.citymanager.SERVER_BASE_URL
@@ -24,11 +27,33 @@ class CaseInteractor(
     private val authManager: AuthManager
 ) : ICaseInteractor {
 
-    override suspend fun createCase(case: Case): Case {
-        val response = client.post("$SERVER_BASE_URL/police/cases") {
-            setHttpBuilder()
-            contentType(ContentType.Application.Json)
-            setBody(case)
+    override suspend fun createCase(case: Case, photoBytes: ByteArray?): Case {
+        val caseJson = Json.encodeToString(Case.serializer(), case)
+        
+        val response = if (photoBytes != null) {
+            // Multipart запрос с фото
+            client.post("$SERVER_BASE_URL/police/cases") {
+                setHttpBuilder()
+                setBody(MultiPartFormDataContent(
+                    formData {
+                        append("case", caseJson)
+                        append("photoComposite", photoBytes, Headers.build {
+                            append(HttpHeaders.ContentType, "image/png")
+                            append(HttpHeaders.ContentDisposition, "filename=photoComposite.png")
+                        })
+                    }
+                ))
+            }
+        } else {
+            // Multipart запрос без фото
+            client.post("$SERVER_BASE_URL/police/cases") {
+                setHttpBuilder()
+                setBody(MultiPartFormDataContent(
+                    formData {
+                        append("case", caseJson)
+                    }
+                ))
+            }
         }
 
         if (response.status == HttpStatusCode.OK) {
@@ -92,11 +117,33 @@ class CaseInteractor(
         }
     }
 
-    override suspend fun updateCase(caseId: Int, case: Case): Case {
-        val response = client.put("$SERVER_BASE_URL/police/cases/$caseId") {
-            setHttpBuilder()
-            contentType(ContentType.Application.Json)
-            setBody(case)
+    override suspend fun updateCase(caseId: Int, case: Case, photoBytes: ByteArray?): Case {
+        val caseJson = Json.encodeToString(Case.serializer(), case)
+        
+        val response = if (photoBytes != null) {
+            // Multipart запрос с фото
+            client.put("$SERVER_BASE_URL/police/cases/$caseId") {
+                setHttpBuilder()
+                setBody(MultiPartFormDataContent(
+                    formData {
+                        append("case", caseJson)
+                        append("photoComposite", photoBytes, Headers.build {
+                            append(HttpHeaders.ContentType, "image/png")
+                            append(HttpHeaders.ContentDisposition, "filename=photoComposite.png")
+                        })
+                    }
+                ))
+            }
+        } else {
+            // Multipart запрос без фото
+            client.put("$SERVER_BASE_URL/police/cases/$caseId") {
+                setHttpBuilder()
+                setBody(MultiPartFormDataContent(
+                    formData {
+                        append("case", caseJson)
+                    }
+                ))
+            }
         }
 
         if (response.status == HttpStatusCode.OK) {
