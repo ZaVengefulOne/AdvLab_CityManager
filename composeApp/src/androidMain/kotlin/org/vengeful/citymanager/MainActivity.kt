@@ -6,8 +6,13 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.tooling.preview.Preview
-import org.vengeful.citymanager.di.initKoin
+import org.koin.core.context.GlobalContext
+import org.koin.core.context.loadKoinModules
+import org.koin.core.context.startKoin
+import org.vengeful.citymanager.di.androidModule
+import org.vengeful.citymanager.di.appModule
 import org.vengeful.citymanager.navigation.AndroidHost
 
 class MainActivity : ComponentActivity() {
@@ -23,7 +28,21 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun AndroidApp() {
-    initKoin()
+    // Initialize Koin with both common and Android-specific modules
+    val koinInitialized = remember {
+        try {
+            loadKoinModules(
+                listOf(androidModule)
+            )
+        } catch (e: Exception) {
+            // First time initialization
+            startKoin {
+                modules(appModule, androidModule)
+            }
+        }
+        true
+    }
+
     MaterialTheme {
         AndroidHost()
     }

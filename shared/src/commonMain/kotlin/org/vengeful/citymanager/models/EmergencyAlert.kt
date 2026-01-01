@@ -15,3 +15,4 @@ data class EmergencyAlertRequest(
     val enterprise: Enterprise
 )
 
+

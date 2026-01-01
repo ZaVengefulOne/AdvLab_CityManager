@@ -13,3 +13,4 @@ data class CreateCaseRequest(
     val status: CaseStatus = CaseStatus.OPEN
 )
 
+

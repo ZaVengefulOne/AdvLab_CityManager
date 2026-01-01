@@ -16,6 +16,9 @@ val SERVER_BASE_URL: String
 // Для Android эмулятора
 const val SERVER_ADDRESS_DEBUG = "10.0.2.2"
 
+val SERVER_ANDROID_URL: String
+    get() = "$SERVER_PROTOCOL://$SERVER_ADDRESS_DEBUG:$SERVER_PORT"
+
 // Routes for navigation
 const val ROUTE_MAIN = "main"
 const val ROUTE_ADMINISTRATION = "administration"

@@ -30,3 +30,4 @@ class SeveriteDao(id: EntityID<Int>) : IntEntity(id) {
 }
 
 
+

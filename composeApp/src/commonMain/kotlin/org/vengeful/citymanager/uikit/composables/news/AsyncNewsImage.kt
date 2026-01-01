@@ -8,7 +8,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asComposeImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.sp
@@ -17,9 +16,8 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import org.jetbrains.skia.Bitmap
 import org.vengeful.citymanager.uikit.composables.veng.VengText
-import org.jetbrains.skia.Image as SkiaImage
+import org.vengeful.citymanager.utils.bytesToImageBitmap
 
 
 @Composable
@@ -81,9 +79,7 @@ fun AsyncNewsImage(
                 throw Exception("Invalid image format. Expected PNG or JPG")
             }
 
-            val skiaImage = SkiaImage.makeFromEncoded(bytes)
-            val bitmap = Bitmap.makeFromImage(skiaImage)
-            imageBitmap = bitmap.asComposeImageBitmap()
+            imageBitmap = bytesToImageBitmap(bytes)
         } catch (e: Exception) {
             error = e.message ?: "Unknown error: ${e.javaClass.simpleName}"
             e.printStackTrace()

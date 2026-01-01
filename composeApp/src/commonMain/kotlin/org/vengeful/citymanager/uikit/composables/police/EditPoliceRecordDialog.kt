@@ -16,16 +16,13 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asComposeImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.launch
-import org.jetbrains.skia.Bitmap
-import org.jetbrains.skia.Image as SkiaImage
+import org.vengeful.citymanager.utils.bytesToImageBitmap
 import org.vengeful.citymanager.SERVER_BASE_URL
 import org.vengeful.citymanager.data.police.FilePicker
 import org.vengeful.citymanager.data.police.FingerprintsReader
@@ -83,9 +80,7 @@ fun EditPoliceRecordDialog(
             try {
                 val bytes = fingerprintsReader.loadFingerprintImage(number)
                 if (bytes != null) {
-                    val skiaImage = SkiaImage.makeFromEncoded(bytes)
-                    val bitmap = Bitmap.makeFromImage(skiaImage)
-                    fingerprintImage = bitmap.asComposeImageBitmap()
+                    fingerprintImage = bytesToImageBitmap(bytes)
                 }
             } catch (e: Exception) {
                 println("Error loading fingerprint image: ${e.message}")
@@ -97,9 +92,7 @@ fun EditPoliceRecordDialog(
     LaunchedEffect(selectedPhotoBytes) {
         previewImageBitmap = selectedPhotoBytes?.let { bytes ->
             try {
-                val skiaImage = SkiaImage.makeFromEncoded(bytes)
-                val bitmap = Bitmap.makeFromImage(skiaImage)
-                bitmap.asComposeImageBitmap()
+                bytesToImageBitmap(bytes)
             } catch (e: Exception) {
                 println("Error creating preview: ${e.message}")
                 null

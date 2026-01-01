@@ -1,16 +1,16 @@
 package org.vengeful.citymanager.ui
 
-import androidx.compose.runtime.Composable
-import androidx.navigation.NavController
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.material3.*
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.vengeful.citymanager.navigation.ANDROID_ROUTE_CREATE_USER
+import androidx.navigation.NavController
+import org.vengeful.citymanager.navigation.*
+import org.vengeful.citymanager.ui.auth.HackerLoginScreen
 import org.vengeful.citymanager.uikit.composables.veng.VengBackground
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
 import org.vengeful.citymanager.uikit.composables.veng.VengText
@@ -18,21 +18,30 @@ import org.vengeful.citymanager.utilities.LocalTheme
 
 @Composable
 fun AndroidMainScreen(navController: NavController) {
+    var isHacked by remember { mutableStateOf(false) }
+
+    if (!isHacked) {
+        HackerLoginScreen(
+            onHackSuccess = { isHacked = true }
+        )
+        return
+    }
+
     VengBackground(
         theme = LocalTheme,
         modifier = Modifier.fillMaxSize()
     ) {
-        Column(
+        androidx.compose.foundation.layout.Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Top
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)
         ) {
             VengText(
-                text = "Хакерский экран",
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 32.dp, bottom = 32.dp),
+                text = "Главное меню",
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                modifier = Modifier.padding(top = 32.dp, bottom = 16.dp),
                 fontSize = 32.sp,
             )
 
@@ -40,9 +49,28 @@ fun AndroidMainScreen(navController: NavController) {
                 onClick = { navController.navigate(ANDROID_ROUTE_CREATE_USER) },
                 text = "Создать пользователя",
                 theme = LocalTheme,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 32.dp)
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            VengButton(
+                onClick = { navController.navigate(ANDROID_ROUTE_BACKUP) },
+                text = "Создать бэкап",
+                theme = LocalTheme,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            VengButton(
+                onClick = { navController.navigate(ANDROID_ROUTE_USERS_LIST) },
+                text = "Управление пользователями",
+                theme = LocalTheme,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            VengButton(
+                onClick = { navController.navigate(ANDROID_ROUTE_PERSONS_LIST) },
+                text = "Управление жителями",
+                theme = LocalTheme,
+                modifier = Modifier.fillMaxWidth()
             )
         }
     }

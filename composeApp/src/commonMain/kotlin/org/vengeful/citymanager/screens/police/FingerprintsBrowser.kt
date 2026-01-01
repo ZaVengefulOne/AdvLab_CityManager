@@ -18,8 +18,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asComposeImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -27,8 +25,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import org.jetbrains.skia.Bitmap
-import org.jetbrains.skia.Image as SkiaImage
+import org.vengeful.citymanager.utils.bytesToImageBitmap
 import org.vengeful.citymanager.data.police.FingerprintsReader
 import org.vengeful.citymanager.models.Person
 import org.vengeful.citymanager.uikit.ColorTheme
@@ -62,9 +59,7 @@ fun FingerprintsBrowser(
                     try {
                         val bytes = fingerprintsReader.loadFingerprintImage(number)
                         if (bytes != null) {
-                            val skiaImage = SkiaImage.makeFromEncoded(bytes)
-                            val bitmap = Bitmap.makeFromImage(skiaImage)
-                            images[number] = bitmap.asComposeImageBitmap()
+                            images[number] = bytesToImageBitmap(bytes)
                         } else {
                             images[number] = null
                         }

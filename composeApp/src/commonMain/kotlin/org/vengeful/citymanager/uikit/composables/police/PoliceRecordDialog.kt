@@ -21,11 +21,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.foundation.Image
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import kotlinx.coroutines.launch
-import org.jetbrains.skia.Bitmap
-import org.jetbrains.skia.Image as SkiaImage
+import org.vengeful.citymanager.utils.bytesToImageBitmap
 import org.vengeful.citymanager.data.police.FilePicker
 import org.vengeful.citymanager.data.police.FingerprintsReader
 import org.vengeful.citymanager.models.Person
@@ -68,9 +66,7 @@ fun PoliceRecordDialog(
     LaunchedEffect(selectedPhotoBytes) {
         photoPreviewBitmap = selectedPhotoBytes?.let { bytes ->
             try {
-                val skiaImage = SkiaImage.makeFromEncoded(bytes)
-                val bitmap = Bitmap.makeFromImage(skiaImage)
-                bitmap.asComposeImageBitmap()
+                bytesToImageBitmap(bytes)
             } catch (e: Exception) {
                 println("Error creating photo preview: ${e.message}")
                 null
@@ -85,9 +81,7 @@ fun PoliceRecordDialog(
             try {
                 val bytes = fingerprintsReader.loadFingerprintImage(fingerprintNumber!!)
                 if (bytes != null) {
-                    val skiaImage = SkiaImage.makeFromEncoded(bytes)
-                    val bitmap = Bitmap.makeFromImage(skiaImage)
-                    fingerprintImage = bitmap.asComposeImageBitmap()
+                    fingerprintImage = bytesToImageBitmap(bytes)
                 }
             } catch (e: Exception) {
                 println("Error loading fingerprint image: ${e.message}")

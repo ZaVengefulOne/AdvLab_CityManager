@@ -11,3 +11,4 @@ interface IHearingInteractor {
     suspend fun deleteHearing(id: Int): Boolean
 }
 
+
