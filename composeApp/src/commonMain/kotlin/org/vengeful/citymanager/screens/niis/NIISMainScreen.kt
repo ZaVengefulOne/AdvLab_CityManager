@@ -161,7 +161,7 @@ fun NIISMainScreen(navController: NavController) {
                     theme = currentTheme,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 32.dp)
+                        .padding(horizontal = 64.dp)
                 )
 
                 VengButton(
@@ -171,7 +171,7 @@ fun NIISMainScreen(navController: NavController) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp)
-                        .padding(horizontal = 32.dp)
+                        .padding(horizontal = 64.dp)
                 )
 
                 VengButton(
@@ -180,15 +180,15 @@ fun NIISMainScreen(navController: NavController) {
                     theme = currentTheme,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 32.dp)
+                        .padding(horizontal = 64.dp)
                 )
             }
         }
 
-        // Тревожная кнопка в левом нижнем углу
+        // Тревожная кнопка в левом верхнем углу
         Column(
             modifier = Modifier
-                .align(Alignment.BottomStart)
+                .align(Alignment.TopStart)
                 .padding(16.dp),
             horizontalAlignment = Alignment.Start
         ) {
@@ -288,37 +288,37 @@ fun NIISMainScreen(navController: NavController) {
             },
             containerColor = SeveritepunkThemes.getColorScheme(currentTheme).background
         )
+    }
 
-        // Диалоги управления персоналом
-        if (showPasswordDialog) {
-            PasswordDialog(
-                onDismiss = { showPasswordDialog = false },
-                onPasswordCorrect = {
-                    showPasswordDialog = false
-                    showPersonnelManagementDialog = true
-                },
-                theme = currentTheme
-            )
-        }
+    // Диалоги управления персоналом
+    if (showPasswordDialog) {
+        PasswordDialog(
+            onDismiss = { showPasswordDialog = false },
+            onPasswordCorrect = {
+                showPasswordDialog = false
+                showPersonnelManagementDialog = true
+            },
+            theme = currentTheme
+        )
+    }
 
-        if (showPersonnelManagementDialog) {
-            val allPersons = viewModel.allPersons.collectAsState().value
-            val personnel = viewModel.getPersonnelByRight(Enterprise.NIIS.toRights())
-            PersonnelManagementDialog(
-                enterpriseRight = Enterprise.NIIS.toRights(),
-                allPersons = allPersons,
-                personnel = personnel,
-                isLoading = false,
-                errorMessage = null,
-                onAddPerson = { person ->
-                    viewModel.addRightToPerson(person.id, Enterprise.NIIS.toRights())
-                },
-                onRemovePerson = { person ->
-                    viewModel.removeRightFromPerson(person.id, Enterprise.NIIS.toRights())
-                },
-                onDismiss = { showPersonnelManagementDialog = false },
-                theme = currentTheme
-            )
-        }
+    if (showPersonnelManagementDialog) {
+        val allPersons = viewModel.allPersons.collectAsState().value
+        val personnel = viewModel.getPersonnelByRight(Enterprise.NIIS.toRights())
+        PersonnelManagementDialog(
+            enterpriseRight = Enterprise.NIIS.toRights(),
+            allPersons = allPersons,
+            personnel = personnel,
+            isLoading = false,
+            errorMessage = null,
+            onAddPerson = { person ->
+                viewModel.addRightToPerson(person.id, Enterprise.NIIS.toRights())
+            },
+            onRemovePerson = { person ->
+                viewModel.removeRightFromPerson(person.id, Enterprise.NIIS.toRights())
+            },
+            onDismiss = { showPersonnelManagementDialog = false },
+            theme = currentTheme
+        )
     }
 }

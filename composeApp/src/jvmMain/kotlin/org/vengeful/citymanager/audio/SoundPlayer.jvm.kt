@@ -13,6 +13,9 @@ import javax.sound.sampled.LineEvent
 actual class SoundPlayer {
     private var shutdownClip: Clip? = null
     private var startupClip: Clip? = null
+    private var clickClip: Clip? = null
+    private var systemWorkingClip: Clip? = null
+    private var systemShutdownClip: Clip? = null
 
     private fun createAudioInputStream(inputStream: InputStream): javax.sound.sampled.AudioInputStream? {
         return try {
@@ -125,11 +128,97 @@ actual class SoundPlayer {
         }
     }
 
+    actual fun playClickSound() {
+        try {
+            clickClip?.close()
+            val resourceStream = SoundPlayer::class.java.getResourceAsStream("/click.wav")
+            val audioInputStream = if (resourceStream != null) {
+                createAudioInputStream(resourceStream)
+            } else {
+                val soundFile = File("click.wav")
+                if (soundFile.exists()) {
+                    AudioSystem.getAudioInputStream(soundFile)
+                } else {
+                    return
+                }
+            }
+            if (audioInputStream == null) return
+            clickClip = AudioSystem.getClip()
+            clickClip?.open(audioInputStream)
+            clickClip?.start()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    actual fun playSystemWorkingSound() {
+        try {
+            systemWorkingClip?.close()
+            val resourceStream = SoundPlayer::class.java.getResourceAsStream("/system_working.wav")
+            val audioInputStream = if (resourceStream != null) {
+                createAudioInputStream(resourceStream)
+            } else {
+                val soundFile = File("system_working.wav")
+                if (soundFile.exists()) {
+                    AudioSystem.getAudioInputStream(soundFile)
+                } else {
+                    return
+                }
+            }
+            if (audioInputStream == null) return
+            systemWorkingClip = AudioSystem.getClip()
+            systemWorkingClip?.open(audioInputStream)
+            systemWorkingClip?.loop(javax.sound.sampled.Clip.LOOP_CONTINUOUSLY) // Зацикливаем звук
+            systemWorkingClip?.start()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    actual fun stopSystemWorkingSound() {
+        try {
+            systemWorkingClip?.stop()
+            systemWorkingClip?.close()
+            systemWorkingClip = null
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    actual fun playSystemShutdownSound() {
+        try {
+            systemShutdownClip?.close()
+            val resourceStream = SoundPlayer::class.java.getResourceAsStream("/system_shutdown.wav")
+            val audioInputStream = if (resourceStream != null) {
+                createAudioInputStream(resourceStream)
+            } else {
+                val soundFile = File("system_shutdown.wav")
+                if (soundFile.exists()) {
+                    AudioSystem.getAudioInputStream(soundFile)
+                } else {
+                    return
+                }
+            }
+            if (audioInputStream == null) return
+            systemShutdownClip = AudioSystem.getClip()
+            systemShutdownClip?.open(audioInputStream)
+            systemShutdownClip?.start()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     actual fun release() {
         shutdownClip?.close()
         startupClip?.close()
+        clickClip?.close()
+        systemWorkingClip?.close()
+        systemShutdownClip?.close()
         shutdownClip = null
         startupClip = null
+        clickClip = null
+        systemWorkingClip = null
+        systemShutdownClip = null
     }
 }
 
