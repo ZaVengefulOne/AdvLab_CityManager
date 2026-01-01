@@ -37,6 +37,7 @@ import org.vengeful.citymanager.uikit.composables.administration.EmergencyShutdo
 import org.vengeful.citymanager.uikit.composables.administration.EnterpriseCallWidget
 import org.vengeful.citymanager.uikit.composables.administration.SeveriteRateGraph
 import org.vengeful.citymanager.uikit.composables.administration.SeveriteSalesWidget
+import org.vengeful.citymanager.uikit.composables.EmergencyButton
 import org.vengeful.citymanager.uikit.composables.dialogs.DeleteConfirmationDialog
 import org.vengeful.citymanager.uikit.composables.dialogs.RegisterDialog
 import org.vengeful.citymanager.uikit.composables.misc.ThemeSwitcher
@@ -81,7 +82,7 @@ fun AdministrationScreen(navController: NavController) {
     var showRestartAnimation by remember { mutableStateOf(false) }
     var isRefreshing by remember { mutableStateOf(false) }
     var refreshTrigger by remember { mutableIntStateOf(0) }
-    
+
     val soundPlayer = rememberSoundPlayer()
 
     val getId = remember { mutableStateOf("") }
@@ -134,6 +135,7 @@ fun AdministrationScreen(navController: NavController) {
         administrationViewModel.startConfigUpdates()
         administrationViewModel.checkEmergencyShutdownStatus()
         administrationViewModel.loadSeverites()
+        administrationViewModel.resetEmergencyButtonState()
     }
 
     LaunchedEffect(refreshTrigger) {
@@ -303,6 +305,53 @@ fun AdministrationScreen(navController: NavController) {
                             theme = LocalTheme,
                             enabled = true
                         )
+
+                        VengButton(
+                            onClick = {
+                                administrationViewModel.downloadLimitedMasterBackup()
+                            },
+                            text = "Выгрузить служебный бэкап",
+                            modifier = Modifier.fillMaxWidth(),
+                            theme = LocalTheme,
+                            enabled = true
+                        )
+
+                        VengButton(
+                            onClick = {
+                                administrationViewModel.uploadLimitedMasterBackup()
+                            },
+                            text = "Загрузить служебный бэкап",
+                            modifier = Modifier.fillMaxWidth(),
+                            theme = LocalTheme,
+                            enabled = true
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            EmergencyButton(
+                                onClick = { administrationViewModel.sendEmergencyAlert() },
+                                modifier = Modifier,
+                                enabled = true
+                            )
+                        }
+
+                        // Индикатор "нажата" под кнопкой
+                        if (administrationViewModel.isEmergencyButtonPressed.collectAsState().value) {
+                            VengText(
+                                text = "нажата",
+                                color = Color(0xFFDC143C),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier
+                                    .fillMaxWidth(),
+                                textAlign = TextAlign.Center
+                            )
+                        }
 
                         if (showEmergencyShutdownDialog) {
                             EmergencyShutdownDialog(

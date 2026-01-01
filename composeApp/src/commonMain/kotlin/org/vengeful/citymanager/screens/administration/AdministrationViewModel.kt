@@ -10,9 +10,12 @@ import kotlinx.coroutines.launch
 import org.vengeful.citymanager.base.BaseViewModel
 import org.vengeful.citymanager.data.administration.IAdministrationInteractor
 import org.vengeful.citymanager.data.backup.IBackupInteractor
+import org.vengeful.citymanager.data.backup.createBackupFilePicker
 import org.vengeful.citymanager.data.persons.IPersonInteractor
 import org.vengeful.citymanager.data.severite.ISeveriteInteractor
 import org.vengeful.citymanager.data.users.IUserInteractor
+import kotlinx.serialization.json.Json
+import org.vengeful.citymanager.models.backup.LimitedMasterBackup
 import org.vengeful.citymanager.models.severite.Severite
 import org.vengeful.citymanager.data.users.models.RegisterResult
 import org.vengeful.citymanager.data.users.states.RegisterUiState
@@ -67,6 +70,9 @@ class AdministrationViewModel(
 
     private val _severites = MutableStateFlow<List<Severite>>(emptyList())
     val severites: StateFlow<List<Severite>> = _severites.asStateFlow()
+
+    private val _isEmergencyButtonPressed = MutableStateFlow<Boolean>(false)
+    val isEmergencyButtonPressed: StateFlow<Boolean> = _isEmergencyButtonPressed.asStateFlow()
 
     private var emergencyShutdownStatusJob: Job? = null
     private var updateJob: Job? = null
@@ -359,6 +365,48 @@ class AdministrationViewModel(
         }
     }
 
+    fun downloadLimitedMasterBackup() {
+        viewModelScope.launch {
+            _errorMessage.value = null
+            try {
+                backupInteractor.downloadLimitedMasterBackup()
+            } catch (e: Exception) {
+                _errorMessage.value = "Ошибка выгрузки бэкапа: ${e.message}"
+            }
+        }
+    }
+
+    fun uploadLimitedMasterBackup() {
+        viewModelScope.launch {
+            _errorMessage.value = null
+            try {
+                val filePicker = createBackupFilePicker()
+                val jsonContent = filePicker.pickJsonFile()
+                
+                if (jsonContent == null) {
+                    _errorMessage.value = "Файл не выбран"
+                    return@launch
+                }
+
+                val json = Json {
+                    ignoreUnknownKeys = true
+                    explicitNulls = false
+                    isLenient = true
+                    encodeDefaults = true
+                }
+
+                val backup = json.decodeFromString<LimitedMasterBackup>(jsonContent)
+                backupInteractor.uploadLimitedMasterBackup(backup)
+                
+                // Обновляем данные после восстановления
+                getPersons()
+                getUsers()
+            } catch (e: Exception) {
+                _errorMessage.value = "Ошибка загрузки бэкапа: ${e.message}"
+            }
+        }
+    }
+
     private fun startPeriodicStatusSync() {
         emergencyShutdownStatusJob?.cancel()
         emergencyShutdownStatusJob = viewModelScope.launch {
@@ -415,6 +463,27 @@ class AdministrationViewModel(
                 e.printStackTrace()
             }
         }
+    }
+
+    fun sendEmergencyAlert() {
+        viewModelScope.launch {
+            try {
+                _isEmergencyButtonPressed.value = true
+                val success = administrationInteractor.sendEmergencyAlert(Enterprise.ADMINISTRATION)
+                if (!success) {
+                    _errorMessage.value = "Не удалось отправить тревожное уведомление"
+                    _isEmergencyButtonPressed.value = false
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = e.message
+                _isEmergencyButtonPressed.value = false
+                println("Error sending emergency alert: ${e.message}")
+            }
+        }
+    }
+
+    fun resetEmergencyButtonState() {
+        _isEmergencyButtonPressed.value = false
     }
 
     companion object {

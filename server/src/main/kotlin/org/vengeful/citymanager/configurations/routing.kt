@@ -25,6 +25,7 @@ import org.vengeful.citymanager.policeService.CaseRepository
 import org.vengeful.citymanager.policeService.PoliceRepository
 import org.vengeful.citymanager.courtService.HearingRepository
 import org.vengeful.citymanager.models.*
+import org.vengeful.citymanager.models.backup.LimitedMasterBackup
 import org.vengeful.citymanager.models.backup.MasterBackup
 import org.vengeful.citymanager.models.emergencyShutdown.EmergencyShutdownRequest
 import org.vengeful.citymanager.models.emergencyShutdown.EmergencyShutdownResponse
@@ -108,209 +109,8 @@ fun Application.configureRouting(
         get("/") {
             call.respondText("Vengeful Server: ${Greeting().greet()}")
         }
-        route("/library") {
-            get("/articles") {
-                val articles = libraryRepository.getAllArticles()
-                call.respond(articles)
-            }
-
-            get("/articles/{id}") {
-                val id = call.parameters["id"]?.toIntOrNull()
-                    ?: throw IllegalArgumentException("Invalid article ID")
-                val article = libraryRepository.getArticleById(id)
-                if (article != null) {
-                    call.respond(article)
-                } else {
-                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Article not found"))
-                }
-            }
-        }
-
-        route("/news") {
-            get("/items") {
-                val news = newsRepository.getAllNews()
-                call.respond(news)
-            }
-
-            get("/items/{id}") {
-                val id = call.parameters["id"]?.toIntOrNull()
-                    ?: throw IllegalArgumentException("Invalid news ID")
-                val news = newsRepository.getNewsById(id)
-                if (news != null) {
-                    call.respond(news)
-                } else {
-                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "News not found"))
-                }
-            }
-
-            get("/images/{filename}") {
-                val filename = call.parameters["filename"] ?: return@get call.respond(HttpStatusCode.BadRequest)
-                val file = File("src/main/resources/news_images", filename)
-                if (file.exists() && file.isFile) {
-                    call.respondFile(file)
-                } else {
-                    call.respond(HttpStatusCode.NotFound, "Image not found")
-                }
-            }
-
-        }
-
-        route("/police") {
-            // Отправка тревожного уведомления (публичный endpoint, не требует аутентификации)
-            post("/emergency-alert") {
-                try {
-                    println("Received emergency alert request")
-                    val request = call.receive<EmergencyAlertRequest>()
-                    println("Parsed request: enterprise = ${request.enterprise}")
-                    
-                    // Проверяем, что это не полиция (полиция не может отправлять тревогу сама себе)
-                    if (request.enterprise == Enterprise.POLICE) {
-                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Police cannot send emergency alert"))
-                        return@post
-                    }
-                    
-                    // Проверяем, есть ли уже активная тревога от этого предприятия
-                    val existingAlert = emergencyAlerts.find { it.enterprise == request.enterprise }
-                    if (existingAlert != null) {
-                        println("Alert already exists for enterprise ${request.enterprise.name}, ignoring new alert")
-                        call.respond(HttpStatusCode.OK, mapOf("status" to "success", "message" to "Alert already exists"))
-                        return@post
-                    }
-                    
-                    val alert = EmergencyAlert(
-                        enterprise = request.enterprise
-                    )
-                    println("Created alert: enterprise = ${alert.enterprise}, timestamp = ${alert.timestamp}")
-                    
-                    emergencyAlerts.add(alert)
-                    println("Added alert to list. Total alerts: ${emergencyAlerts.size}")
-                    
-                    // Ограничиваем размер списка (храним последние 100 уведомлений)
-                    if (emergencyAlerts.size > 100) {
-                        emergencyAlerts.removeFirst()
-                    }
-                    
-                    call.respond(HttpStatusCode.OK, mapOf("status" to "success", "message" to "Emergency alert sent"))
-                } catch (e: Exception) {
-                    println("Error processing emergency alert: ${e::class.simpleName} - ${e.message}")
-                    e.printStackTrace()
-                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
-                }
-            }
-
-            // Получение всех тревожных уведомлений (публичный endpoint для полиции)
-            get("/emergency-alerts") {
-                try {
-                    println("Getting emergency alerts. Total: ${emergencyAlerts.size}")
-                    call.respond(HttpStatusCode.OK, emergencyAlerts)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
-                }
-            }
-
-            // Удаление тревожного уведомления (публичный endpoint для полиции)
-            delete("/emergency-alerts/{index}") {
-                try {
-                    val index = call.parameters["index"]?.toIntOrNull()
-                        ?: throw IllegalArgumentException("Invalid alert index")
-                    
-                    println("Deleting emergency alert at index $index. Total alerts: ${emergencyAlerts.size}")
-                    
-                    if (index >= 0 && index < emergencyAlerts.size) {
-                        val removedAlert = emergencyAlerts.removeAt(index)
-                        println("Removed alert: enterprise = ${removedAlert.enterprise}")
-                        call.respond(HttpStatusCode.OK, mapOf("status" to "success", "message" to "Alert removed"))
-                    } else {
-                        println("Alert index $index out of bounds (size: ${emergencyAlerts.size})")
-                        call.respond(HttpStatusCode.NotFound, mapOf("error" to "Alert not found"))
-                    }
-                } catch (e: Exception) {
-                    println("Error deleting emergency alert: ${e::class.simpleName} - ${e.message}")
-                    e.printStackTrace()
-                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
-                }
-            }
-
-            get("/photos/{filename}") {
-                val filename = call.parameters["filename"] ?: return@get call.respond(HttpStatusCode.BadRequest)
-                val file = File("src/main/resources/police_photos", filename)
-                if (file.exists() && file.isFile) {
-                    call.respondFile(file)
-                } else {
-                    call.respond(HttpStatusCode.NotFound, "Photo not found")
-                }
-            }
-
-            // Получение фото фоторобота (публичный доступ)
-            get("/cases/photos/{filename}") {
-                val filename = call.parameters["filename"] ?: return@get call.respond(HttpStatusCode.BadRequest)
-                val file = File("src/main/resources/case_photos", filename)
-                if (file.exists() && file.isFile) {
-                    call.respondFile(file)
-                } else {
-                    call.respond(HttpStatusCode.NotFound, "Photo not found")
-                }
-            }
-        }
-
-        post("/adminReg") {
-            try {
-                val registerRequest = call.receive<RegisterRequest>()
-                // Валидация входных данных
-                if (registerRequest.username.isBlank()) {
-                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Username cannot be empty"))
-                    return@post
-                }
-
-                if (registerRequest.password.isBlank() || registerRequest.password.length < 4) {
-                    call.respond(
-                        HttpStatusCode.BadRequest,
-                        mapOf("error" to "Password must be at least 4 characters")
-                    )
-                    return@post
-                }
-
-                val rights = registerRequest.rights.ifEmpty {
-                    listOf(Rights.Any)
-                }
-
-                val user = userRepository.registerUser(
-                    username = registerRequest.username,
-                    password = registerRequest.password,
-                    personId = registerRequest.personId,
-                    rights = rights
-                )
-
-                call.respond(
-                    HttpStatusCode.Created,
-                    RegisterResponse(
-                        message = "User registered successfully",
-                        userId = user.id,
-                        username = user.username
-                    )
-                )
-            } catch (e: IllegalArgumentException) {
-                call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
-            } catch (e: Exception) {
-                println("Registration error: ${e::class.simpleName} - ${e.message}")
-                e.printStackTrace()
-                call.respond(
-                    HttpStatusCode.InternalServerError,
-                    mapOf("error" to "Registration failed: ${e.message}")
-                )
-            }
-        }
-
-        get("/adminPersons") {
-            val persons = personRepository.allPersons()
-            call.respond(HttpStatusCode.OK, persons)
-        }
-    }
-
-    routing { // Приватный роутинг
-
-        // Аутентификация и регистрация
+        
+        // Аутентификация и регистрация (публичные маршруты)
         route("/auth") {
             post("/login") {
                 try {
@@ -412,6 +212,208 @@ fun Application.configureRouting(
                 }
             }
         }
+        
+        route("/library") {
+            get("/articles") {
+                val articles = libraryRepository.getAllArticles()
+                call.respond(articles)
+            }
+
+            get("/articles/{id}") {
+                val id = call.parameters["id"]?.toIntOrNull()
+                    ?: throw IllegalArgumentException("Invalid article ID")
+                val article = libraryRepository.getArticleById(id)
+                if (article != null) {
+                    call.respond(article)
+                } else {
+                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Article not found"))
+                }
+            }
+        }
+
+        route("/news") {
+            get("/items") {
+                val news = newsRepository.getAllNews()
+                call.respond(news)
+            }
+
+            get("/items/{id}") {
+                val id = call.parameters["id"]?.toIntOrNull()
+                    ?: throw IllegalArgumentException("Invalid news ID")
+                val news = newsRepository.getNewsById(id)
+                if (news != null) {
+                    call.respond(news)
+                } else {
+                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "News not found"))
+                }
+            }
+
+            get("/images/{filename}") {
+                val filename = call.parameters["filename"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+                val file = File("src/main/resources/news_images", filename)
+                if (file.exists() && file.isFile) {
+                    call.respondFile(file)
+                } else {
+                    call.respond(HttpStatusCode.NotFound, "Image not found")
+                }
+            }
+
+        }
+
+        route("/police") {
+            // Отправка тревожного уведомления (публичный endpoint, не требует аутентификации)
+            post("/emergency-alert") {
+                try {
+                    println("Received emergency alert request")
+                    val request = call.receive<EmergencyAlertRequest>()
+                    println("Parsed request: enterprise = ${request.enterprise}")
+
+                    // Проверяем, что это не полиция (полиция не может отправлять тревогу сама себе)
+                    if (request.enterprise == Enterprise.POLICE) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Police cannot send emergency alert"))
+                        return@post
+                    }
+
+                    // Проверяем, есть ли уже активная тревога от этого предприятия
+                    val existingAlert = emergencyAlerts.find { it.enterprise == request.enterprise }
+                    if (existingAlert != null) {
+                        println("Alert already exists for enterprise ${request.enterprise.name}, ignoring new alert")
+                        call.respond(HttpStatusCode.OK, mapOf("status" to "success", "message" to "Alert already exists"))
+                        return@post
+                    }
+
+                    val alert = EmergencyAlert(
+                        enterprise = request.enterprise
+                    )
+                    println("Created alert: enterprise = ${alert.enterprise}, timestamp = ${alert.timestamp}")
+
+                    emergencyAlerts.add(alert)
+                    println("Added alert to list. Total alerts: ${emergencyAlerts.size}")
+
+                    // Ограничиваем размер списка (храним последние 100 уведомлений)
+                    if (emergencyAlerts.size > 100) {
+                        emergencyAlerts.removeFirst()
+                    }
+
+                    call.respond(HttpStatusCode.OK, mapOf("status" to "success", "message" to "Emergency alert sent"))
+                } catch (e: Exception) {
+                    println("Error processing emergency alert: ${e::class.simpleName} - ${e.message}")
+                    e.printStackTrace()
+                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                }
+            }
+
+            // Получение всех тревожных уведомлений (публичный endpoint для полиции)
+            get("/emergency-alerts") {
+                try {
+                    println("Getting emergency alerts. Total: ${emergencyAlerts.size}")
+                    call.respond(HttpStatusCode.OK, emergencyAlerts)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                }
+            }
+
+            // Удаление тревожного уведомления (публичный endpoint для полиции)
+            delete("/emergency-alerts/{index}") {
+                try {
+                    val index = call.parameters["index"]?.toIntOrNull()
+                        ?: throw IllegalArgumentException("Invalid alert index")
+
+                    println("Deleting emergency alert at index $index. Total alerts: ${emergencyAlerts.size}")
+
+                    if (index >= 0 && index < emergencyAlerts.size) {
+                        val removedAlert = emergencyAlerts.removeAt(index)
+                        println("Removed alert: enterprise = ${removedAlert.enterprise}")
+                        call.respond(HttpStatusCode.OK, mapOf("status" to "success", "message" to "Alert removed"))
+                    } else {
+                        println("Alert index $index out of bounds (size: ${emergencyAlerts.size})")
+                        call.respond(HttpStatusCode.NotFound, mapOf("error" to "Alert not found"))
+                    }
+                } catch (e: Exception) {
+                    println("Error deleting emergency alert: ${e::class.simpleName} - ${e.message}")
+                    e.printStackTrace()
+                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (e.message ?: "Unknown error")))
+                }
+            }
+
+            get("/photos/{filename}") {
+                val filename = call.parameters["filename"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+                val file = File("src/main/resources/police_photos", filename)
+                if (file.exists() && file.isFile) {
+                    call.respondFile(file)
+                } else {
+                    call.respond(HttpStatusCode.NotFound, "Photo not found")
+                }
+            }
+
+            // Получение фото фоторобота (публичный доступ)
+            get("/cases/photos/{filename}") {
+                val filename = call.parameters["filename"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+                val file = File("src/main/resources/case_photos", filename)
+                if (file.exists() && file.isFile) {
+                    call.respondFile(file)
+                } else {
+                    call.respond(HttpStatusCode.NotFound, "Photo not found")
+                }
+            }
+        }
+
+        post("/adminReg") {
+            try {
+                val registerRequest = call.receive<RegisterRequest>()
+                // Валидация входных данных
+                if (registerRequest.username.isBlank()) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Username cannot be empty"))
+                    return@post
+                }
+
+                if (registerRequest.password.isBlank() || registerRequest.password.length < 4) {
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        mapOf("error" to "Password must be at least 4 characters")
+                    )
+                    return@post
+                }
+
+                val rights = registerRequest.rights.ifEmpty {
+                    listOf(Rights.Any)
+                }
+
+                val user = userRepository.registerUser(
+                    username = registerRequest.username,
+                    password = registerRequest.password,
+                    personId = registerRequest.personId,
+                    rights = rights
+                )
+
+                call.respond(
+                    HttpStatusCode.Created,
+                    RegisterResponse(
+                        message = "User registered successfully",
+                        userId = user.id,
+                        username = user.username
+                    )
+                )
+            } catch (e: IllegalArgumentException) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+            } catch (e: Exception) {
+                println("Registration error: ${e::class.simpleName} - ${e.message}")
+                e.printStackTrace()
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    mapOf("error" to "Registration failed: ${e.message}")
+                )
+            }
+        }
+
+        get("/adminPersons") {
+            val persons = personRepository.allPersons()
+            call.respond(HttpStatusCode.OK, persons)
+        }
+    }
+
+    routing { // Приватный роутинг
 
         authenticate("auth-jwt") {
             route("/users") {
@@ -1694,7 +1696,7 @@ fun Application.configureRouting(
 
                             photoUrl = "/police/cases/photos/$uniqueFileName"
                         }
-                        
+
                         val case = Case(
                             complainantPersonId = caseData.complainantPersonId,
                             complainantName = caseData.complainantName,
@@ -1826,7 +1828,7 @@ fun Application.configureRouting(
                         }
 
                         val caseData = kotlinx.serialization.json.Json.decodeFromString<Case>(caseJson)
-                        
+
                         val existingCase = caseRepository.getCaseById(caseId)
                             ?: throw IllegalStateException("Case with id $caseId not found")
 
@@ -2084,15 +2086,16 @@ fun Application.configureRouting(
         }
 
 
-        route("/backup") {
-            // Проверка прав Joker
-            fun checkJokerAccess(call: ApplicationCall, userRepository: IUserRepository): Boolean {
-                val currentUser = getCurrentUser(call, userRepository)
-                return currentUser?.rights?.contains(Rights.Joker) == true
-            }
+        authenticate("auth-jwt") {
+            route("/backup") {
+                // Проверка прав Joker
+                fun checkJokerAccess(call: ApplicationCall, userRepository: IUserRepository): Boolean {
+                    val currentUser = getCurrentUser(call, userRepository)
+                    return currentUser?.rights?.contains(Rights.Joker) == true || currentUser?.rights?.contains(Rights.Administration) == true
+                }
 
-            // GET /backup/game?format=html - получить игровой бэкап в формате HTML
-            get("/game") {
+                // GET /backup/game?format=html - получить игровой бэкап в формате HTML
+                get("/game") {
                 try {
                     if (!checkJokerAccess(call, userRepository)) {
                         call.respond(
@@ -2193,6 +2196,66 @@ fun Application.configureRouting(
                     )
                 }
             }
+
+            // GET /backup/master-limited - получить ограниченный мастерский бэкап (только жители и пользователи)
+            get("/master-limited") {
+                try {
+                    if (!checkJokerAccess(call, userRepository)) {
+                        call.respond(
+                            HttpStatusCode.Forbidden,
+                            mapOf("error" to "Access denied. You have no rights!")
+                        )
+                        return@get
+                    }
+
+                    val backupService = BackupService(personRepository, userRepository, bankRepository)
+                    val limitedBackup = backupService.createLimitedMasterBackup()
+                    call.respond(HttpStatusCode.OK, limitedBackup)
+                } catch (e: Exception) {
+                    println("Get limited master backup error: ${e::class.simpleName} - ${e.message}")
+                    e.printStackTrace()
+                    call.respond(
+                        HttpStatusCode.InternalServerError,
+                        mapOf("error" to "Failed to create limited master backup: ${e.message}")
+                    )
+                }
+            }
+
+            // POST /backup/restore-limited - загрузить и восстановить ограниченный мастерский бэкап
+            post("/restore-limited") {
+                try {
+                    if (!checkJokerAccess(call, userRepository)) {
+                        call.respond(
+                            HttpStatusCode.Forbidden,
+                            mapOf("error" to "Access denied. You have no rights!")
+                        )
+                        return@post
+                    }
+
+                    val limitedBackup = call.receive<LimitedMasterBackup>()
+                    val backupService = BackupService(personRepository, userRepository, bankRepository)
+
+                    backupService.restoreFromLimitedMasterBackup(limitedBackup)
+
+                    call.respond(
+                        HttpStatusCode.OK,
+                        mapOf("message" to "Persons and users restored successfully from limited master backup")
+                    )
+                } catch (e: JsonConvertException) {
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        mapOf("error" to "Invalid JSON format: ${e.message}")
+                    )
+                } catch (e: Exception) {
+                    println("Restore limited backup error: ${e::class.simpleName} - ${e.message}")
+                    e.printStackTrace()
+                    call.respond(
+                        HttpStatusCode.InternalServerError,
+                        mapOf("error" to "Failed to restore limited backup: ${e.message}")
+                    )
+                }
+            }
+        }
         }
 
 
