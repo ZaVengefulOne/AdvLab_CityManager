@@ -5,7 +5,7 @@ const val BUILD_VERSION = "1.0.0"
 
 // Конфигурация сервера - значения по умолчанию
 // Могут быть переопределены через переменные окружения при сборке
-const val SERVER_HOST = "localhost"
+const val SERVER_HOST = "10.70.0.47"
 const val SERVER_PORT = 8080
 const val SERVER_PROTOCOL = "http"
 
