@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.ktor)
     alias(libs.plugins.kotlin.plugin.serialization)
     application
+    id("com.gradleup.shadow") version "9.1.0"
 }
 
 group = "org.vengeful.citymanager"

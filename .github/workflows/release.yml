@@ -47,12 +47,35 @@ jobs:
       - name: Build server JAR
         run: ./gradlew :server:shadowJar --no-daemon
 
+      - name: Find and prepare JAR file
+        run: |
+          echo "Looking for JAR files in server/build/libs/"
+          ls -la server/build/libs/ || echo "Directory not found"
+          # Try to find the JAR file with expected name
+          JAR_FILE=$(find server/build/libs -name "citymanager-server*.jar" -type f | head -n 1)
+          if [ -z "$JAR_FILE" ]; then
+            echo "JAR file not found with expected name, listing all JARs:"
+            find server/build/libs -name "*.jar" -type f || true
+            # Try to find any JAR file
+            JAR_FILE=$(find server/build/libs -name "*.jar" -type f | head -n 1)
+            if [ -z "$JAR_FILE" ]; then
+              echo "Error: No JAR file found in server/build/libs/"
+              exit 1
+            fi
+          fi
+          echo "Found JAR file: $JAR_FILE"
+          # Copy to a fixed location for upload
+          mkdir -p server-jar-output
+          cp "$JAR_FILE" server-jar-output/server.jar
+          echo "JAR file copied to server-jar-output/server.jar"
+
       - name: Upload server JAR artifact
         uses: actions/upload-artifact@v4
         with:
           name: server-jar
-          path: server/build/libs/citymanager-server-*.jar
+          path: server-jar-output/server.jar
           retention-days: 90
+          if-no-files-found: error
 
   build-admin-panel:
     name: Build Admin Panel
@@ -73,8 +96,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: adminPanel/build/js/node_modules/**/package-lock.json
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -210,8 +231,10 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          api-level: 36
-          build-tools: 36.0.0
+          packages: |
+            platform-tools
+            platforms;android-36
+            build-tools;36.0.0
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -319,8 +342,12 @@ jobs:
           mkdir -p release-files
           
           # Copy server JAR
-          if [ -f artifacts/server/*.jar ]; then
-            cp artifacts/server/*.jar release-files/ || true
+          JAR_FILE=$(find artifacts/server -name "*.jar" -type f | head -n 1)
+          if [ -n "$JAR_FILE" ]; then
+            cp "$JAR_FILE" release-files/citymanager-server.jar || true
+            echo "Copied server JAR: $JAR_FILE"
+          else
+            echo "Warning: Server JAR file not found!"
           fi
           
           # Copy admin panel (all files)
