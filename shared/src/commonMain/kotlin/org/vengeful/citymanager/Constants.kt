@@ -1,7 +1,7 @@
 package org.vengeful.citymanager
 
 // Версия сборки
-const val BUILD_VERSION = "0.9.9"
+const val BUILD_VERSION = "1.0.0"
 
 // Конфигурация сервера - значения по умолчанию
 // Могут быть переопределены через переменные окружения при сборке

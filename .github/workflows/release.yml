@@ -1,0 +1,354 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - '*.*.*'
+
+jobs:
+  build-server-jar:
+    name: Build Server JAR
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            .gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          VERSION=${TAG_NAME#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
+
+      - name: Build server JAR
+        run: ./gradlew :server:shadowJar --no-daemon
+
+      - name: Upload server JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-jar
+          path: server/build/libs/citymanager-server-*.jar
+          retention-days: 90
+
+  build-admin-panel:
+    name: Build Admin Panel
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: adminPanel/build/js/node_modules/**/package-lock.json
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            .gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Build admin panel
+        run: ./gradlew :adminPanel:jsBrowserProductionWebpack --no-daemon
+
+      - name: Prepare admin panel package
+        run: |
+          # Find the webpack output directory
+          if [ -d "adminPanel/build/dist/js/productionExecutable" ]; then
+            ADMIN_DIR="adminPanel/build/dist/js/productionExecutable"
+          elif [ -d "adminPanel/build/distributions" ]; then
+            ADMIN_DIR="adminPanel/build/distributions"
+          else
+            echo "Admin panel build directory not found!"
+            find adminPanel/build -type d -name "*production*" || true
+            exit 1
+          fi
+          # Copy index.html if it exists in resources
+          if [ -f "adminPanel/src/jsMain/resources/index.html" ]; then
+            cp adminPanel/src/jsMain/resources/index.html "$ADMIN_DIR/" || true
+          fi
+          # Create a package directory
+          mkdir -p admin-package
+          cp -r "$ADMIN_DIR"/* admin-package/ || cp "$ADMIN_DIR"/* admin-package/ 2>/dev/null || true
+
+      - name: Upload admin panel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-panel
+          path: admin-package/**
+          retention-days: 90
+
+  build-desktop-msi:
+    name: Build Desktop MSI
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: icacls gradlew.bat /grant Everyone:RX
+
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            .gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          $tagName = $env:GITHUB_REF -replace 'refs/tags/', ''
+          $version = $tagName -replace '^v', ''
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+          echo "tag=$tagName" >> $env:GITHUB_OUTPUT
+
+      - name: Build desktop MSI
+        run: .\gradlew.bat :composeApp:packageMsi --no-daemon
+
+      - name: Find and rename MSI to SGK.msi
+        run: |
+          # Try different possible paths
+          $msiPaths = @(
+            "composeApp\build\compose\binaries\main\msi\*.msi",
+            "composeApp\build\compose\binaries\main\package\*.msi",
+            "composeApp\build\compose\binaries\*.msi"
+          )
+          $msiFile = $null
+          foreach ($path in $msiPaths) {
+            $found = Get-ChildItem -Path $path -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($found) {
+              $msiFile = $found
+              break
+            }
+          }
+          if ($msiFile) {
+            Copy-Item $msiFile.FullName -Destination "SGK.msi"
+            echo "MSI file found at $($msiFile.FullName) and renamed to SGK.msi"
+          } else {
+            echo "MSI file not found! Searching..."
+            Get-ChildItem -Path "composeApp\build" -Recurse -Filter "*.msi" | ForEach-Object { echo "Found: $($_.FullName)" }
+            exit 1
+          }
+
+      - name: Upload desktop MSI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-msi
+          path: SGK.msi
+          retention-days: 90
+
+  build-android-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 36
+          build-tools: 36.0.0
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            .gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          VERSION=${TAG_NAME#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
+
+      - name: Build Android APK
+        run: ./gradlew :composeApp:assembleRelease --no-daemon
+
+      - name: Find and rename APK to sgk-hacker.apk
+        run: |
+          # Try standard path first
+          APK_FILE=$(find composeApp/build/outputs/apk/release -name "*.apk" 2>/dev/null | head -n 1)
+          # If not found, search more broadly
+          if [ -z "$APK_FILE" ]; then
+            APK_FILE=$(find composeApp/build/outputs/apk -name "*.apk" 2>/dev/null | head -n 1)
+          fi
+          if [ -f "$APK_FILE" ]; then
+            cp "$APK_FILE" sgk-hacker.apk
+            echo "APK file found at $APK_FILE and renamed to sgk-hacker.apk"
+          else
+            echo "APK file not found! Searching..."
+            find composeApp/build -name "*.apk" 2>/dev/null || true
+            exit 1
+          fi
+
+      - name: Upload Android APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: sgk-hacker.apk
+          retention-days: 90
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [build-server-jar, build-admin-panel, build-desktop-msi, build-android-apk]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          VERSION=${TAG_NAME#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
+
+      - name: Download server JAR
+        uses: actions/download-artifact@v4
+        with:
+          name: server-jar
+          path: artifacts/server
+
+      - name: Download admin panel
+        uses: actions/download-artifact@v4
+        with:
+          name: admin-panel
+          path: artifacts/admin-panel
+
+      - name: Download desktop MSI
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-msi
+          path: artifacts/desktop
+
+      - name: Download Android APK
+        uses: actions/download-artifact@v4
+        with:
+          name: android-apk
+          path: artifacts/android
+
+      - name: Prepare release files
+        run: |
+          # List all downloaded artifacts
+          echo "Server JAR files:"
+          find artifacts/server -type f || true
+          echo "Admin panel files:"
+          find artifacts/admin-panel -type f || true
+          echo "Desktop MSI files:"
+          find artifacts/desktop -type f || true
+          echo "Android APK files:"
+          find artifacts/android -type f || true
+          
+          # Create release directory with proper names
+          mkdir -p release-files
+          
+          # Copy server JAR
+          if [ -f artifacts/server/*.jar ]; then
+            cp artifacts/server/*.jar release-files/ || true
+          fi
+          
+          # Copy admin panel (all files)
+          if [ -d artifacts/admin-panel ]; then
+            cp -r artifacts/admin-panel/* release-files/ || true
+          fi
+          
+          # Copy desktop MSI
+          if [ -f artifacts/desktop/SGK.msi ]; then
+            cp artifacts/desktop/SGK.msi release-files/ || true
+          fi
+          
+          # Copy Android APK
+          if [ -f artifacts/android/sgk-hacker.apk ]; then
+            cp artifacts/android/sgk-hacker.apk release-files/ || true
+          fi
+          
+          echo "Release files prepared:"
+          ls -la release-files/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.version }}
+          files: release-files/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
