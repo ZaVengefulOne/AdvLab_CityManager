@@ -126,11 +126,12 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "Система Государственного Контроля"
+            packageName = "State Control System"
             packageVersion = "1.0.0"
 
             modules("jdk.unsupported")
-            appResourcesRootDir.set(project.layout.projectDirectory.dir("src/jvmMain/resources"))
+
+            appResourcesRootDir.set(project.file("src/jvmMain/resources"))
 
             macOS {
                 iconFile.set(project.file("src/jvmMain/resources/icon.png"))

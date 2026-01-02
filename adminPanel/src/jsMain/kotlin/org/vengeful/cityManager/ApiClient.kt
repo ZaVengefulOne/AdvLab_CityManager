@@ -56,7 +56,7 @@ class ApiClient(
         }
     }
 
-    private val baseUrl: String = "http://localhost:8080"
+    private val baseUrl: String = "http://10.70.0.47:8080"
 
     private fun HttpRequestBuilder.addAuthHeader() {
         val token = authManager.getToken()

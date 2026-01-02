@@ -2,15 +2,15 @@ package org.vengeful.citymanager
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
-import io.ktor.http.HttpStatusCode
-import io.ktor.serialization.kotlinx.json.json
+import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
-import io.ktor.server.auth.Authentication
-import io.ktor.server.auth.jwt.JWTPrincipal
-import io.ktor.server.auth.jwt.jwt
+import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
 import io.ktor.server.netty.*
-import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.server.response.respond
+import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.cors.routing.*
+import io.ktor.server.response.*
 import kotlinx.serialization.json.Json
 import org.vengeful.citymanager.adminPanel.configurations.configureAdminApi
 import org.vengeful.citymanager.auth.EmergencyShutdownConfig
@@ -40,6 +40,20 @@ fun Application.module() {
             encodeDefaults = true
         })
     }
+
+    install(CORS) {
+        allowMethod(HttpMethod.Options)
+        allowMethod(HttpMethod.Get)
+        allowMethod(HttpMethod.Post)
+        allowMethod(HttpMethod.Put)
+        allowMethod(HttpMethod.Delete)
+        allowHeader(HttpHeaders.Authorization)
+        allowHeader(HttpHeaders.ContentType)
+        anyHost()
+        allowNonSimpleContentTypes = true
+        allowCredentials = true
+    }
+
     install(Authentication) {
         jwt("auth-jwt") {
             realm = jwtConfig.realm
