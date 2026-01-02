@@ -42,6 +42,7 @@ import org.vengeful.citymanager.uikit.composables.personnel.PasswordDialog
 import org.vengeful.citymanager.uikit.composables.personnel.PersonnelManagementDialog
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.collectAsState
 
 @Composable
 fun CourtScreen(navController: NavController) {
@@ -243,6 +244,33 @@ fun CourtScreen(navController: NavController) {
                             .fillMaxWidth()
                             .padding(top = 8.dp, bottom = 8.dp)
                     )
+
+                    // Тревожная кнопка под кнопкой "Новое"
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        EmergencyButton(
+                            onClick = { courtViewModel.sendEmergencyAlert() },
+                            modifier = Modifier,
+                            enabled = true
+                        )
+                        // Индикатор "нажата" под кнопкой
+                        if (courtViewModel.isEmergencyButtonPressed.collectAsState().value) {
+                            VengText(
+                                text = "нажата",
+                                color = Color(0xFFDC143C),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier
+                                    .padding(top = 8.dp)
+                                    .fillMaxWidth(),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
                 }
             }
 
@@ -258,33 +286,6 @@ fun CourtScreen(navController: NavController) {
                     text = "Показать все",
                     theme = currentTheme,
                     modifier = Modifier.fillMaxWidth(0.3f)
-                )
-            }
-        }
-
-        // Тревожная кнопка в левом нижнем углу
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.Start
-        ) {
-            EmergencyButton(
-                onClick = { courtViewModel.sendEmergencyAlert() },
-                modifier = Modifier,
-                enabled = true
-            )
-            // Индикатор "нажата" под кнопкой
-            if (courtViewModel.isEmergencyButtonPressed.collectAsState().value) {
-                VengText(
-                    text = "нажата",
-                    color = Color(0xFFDC143C),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .padding(top = 8.dp)
-                        .fillMaxWidth(),
-                    textAlign = TextAlign.Start
                 )
             }
         }
@@ -381,7 +382,7 @@ fun CourtScreen(navController: NavController) {
             allPersons = allPersons,
             personnel = personnel,
             isLoading = false,
-            errorMessage = courtViewModel.errorMessage.value,
+            errorMessage = courtViewModel.errorMessage.collectAsState().value,
             onAddPerson = { person ->
                 courtViewModel.addRightToPerson(person.id, Enterprise.COURT.toRights())
             },

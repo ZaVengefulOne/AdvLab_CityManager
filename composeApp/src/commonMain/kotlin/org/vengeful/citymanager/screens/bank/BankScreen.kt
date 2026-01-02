@@ -35,6 +35,7 @@ import org.vengeful.citymanager.uikit.composables.personnel.PasswordDialog
 import org.vengeful.citymanager.uikit.composables.personnel.PersonnelManagementDialog
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.collectAsState
 
 @Composable
 fun BankScreen(navController: NavController) {
@@ -85,28 +86,68 @@ fun BankScreen(navController: NavController) {
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(
-                    modifier = Modifier.weight(0.1f),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                Row(
+                    modifier = Modifier.weight(0.2f),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    ThemeSwitcher(
-                        currentTheme = currentTheme,
-                        onThemeChange = { newTheme ->
-                            LocalTheme = newTheme
-                            currentTheme = LocalTheme
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        ThemeSwitcher(
+                            currentTheme = currentTheme,
+                            onThemeChange = { newTheme ->
+                                LocalTheme = newTheme
+                                currentTheme = LocalTheme
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
 
-                    VengButton(
-                        onClick = { showPasswordDialog = true },
-                        text = "Сотрудники",
-                        theme = currentTheme,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                    )
+                        VengButton(
+                            onClick = { showPasswordDialog = true },
+                            text = "",
+                            theme = currentTheme,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            content = {
+                                VengText(
+                                    text = "Сотрудники",
+                                    color = SeveritepunkThemes.getColorScheme(currentTheme).text,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 0.5.sp
+                                )
+                            }
+                        )
+                    }
+
+                    // Тревожная кнопка справа от блока с кнопками
+                    Column(
+                        modifier = Modifier,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        EmergencyButton(
+                            onClick = { viewModel.sendEmergencyAlert() },
+                            modifier = Modifier,
+                            enabled = true
+                        )
+                        // Индикатор "нажата" под кнопкой
+                        if (viewModel.isEmergencyButtonPressed.collectAsState().value) {
+                            VengText(
+                                text = "нажата",
+                                color = Color(0xFFDC143C),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier
+                                    .padding(top = 4.dp)
+                                    .fillMaxWidth(),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
                 }
 
                 VengText(
@@ -370,33 +411,6 @@ fun BankScreen(navController: NavController) {
             )
         }
 
-        // Тревожная кнопка в левом нижнем углу
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.Start
-        ) {
-            EmergencyButton(
-                onClick = { viewModel.sendEmergencyAlert() },
-                modifier = Modifier,
-                enabled = true
-            )
-            // Индикатор "нажата" под кнопкой
-            if (viewModel.isEmergencyButtonPressed.collectAsState().value) {
-                VengText(
-                    text = "нажата",
-                    color = Color(0xFFDC143C),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .padding(top = 8.dp)
-                        .fillMaxWidth(),
-                    textAlign = TextAlign.Start
-                )
-            }
-        }
-
         // Диалоги управления персоналом
         if (showPasswordDialog) {
             PasswordDialog(
@@ -416,7 +430,7 @@ fun BankScreen(navController: NavController) {
                 allPersons = persons,
                 personnel = personnel,
                 isLoading = false,
-                errorMessage = viewModel.errorMessage.value,
+                errorMessage = viewModel.errorMessage.collectAsState().value,
                 onAddPerson = { person ->
                     viewModel.addRightToPerson(person.id, Enterprise.BANK.toRights())
                 },
