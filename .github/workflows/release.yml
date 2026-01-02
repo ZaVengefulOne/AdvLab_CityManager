@@ -117,22 +117,38 @@ jobs:
       - name: Prepare admin panel package
         run: |
           # Find the webpack output directory
-          if [ -d "adminPanel/build/dist/js/productionExecutable" ]; then
+          ADMIN_DIR=""
+          # Try different possible paths
+          if [ -d "adminPanel/build/kotlin-webpack/js/productionExecutable" ]; then
+            ADMIN_DIR="adminPanel/build/kotlin-webpack/js/productionExecutable"
+          elif [ -d "adminPanel/build/compileSync/js/main/productionExecutable" ]; then
+            ADMIN_DIR="adminPanel/build/compileSync/js/main/productionExecutable"
+          elif [ -d "adminPanel/build/dist/js/productionExecutable" ]; then
             ADMIN_DIR="adminPanel/build/dist/js/productionExecutable"
           elif [ -d "adminPanel/build/distributions" ]; then
             ADMIN_DIR="adminPanel/build/distributions"
           else
-            echo "Admin panel build directory not found!"
+            echo "Admin panel build directory not found! Searching..."
             find adminPanel/build -type d -name "*production*" || true
-            exit 1
+            # Try to find any js output directory
+            ADMIN_DIR=$(find adminPanel/build -type d -path "*/js/*production*" | head -n 1)
+            if [ -z "$ADMIN_DIR" ]; then
+              echo "Error: Could not find admin panel build output!"
+              exit 1
+            fi
+            echo "Using found directory: $ADMIN_DIR"
           fi
+          echo "Using admin panel directory: $ADMIN_DIR"
+          ls -la "$ADMIN_DIR" || true
           # Copy index.html if it exists in resources
           if [ -f "adminPanel/src/jsMain/resources/index.html" ]; then
             cp adminPanel/src/jsMain/resources/index.html "$ADMIN_DIR/" || true
           fi
           # Create a package directory
           mkdir -p admin-package
-          cp -r "$ADMIN_DIR"/* admin-package/ || cp "$ADMIN_DIR"/* admin-package/ 2>/dev/null || true
+          cp -r "$ADMIN_DIR"/* admin-package/ 2>/dev/null || cp "$ADMIN_DIR"/* admin-package/ 2>/dev/null || true
+          echo "Admin package contents:"
+          ls -la admin-package/ || true
 
       - name: Upload admin panel artifact
         uses: actions/upload-artifact@v4
@@ -234,7 +250,7 @@ jobs:
           packages: |
             platform-tools
             platforms;android-36
-            build-tools;36.0.0
+            build-tools;34.0.0
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
