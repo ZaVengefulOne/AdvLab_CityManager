@@ -9,6 +9,7 @@ import org.vengeful.citymanager.models.users.User
 
 interface IUserInteractor {
     suspend fun login(username: String, password: String): LoginResult
+    suspend fun loginAsJoker(): LoginResult
     suspend fun logout(): Boolean
     suspend fun register(username: String, password: String, personId: Int?, rights: List<Rights> = emptyList()): RegisterResult
 

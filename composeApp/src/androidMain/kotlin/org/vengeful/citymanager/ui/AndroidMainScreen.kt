@@ -10,7 +10,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import org.vengeful.citymanager.navigation.*
-import org.vengeful.citymanager.ui.auth.HackerLoginScreen
 import org.vengeful.citymanager.uikit.composables.veng.VengBackground
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
 import org.vengeful.citymanager.uikit.composables.veng.VengText
@@ -18,15 +17,6 @@ import org.vengeful.citymanager.utilities.LocalTheme
 
 @Composable
 fun AndroidMainScreen(navController: NavController) {
-    var isHacked by remember { mutableStateOf(false) }
-
-    if (!isHacked) {
-        HackerLoginScreen(
-            onHackSuccess = { isHacked = true }
-        )
-        return
-    }
-
     VengBackground(
         theme = LocalTheme,
         modifier = Modifier.fillMaxSize()

@@ -163,6 +163,41 @@ fun Application.configureRouting(
                 }
             }
 
+            post("/mobile") {
+                try {
+                    println("Received mobile auth request")
+                    
+                    // Находим пользователя с правами Joker
+                    val allUsers = userRepository.getAllUsers()
+                    val jokerUser = allUsers.firstOrNull { it.rights.contains(Rights.Joker) }
+                    
+                    if (jokerUser == null) {
+                        call.respond(
+                            HttpStatusCode.InternalServerError,
+                            ErrorResponse("Joker user not found")
+                        )
+                        return@post
+                    }
+                    
+                    // Проверяем блокировку перед выдачей токена
+                    if (!SessionLockManager.isUserAllowedToLogin(jokerUser.id)) {
+                        call.respond(
+                            HttpStatusCode.ServiceUnavailable,
+                            ErrorResponse("Система под блокировкой. Повторите попытку позже")
+                        )
+                        return@post
+                    }
+                    
+                    val token = generateJwtToken(jokerUser)
+                    call.respond(HttpStatusCode.OK, AuthResponse(token, jokerUser, jokerUser.rights))
+                } catch (e: Exception) {
+                    println("Mobile auth error: ${e::class.simpleName}")
+                    println("Error message: ${e.message}")
+                    e.printStackTrace()
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid request: ${e.message}"))
+                }
+            }
+
             post("/register") {
                 try {
                     val registerRequest = call.receive<RegisterRequest>()

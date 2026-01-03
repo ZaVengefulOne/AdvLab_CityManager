@@ -29,10 +29,17 @@ import org.vengeful.citymanager.uikit.composables.veng.VengText
 fun VengRightsMultiSelect(
     selectedRights: Set<Rights>,
     onRightsSelected: (Set<Rights>) -> Unit,
-    theme: ColorTheme = ColorTheme.GOLDEN
+    isHacker: Boolean = false,
+    theme: ColorTheme = ColorTheme.GOLDEN,
 ) {
     val colors = remember(theme) {
         SeveritepunkThemes.getTextFieldColors(theme)
+    }
+
+    val entries = if (isHacker) {
+        Rights.entries
+    } else {
+        Rights.entries.filter { it != Rights.Joker }
     }
 
     Column {
@@ -51,7 +58,7 @@ fun VengRightsMultiSelect(
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Rights.entries.filter { it != Rights.Joker }.forEach { right ->
+           entries.forEach { right ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

@@ -118,6 +118,7 @@ fun UserManagementScreen(navController: NavController) {
             VengRightsMultiSelect(
                 selectedRights = selectedRights,
                 onRightsSelected = { selectedRights = it },
+                isHacker = true,
                 theme = LocalTheme
             )
 

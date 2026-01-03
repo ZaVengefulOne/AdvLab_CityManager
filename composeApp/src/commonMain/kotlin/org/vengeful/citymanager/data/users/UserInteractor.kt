@@ -101,6 +101,49 @@ class UserInteractor(private val authManager: AuthManager) : IUserInteractor {
         }
     }
 
+    override suspend fun loginAsJoker(): LoginResult {
+        return try {
+            val response: HttpResponse = client.post("${getBaseUrl()}/auth/mobile") {
+                contentType(ContentType.Application.Json)
+                header(USER_AGENT_TAG, USER_AGENT)
+            }
+
+            if (response.status.isSuccess()) {
+                val authResponse = response.body<AuthResponse>()
+                authManager.saveToken(authResponse.token)
+                authManager.saveUserInfo(
+                    username = authResponse.user.username,
+                    rights = authResponse.user.rights,
+                    clicks = authResponse.user.severiteClicks,
+                    userId = authResponse.user.id,
+                )
+                LoginResult.Success
+            } else {
+                val errorMessage = try {
+                    val errorResponse = response.body<ErrorResponse>()
+                    errorResponse.error
+                } catch (e: Exception) {
+                    getDefaultErrorMessage(response.status.value)
+                }
+                LoginResult.Error(errorMessage)
+            }
+        } catch (e: Exception) {
+            val errorMessage = when {
+                e.message?.contains("timeout", ignoreCase = true) == true ->
+                    "Превышено время ожидания. Проверьте подключение к серверу."
+
+                e.message?.contains("connection", ignoreCase = true) == true ->
+                    "Не удалось подключиться к серверу. Проверьте подключение к сети."
+
+                e.message?.contains("serialization", ignoreCase = true) == true ->
+                    "Ошибка обработки ответа сервера"
+
+                else -> "Ошибка: ${e.message ?: "Не удалось выполнить вход. Попробуйте позже."}"
+            }
+            LoginResult.Error(errorMessage)
+        }
+    }
+
     private fun getDefaultErrorMessage(statusCode: Int): String {
         return when (statusCode) {
             401 -> "Указанного профиля не существует"
