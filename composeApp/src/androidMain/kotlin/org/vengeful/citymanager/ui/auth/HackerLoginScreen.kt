@@ -262,8 +262,8 @@ fun HackerLoginScreen(
                 )
 
                 Text(
-//                    text = "Код: ${"*".repeat(6)}",
-                    text = "Код: ${viewModel.code.collectAsState().value}",
+                    text = "Код: ${"*".repeat(6)}",
+//                    text = "Код: ${viewModel.code.collectAsState().value}",
                     color = colors.borderLight.copy(alpha = 0.3f),
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace
