@@ -32,6 +32,7 @@ class StockViewModel(
         const val FLUCTUATION_MIN = -20
         const val FLUCTUATION_MAX = 20
         const val GRAPH_HISTORY_SIZE = 20
+        const val MINIMAL_PRICE = 10
     }
 
     fun loadStocks() {
@@ -118,7 +119,10 @@ class StockViewModel(
                     FLUCTUATION_MIN.toDouble(),
                     FLUCTUATION_MAX.toDouble()
                 )
-                val newPrice = basePrice + fluctuation
+                var newPrice = basePrice + fluctuation
+                if (newPrice < 10.0) {
+                    newPrice = MINIMAL_PRICE.toDouble()
+                }
 
                 val currentStocks = _stocks.value.toMutableMap()
                 val stockData = currentStocks[stockName] ?: return@launch
