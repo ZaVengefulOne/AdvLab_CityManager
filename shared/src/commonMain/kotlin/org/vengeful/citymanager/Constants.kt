@@ -5,7 +5,7 @@ const val BUILD_VERSION = "1.0.0"
 
 // Конфигурация сервера - значения по умолчанию
 // Могут быть переопределены через переменные окружения при сборке
-const val SERVER_HOST = "169.254.91.110"
+const val SERVER_HOST = "10.0.0.51"
 const val SERVER_PORT = 8080
 const val SERVER_PROTOCOL = "http"
 
@@ -14,7 +14,7 @@ val SERVER_BASE_URL: String
     get() = "$SERVER_PROTOCOL://$SERVER_HOST:$SERVER_PORT"
 
 // Для Android эмулятора
-const val SERVER_ADDRESS_DEBUG = "169.254.91.110"
+const val SERVER_ADDRESS_DEBUG = "10.0.0.51"
 
 val SERVER_ANDROID_URL: String
     get() = "$SERVER_PROTOCOL://$SERVER_ADDRESS_DEBUG:$SERVER_PORT"
