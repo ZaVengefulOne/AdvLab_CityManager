@@ -21,7 +21,7 @@ import org.vengeful.citymanager.uikit.composables.veng.VengText
 @Composable
 fun StockGraph(
     stockName: String,
-    currentPrice: Double,
+    currentPrice: Int,
     history: List<Double>,
     modifier: Modifier = Modifier,
     graphColor: Color = Color(0xFF4A90E2),
@@ -128,7 +128,7 @@ fun StockGraph(
             }
 
             VengText(
-                text = String.format("%.2f", currentPrice),
+                text = currentPrice.toString(),
                 color = Color.White,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold

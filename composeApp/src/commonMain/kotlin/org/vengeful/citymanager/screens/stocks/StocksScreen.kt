@@ -85,7 +85,7 @@ fun StockScreen(navController: NavController) {
                     items(stocks.values.toList()) { stockData ->
                         StockGraph(
                             stockName = stockData.config.name,
-                            currentPrice = stockData.currentPrice,
+                            currentPrice = stockData.currentPrice.toInt(),
                             history = stockData.history,
                             modifier = Modifier.fillMaxWidth(),
                             graphColor = StockColors.getColorForIndex(stockData.colorIndex),  // Используем цвет из индекса

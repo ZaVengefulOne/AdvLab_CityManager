@@ -336,6 +336,7 @@ fun Application.configureAdminApi(
                 Rights.Administration,
                 Rights.Medic,
                 Rights.Police,
+                Rights.Court
             )
 
             // Получаем всех людей с нужными правами

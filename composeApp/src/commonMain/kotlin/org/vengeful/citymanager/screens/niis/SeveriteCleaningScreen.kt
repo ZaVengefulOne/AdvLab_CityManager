@@ -107,6 +107,7 @@ fun SeveriteCleaningScreen(
                     VengButton(
                         onClick = {
                             viewModel.reset()
+                            soundPlayer.stopSystemWorkingSound()
                             navController.popBackStack()
                         },
                         text = "Назад",
@@ -299,6 +300,7 @@ fun SeveriteCleaningScreen(
                 onDismissRequest = {
                     viewModel.dismissErrorDialog()
                     viewModel.reset()
+                    soundPlayer.stopSystemWorkingSound()
                     navController.navigate(ROUTE_MAIN) {
                         popUpTo(ROUTE_MAIN) {
                             inclusive = true
@@ -327,6 +329,7 @@ fun SeveriteCleaningScreen(
                         onClick = {
                             viewModel.dismissErrorDialog()
                             viewModel.reset()
+                            soundPlayer.stopSystemWorkingSound()
                             navController.navigate(ROUTE_MAIN) {
                                 popUpTo(ROUTE_MAIN) {
                                     inclusive = true

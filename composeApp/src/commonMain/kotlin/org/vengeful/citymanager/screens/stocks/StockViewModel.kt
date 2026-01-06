@@ -30,7 +30,7 @@ class StockViewModel(
         const val UPDATE_INTERVAL_MS = 600000L // 600 секунд (10 минут)
         const val CONFIG_UPDATE_INTERVAL_MS = 900000L // 900 секунд (15 минут)
         const val FLUCTUATION_MIN = -10
-        const val FLUCTUATION_MAX = 10
+        const val FLUCTUATION_MAX = 5
         const val GRAPH_HISTORY_SIZE = 20
         const val MINIMAL_PRICE = 10
     }
