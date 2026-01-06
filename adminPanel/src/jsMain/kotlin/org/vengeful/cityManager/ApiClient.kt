@@ -4,21 +4,14 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
-import io.ktor.client.request.forms.MultiPartFormDataContent
-import io.ktor.client.request.forms.formData
-import io.ktor.http.ContentType
-import io.ktor.http.Headers
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpStatusCode
-import io.ktor.http.contentType
+import io.ktor.client.request.forms.*
+import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import org.jetbrains.compose.web.attributes.InputType
 import org.vengeful.cityManager.models.RequestLog
 import org.vengeful.cityManager.models.ServerStats
 import org.vengeful.citymanager.models.AdministrationConfig
@@ -56,7 +49,7 @@ class ApiClient(
         }
     }
 
-    private val baseUrl: String = "http://10.70.0.47:8080"
+    private val baseUrl: String = "http://10.0.0.51:8080"
 
     private fun HttpRequestBuilder.addAuthHeader() {
         val token = authManager.getToken()
