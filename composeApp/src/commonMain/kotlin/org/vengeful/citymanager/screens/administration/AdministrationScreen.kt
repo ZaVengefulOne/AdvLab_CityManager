@@ -3,8 +3,6 @@ package org.vengeful.citymanager.screens.administration
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -13,7 +11,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
@@ -45,13 +42,11 @@ import org.vengeful.citymanager.uikit.composables.dialogs.RegisterDialog
 import org.vengeful.citymanager.uikit.composables.misc.ThemeSwitcher
 import org.vengeful.citymanager.uikit.composables.person.*
 import org.vengeful.citymanager.uikit.composables.user.UserEditDialog
-import org.vengeful.citymanager.uikit.composables.user.UserList
 import org.vengeful.citymanager.uikit.composables.veng.VengBackground
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
 import org.vengeful.citymanager.uikit.composables.veng.VengText
 import org.vengeful.citymanager.utilities.LocalTheme
 import androidx.compose.runtime.collectAsState
-import org.vengeful.citymanager.models.emergencyShutdown.ErrorResponse
 import org.vengeful.citymanager.ROUTE_USERS_AND_PERSONS
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -428,7 +423,7 @@ fun AdministrationScreen(navController: NavController) {
 
                     SeveriteSalesWidget(
                         severites = severites,
-                        severitRate = severitRate,
+                        severiteRate = severitRate,
                         onSell = { severiteIds ->
                             administrationViewModel.sellSeverite(severiteIds)
                         },

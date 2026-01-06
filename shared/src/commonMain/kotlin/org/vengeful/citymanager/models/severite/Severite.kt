@@ -14,6 +14,13 @@ enum class SeveritePurity {
     NORMAL,          // Обычный (5 элементов)
     CRYSTAL_CLEAR    // Кристально чистый (7 элементов)
 }
+
+fun getSeveritePurity(purity: SeveritePurity): String = when (purity) {
+    SeveritePurity.CRYSTAL_CLEAR -> "Кристально чистый северит"
+    SeveritePurity.NORMAL -> "Обычный северит"
+    SeveritePurity.CONTAMINATED -> "Загрязнённый северит"
+}
+
 @Serializable
 data class SeveriteCounts(
     val contaminated: Int,

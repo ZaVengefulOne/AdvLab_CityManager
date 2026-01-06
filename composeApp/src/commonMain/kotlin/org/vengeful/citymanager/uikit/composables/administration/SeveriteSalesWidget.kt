@@ -8,7 +8,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Checkbox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -17,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.vengeful.citymanager.models.severite.Severite
 import org.vengeful.citymanager.models.severite.SeveritePurity
+import org.vengeful.citymanager.models.severite.getSeveritePurity
 import org.vengeful.citymanager.uikit.ColorTheme
 import org.vengeful.citymanager.uikit.SeveritepunkThemes
 import org.vengeful.citymanager.uikit.composables.veng.VengButton
@@ -27,7 +27,7 @@ import kotlin.math.roundToInt
 @Composable
 fun SeveriteSalesWidget(
     severites: List<Severite>,
-    severitRate: Double,
+    severiteRate: Double,
     onSell: (List<Int>) -> Unit,
     modifier: Modifier = Modifier,
     backgroundColor: Color = Color(0xFF2C3E50),
@@ -47,12 +47,13 @@ fun SeveriteSalesWidget(
         SeveritePurity.CRYSTAL_CLEAR to 1.5
     )
 
+
     // Вычисляем итоговую сумму
     val totalAmount = selectedSeveriteIds.sumOf { id ->
         val severite = severites.find { it.id == id }
         if (severite != null) {
             val coefficient = purityCoefficients[severite.purity] ?: 1.0
-            coefficient * severitRate
+            coefficient * severiteRate
         } else {
             0.0
         }
@@ -125,7 +126,7 @@ fun SeveriteSalesWidget(
                                 SeveritePurity.CRYSTAL_CLEAR -> "Кристально чистый северит"
                             }
                             val coefficient = purityCoefficients[purity] ?: 1.0
-                            val pricePerUnit = coefficient * severitRate
+                            val pricePerUnit = coefficient * severiteRate
 
                             VengText(
                                 text = "$purityName (${severiteList.size} шт.)",
@@ -163,7 +164,7 @@ fun SeveriteSalesWidget(
                                             theme = theme,
                                         )
                                         VengText(
-                                            text = "ID: ${severite.id}, код очистки: ${severite.createdAt}",
+                                            text = "Чистота: ${getSeveritePurity(severite.purity)}, ID: ${severite.id}",
                                             fontSize = 12.sp
                                         )
                                     }
